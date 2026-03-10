@@ -1,0 +1,18 @@
+<configs>
+
+    <append xpath="/recipes">
+        <recipe name="universalIronExtractort1" count="1" craft_area="workbench" craft_time="30">
+            <ingredient name="resourceScrapIron" count="100"/>
+            <ingredient name="resourceMechanicalParts" count="10"/>
+            <ingredient name="resourceElectricParts" count="5"/>
+        </recipe>
+
+
+        <!-- WASHER RECIPES -->
+        <recipe name="resourceScrapIron" count="1" craft_area="washer" craft_time="10" tags="fluid:water,fluid_amount:2">
+            <ingredient name="resourceScrapBrass" count="10"/>
+        </recipe>
+
+    </append>
+
+</configs>

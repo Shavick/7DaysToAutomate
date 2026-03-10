@@ -1,0 +1,9 @@
+<configs>
+
+    <append xpath="/lootcontainers">
+        <lootcontainer id="9999" name="ironExtractorOutput" count="0" size="8,4">
+            <item name="resourceScrapIron" count="0"/>
+        </lootcontainer>
+    </append>
+
+</configs>

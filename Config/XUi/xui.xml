@@ -1,0 +1,23 @@
+<configs>
+
+    <append xpath="//ruleset[@name='default']">
+
+        <window_group name="ExtractorInfo" open_backpack_on_open="false" defaultSelected="bp.content">
+			<window name="windowIronExtractorInfo"/>
+		</window_group>
+
+        <window_group name="CrafterInfo" open_backpack_on_open="false" defaultSelected="bp.content">
+			<window name="windowUniversalCrafterInfo"/>
+		</window_group>
+
+        <!-- <window_group name="ResearchWindow" open_backpack_on_open="false">
+            <window name="windowResearch"/>
+        </window_group> -->
+
+        <!-- <window_group name="WasherInfo" open_backpack_on_open="false" defaultSelected="bp.content">
+            <window name="windowUniversalWasher"/>
+        </window_group> -->
+
+    </append>
+
+</configs>

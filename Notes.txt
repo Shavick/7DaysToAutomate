@@ -1,0 +1,4 @@
+Need to Hook up power switch methos to the machine class
+need to override the methods for power switch to the inherited classes
+
+i still don't fully understand why we need to apply it to both classes....

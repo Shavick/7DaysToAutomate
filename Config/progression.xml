@@ -1,0 +1,13 @@
+<configs>
+
+	<append xpath="/progression">
+
+		<tech_tree name="Mechanical">
+			<node id="mech_t0" x="0" y="0" icon="mech_root" unlocks="mech_t1" />
+			<node id="mech_t1" x="1" y="-1" icon="mech_basic" unlocks="mech_t2"/>
+			<node id="mech_t2" x="1" y="-2" icon="mech_basic2" />
+		</tech_tree>
+
+	</append>
+
+</configs>

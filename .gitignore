@@ -1,0 +1,12 @@
+# Visual Studio / build artifacts
+.vs/
+bin/
+obj/
+
+# Generated mod binaries (root output)
+7DaysToAutomate.dll
+7DaysToAutomate.pdb
+
+# User-specific files
+*.user
+*.suo

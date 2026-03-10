@@ -1,0 +1,16 @@
+Key,english
+
+universalIronExtractort1,"Iron Extractor (T1)"
+universalIronExtractort2,"Iron Extractor (T2)"
+universalIronExtractort3,"Iron Extractor (T3)"
+universalIronExtractort4,"Iron Extractor (T4)"
+universalIronExtractort5,"Iron Extractor (T5)"
+
+universalCoalExtractor,"Coal Extractor"
+universalNitrateExtractor,"Nitrate Extractor"
+universalLeadExtractor,"Lead Extractor"
+universalOilShaleExtractor,"Oil Shale Extractor"
+
+universalCrafter,"Universal Crafter"
+
+universalWasher,"Universal Washer"
