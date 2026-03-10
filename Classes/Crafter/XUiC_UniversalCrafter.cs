@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class XUiC_UniversalCrafter : XUiController
 {
@@ -14,6 +14,8 @@ public class XUiC_UniversalCrafter : XUiController
     private bool lastIsCrafting = false;
     private bool lastDisabledByPlayer = true;
     private bool lastIsWaitingForIngredients = false;
+    private int lastInputTargetsSignature = int.MinValue;
+    private int lastOutputTargetsSignature = int.MinValue;
 
     // -------------------------------
     // Init
@@ -98,7 +100,7 @@ public class XUiC_UniversalCrafter : XUiController
     }
 
     // -------------------------------
-    // OnOpen — syncs UI to TE
+    // OnOpen - syncs UI to TE
     // -------------------------------
     public override void OnOpen()
     {
@@ -176,7 +178,68 @@ public class XUiC_UniversalCrafter : XUiController
     }
 
     // -------------------------------
-    // Update — smooth craft bar
+        private int BuildInputTargetsSignature(TileEntityUniversalCrafter targetTe)
+    {
+        unchecked
+        {
+            int hash = 17;
+            var list = targetTe?.availableInputTargets;
+            hash = (hash * 31) + (list?.Count ?? 0);
+
+            if (list != null)
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    InputTargetInfo target = list[i];
+                    if (target == null)
+                    {
+                        hash = (hash * 31) + 1;
+                        continue;
+                    }
+
+                    hash = (hash * 31) + target.BlockPos.x;
+                    hash = (hash * 31) + target.BlockPos.y;
+                    hash = (hash * 31) + target.BlockPos.z;
+                    hash = (hash * 31) + target.PipeGraphId.GetHashCode();
+                }
+            }
+
+            return hash;
+        }
+    }
+
+    private int BuildOutputTargetsSignature(TileEntityUniversalCrafter targetTe)
+    {
+        unchecked
+        {
+            int hash = 17;
+            var list = targetTe?.availableOutputTargets;
+            hash = (hash * 31) + (list?.Count ?? 0);
+
+            if (list != null)
+            {
+                for (int i = 0; i < list.Count; i++)
+                {
+                    OutputTargetInfo target = list[i];
+                    if (target == null)
+                    {
+                        hash = (hash * 31) + 1;
+                        continue;
+                    }
+
+                    hash = (hash * 31) + target.BlockPos.x;
+                    hash = (hash * 31) + target.BlockPos.y;
+                    hash = (hash * 31) + target.BlockPos.z;
+                    hash = (hash * 31) + (int)target.TransportMode;
+                    hash = (hash * 31) + target.PipeGraphId.GetHashCode();
+                }
+            }
+
+            return hash;
+        }
+    }
+
+    // -------------------------------
     // -------------------------------
     public override void Update(float _dt)
     {
@@ -224,6 +287,20 @@ public class XUiC_UniversalCrafter : XUiController
             {
                 lastIsWaitingForIngredients = te.isWaitingForIngredients;
                 stateChanged = true;
+            }
+
+            int inputTargetsSignature = BuildInputTargetsSignature(te);
+            if (inputTargetsSignature != lastInputTargetsSignature)
+            {
+                lastInputTargetsSignature = inputTargetsSignature;
+                selectionChanged = true;
+            }
+
+            int outputTargetsSignature = BuildOutputTargetsSignature(te);
+            if (outputTargetsSignature != lastOutputTargetsSignature)
+            {
+                lastOutputTargetsSignature = outputTargetsSignature;
+                selectionChanged = true;
             }
 
             if (selectionChanged)
@@ -305,20 +382,20 @@ public class XUiC_UniversalCrafter : XUiController
     public override bool GetBindingValueInternal(ref string value, string bindingName)
     {
         var te = GetCrafter();
-
-        if (bindingName == "req_has_nearby_storage")
+                if (bindingName == "req_recipe_selected")
         {
-            value = (te != null && te.reqHasNearbyStorage) ? "true" : "false";
+            bool hasRecipe = te != null && !string.IsNullOrEmpty(te.SelectedRecipeName);
+            value = hasRecipe ? "true" : "false";
             return true;
         }
 
-        if (bindingName == "req_not_has_nearby_storage")
+        if (bindingName == "req_not_recipe_selected")
         {
-            value = (te != null && te.reqHasNearbyStorage) ? "false" : "true";
+            bool hasRecipe = te != null && !string.IsNullOrEmpty(te.SelectedRecipeName);
+            value = hasRecipe ? "false" : "true";
             return true;
         }
-
-        if (bindingName == "recipename")
+if (bindingName == "recipename")
         {
             if (te != null && !string.IsNullOrEmpty(te.SelectedRecipeName))
             {
@@ -401,29 +478,29 @@ public class XUiC_UniversalCrafter : XUiController
         {
             if (te == null)
             {
-                value = "✗ Craft!";
+                value = "Craft Unavailable";
                 return true;
             }
 
             if (te.isCrafting)
             {
-                value = "Stop Craft!";
+                value = "Stop Crafting";
                 return true;
             }
 
             if (te.isWaitingForIngredients)
             {
-                value = "✗ Waiting...";
+                value = "Waiting";
                 return true;
             }
 
             if (te.disabledByPlayer)
             {
-                value = "✓ Craft!";
+                value = "Start Crafting";
                 return true;
             }
 
-            value = "✓ Craft!";
+            value = "Start Crafting";
             return true;
         }
 

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 public class XUiC_ExtractorOutputContainerList : XUiController
 {
@@ -82,7 +82,6 @@ public class XUiC_ExtractorOutputContainerList : XUiController
                 OutputTargetInfo target = targets[i];
                 TileEntityComposite comp = world.GetTileEntity(0, target.BlockPos) as TileEntityComposite;
 
-                Log.Out($"[ExtractorOutputList] target={target.BlockPos} mode={target.TransportMode} graphId={target.PipeGraphId} comp={(comp == null ? "null" : "found")}");
 
                 if (comp == null)
                 {

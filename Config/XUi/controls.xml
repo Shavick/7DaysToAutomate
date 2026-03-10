@@ -34,7 +34,8 @@
 
                 <label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center"/>
 
-                <sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="false" foregroundlayer="true" visible="{isselected}"/>
+                <sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}"/>
+                <sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}"/>
 
             </rect>
         </crafter_input_container_entry>
@@ -49,7 +50,8 @@
 
                 <label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center"/>
 
-                <sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="false" foregroundlayer="true" visible="{isselected}"/>
+                <sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}"/>
+                <sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}"/>
 
             </rect>
         </crafter_output_container_entry>
@@ -65,6 +67,7 @@
                 <label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center"/>
 
                 <sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="false" foregroundlayer="true" visible="{isselected}"/>
+                
 
             </rect>
         </extractor_output_container_entry>

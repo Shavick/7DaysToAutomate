@@ -1,4 +1,4 @@
-﻿namespace _7DaysToAutomate.Classes.Net_Packages
+namespace _7DaysToAutomate.Classes.Net_Packages
 {
     public class NetPackageOpenMachineUi : NetPackage
     {
@@ -92,7 +92,11 @@
 
                 if (te is TileEntityUniversalCrafter crafter)
                 {
+                    // Server-authoritative target discovery before UI open.
+                    crafter.RefreshAvailableInputTargets(_world);
                     crafter.RefreshAvailableOutputTargets(_world);
+                    crafter.ResolveSelectedInputContainer();
+                    crafter.ResolveSelectedOutputContainer();
                     crafter.setModified();
                     crafter.NeedsUiRefresh = true;
                 }

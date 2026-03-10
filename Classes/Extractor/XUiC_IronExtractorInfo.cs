@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 public class XUiC_IronExtractorInfo : XUiController
@@ -43,7 +43,6 @@ public class XUiC_IronExtractorInfo : XUiController
 
     private void UpdateHasStorage()
     {
-        Log.Out("UpdateHasStorage called.");
 
         te = GetExtractor();
         if (te == null)
@@ -214,7 +213,7 @@ public class XUiC_IronExtractorInfo : XUiController
                     string name = itemValue.ItemClass.GetLocalizedItemName() ?? t.Resource;
                     string count = t.MinCount == t.MaxCount ? t.MinCount.ToString() : $"{t.MinCount}-{t.MaxCount}";
                     string speed = $"{t.Speed}s";
-                    sb.AppendLine($"• {count} {name} every {speed}");
+                    sb.AppendLine($"- {count} {name} every {speed}");
                 }
                 value = sb.ToString().Trim();
                 return true;
@@ -227,3 +226,4 @@ public class XUiC_IronExtractorInfo : XUiController
         return false;
     }
 }
+

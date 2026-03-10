@@ -25,10 +25,8 @@
                     <rect pos="0,-300">
                         <label depth="5" pos="0,0" width="450" height="50" text="REQUIREMENTS" justify="center" font_size="40" upper_case="true" color="[limeGreen]" effect="outline" effect_distance="2,2" effect_color="[black]"/>
 
-                        <label depth="6" pos="30,-70" width="400" height="30" text="✓ Valid Output Target" color="[green]" visible="{hasstorage}"/>
-                        <label depth="6" pos="30,-70" width="400" height="30" text="✗ Valid Output Target" color="[red]" visible="{nothasstorage}"/>
-
-                        <label depth="6" pos="30,-120" width="400" height="30" text="• Chunk Must Be Loaded" color="[white]"/>
+                        <label depth="6" pos="30,-70" width="400" height="30" text="Valid Output Target" color="[green]" visible="{hasstorage}"/>
+                        <label depth="6" pos="30,-70" width="400" height="30" text="Valid Output Target" color="[red]" visible="{nothasstorage}"/>
                     </rect>
 
                     <!-- POWER BUTTON -->
@@ -160,17 +158,17 @@
                     <!-- CONTENT -->
                     <panel name="containerPanel" pos="460,-400" width="300" height="150" depth="1">
                         <sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8"/>
-                        <label depth="6" pos="55,-10" text="✓ Nearby Storage" color="[green]" visible="{req_has_nearby_storage}"/>
-                        <label depth="6" pos="55,-10" text="✗ Nearby Storage" color="[red]" visible="{req_not_has_nearby_storage}"/>
+                        <label depth="6" pos="55,-10" text="Recipe Selected" color="[green]" visible="{req_recipe_selected}"/>
+                        <label depth="6" pos="55,-10" text="No Recipe Selected" color="[red]" visible="{req_not_recipe_selected}"/>
 
-                        <label depth="6" pos="55,-40" text="✓ Has Ingredients" color="[green]" visible="{req_has_ingredients}"/>
-                        <label depth="6" pos="55,-40" text="✗ Has Ingredients" color="[red]" visible="{req_not_has_ingredients}"/>
+                        <label depth="6" pos="55,-40" text="Has Ingredients" color="[green]" visible="{req_has_ingredients}"/>
+                        <label depth="6" pos="55,-40" text="Has Ingredients" color="[red]" visible="{req_not_has_ingredients}"/>
 
-                        <label depth="6" pos="55,-70" text="✓ Input Container" color="[green]" visible="{input_chest_selected}"/>
-                        <label depth="6" pos="55,-70" text="✗ Input Container" color="[red]" visible="{input_chest_not_selected}"/>
+                        <label depth="6" pos="55,-70" text="Input Container" color="[green]" visible="{input_chest_selected}"/>
+                        <label depth="6" pos="55,-70" text="Input Container" color="[red]" visible="{input_chest_not_selected}"/>
 
-                        <label depth="6" pos="55,-100" text="✓ Output Container" color="[green]" visible="{output_chest_selected}"/>
-                        <label depth="6" pos="55,-100" text="✗ Output Container" color="[red]" visible="{output_chest_not_selected}"/>
+                        <label depth="6" pos="55,-100" text="Output Container" color="[green]" visible="{output_chest_selected}"/>
+                        <label depth="6" pos="55,-100" text="Output Container" color="[red]" visible="{output_chest_not_selected}"/>
                     </panel>
                 </rect>
 

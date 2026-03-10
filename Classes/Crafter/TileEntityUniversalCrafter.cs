@@ -114,7 +114,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         else
             inputBuffer[itemName] = count;
 
-        DevLog($"RECEIVE BUFFERED INPUT — accepted {count}x {itemName} (total={inputBuffer[itemName]})");
+        DevLog($"RECEIVE BUFFERED INPUT -> accepted {count}x {itemName} (total={inputBuffer[itemName]})");
         setModified();
         return count;
     }
@@ -122,21 +122,21 @@ public class TileEntityUniversalCrafter : TileEntityMachine
     public override IHLRSnapshot BuildHLRSnapshot(WorldBase world)
     {
         DevLog("========================================");
-        DevLog("HLR SNAPSHOT BUILD — BEGIN");
+        DevLog("HLR SNAPSHOT BUILD -> BEGIN");
         DevLog("========================================");
 
-        DevLog($"STATE — MachineGuid={MachineGuid}");
-        DevLog($"STATE — Position={ToWorldPos()}");
-        DevLog($"STATE — SelectedRecipeName='{SelectedRecipeName}'");
-        DevLog($"STATE — isCrafting={isCrafting}");
-        DevLog($"STATE — disabledByPlayer={disabledByPlayer}");
-        DevLog($"STATE — craftStartTime={craftStartTime}");
-        DevLog($"STATE — BaseRecipeDuration={BaseRecipeDuration}");
-        DevLog($"STATE — CraftSpeed={CraftSpeed}");
+        DevLog($"STATE -> MachineGuid={MachineGuid}");
+        DevLog($"STATE -> Position={ToWorldPos()}");
+        DevLog($"STATE -> SelectedRecipeName='{SelectedRecipeName}'");
+        DevLog($"STATE -> isCrafting={isCrafting}");
+        DevLog($"STATE -> disabledByPlayer={disabledByPlayer}");
+        DevLog($"STATE -> craftStartTime={craftStartTime}");
+        DevLog($"STATE -> BaseRecipeDuration={BaseRecipeDuration}");
+        DevLog($"STATE -> CraftSpeed={CraftSpeed}");
 
         if (string.IsNullOrEmpty(SelectedRecipeName))
         {
-            DevLog("ABORT — No recipe selected", DevLogLevel.Warning);
+            DevLog("ABORT -> No recipe selected", DevLogLevel.Warning);
             DevLog("========================================");
             return null;
         }
@@ -144,13 +144,13 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         Recipe recipe = CraftingManager.GetRecipe(SelectedRecipeName);
         if (recipe == null)
         {
-            DevLog($"ABORT — CraftingManager returned NULL for recipe '{SelectedRecipeName}'", DevLogLevel.Error);
+            DevLog($"ABORT -> CraftingManager returned NULL for recipe '{SelectedRecipeName}'", DevLogLevel.Error);
             DevLog("========================================");
             return null;
         }
 
         _recipe = recipe;
-        DevLog($"RECIPE — Resolved '{recipe.GetName()}'");
+        DevLog($"RECIPE -> Resolved '{recipe.GetName()}'");
 
         var snapshot = new CrafterSnapshot
         {
@@ -168,37 +168,37 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             UsedIngredients = new Dictionary<string, int>()
         };
 
-        DevLog("SNAPSHOT — Base fields populated");
+        DevLog("SNAPSHOT -> Base fields populated");
 
         TileEntityComposite input = selectedInputContainer;
 
         if (input == null)
         {
-            DevLog("INPUT — selectedInputContainer is NULL", DevLogLevel.Warning);
+            DevLog("INPUT -> selectedInputContainer is NULL", DevLogLevel.Warning);
         }
         else
         {
-            DevLog($"INPUT — Container at {input.ToWorldPos()}");
+            DevLog($"INPUT -> Container at {input.ToWorldPos()}");
 
             TEFeatureStorage storage = input.GetFeature<TEFeatureStorage>();
             if (storage == null)
             {
-                DevLog("INPUT — TEFeatureStorage is NULL", DevLogLevel.Warning);
+                DevLog("INPUT -> TEFeatureStorage is NULL", DevLogLevel.Warning);
             }
             else if (storage.items == null)
             {
-                DevLog("INPUT — storage.items is NULL", DevLogLevel.Warning);
+                DevLog("INPUT -> storage.items is NULL", DevLogLevel.Warning);
             }
             else
             {
-                DevLog($"INPUT — storage slot count = {storage.items.Length}");
+                DevLog($"INPUT -> storage slot count = {storage.items.Length}");
             }
 
             foreach (var ingredient in recipe.ingredients)
             {
                 if (ingredient.count == 0)
                 {
-                    DevLog($"INGREDIENT SKIP — '{ingredient.itemValue.ItemClass.GetItemName()}' requires 0");
+                    DevLog($"INGREDIENT SKIP -> '{ingredient.itemValue.ItemClass.GetItemName()}' requires 0");
                     continue;
                 }
 
@@ -220,17 +220,17 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 snapshot.IngredientCount[itemName] = total;
 
                 DevLog(
-                    $"INGREDIENT — '{itemName}' " +
+                    $"INGREDIENT -> '{itemName}' " +
                     $"requiredPerCraft={ingredient.count} " +
                     $"availableInInput={total}"
                 );
             }
         }
 
-        DevLog("SNAPSHOT — IngredientCount populated");
+        DevLog("SNAPSHOT -> IngredientCount populated");
 
         DevLog("========================================");
-        DevLog("HLR SNAPSHOT BUILD — COMPLETE");
+        DevLog("HLR SNAPSHOT BUILD -> COMPLETE");
         DevLog("========================================");
 
         return snapshot;
@@ -292,46 +292,46 @@ public class TileEntityUniversalCrafter : TileEntityMachine
     public void ApplyUsedIngredients(Dictionary<string, int> usedIngredients)
     {
         DevLog("========================================");
-        DevLog("APPLY USED INGREDIENTS — ENTER");
+        DevLog("APPLY USED INGREDIENTS -> ENTER");
         DevLog("========================================");
 
         if (usedIngredients == null)
         {
-            DevLog("ABORT — usedIngredients dictionary is NULL", DevLogLevel.Warning);
+            DevLog("ABORT -> usedIngredients dictionary is NULL", DevLogLevel.Warning);
             return;
         }
 
-        DevLog($"STATE — usedIngredients.Count = {usedIngredients.Count}");
+        DevLog($"STATE -> usedIngredients.Count = {usedIngredients.Count}");
 
         if (usedIngredients.Count == 0)
         {
-            DevLog("ABORT — no ingredients to apply");
+            DevLog("ABORT -> no ingredients to apply");
             return;
         }
 
         if (selectedInputContainer == null)
         {
-            DevLog("ABORT — selectedInputContainer is NULL", DevLogLevel.Warning);
+            DevLog("ABORT -> selectedInputContainer is NULL", DevLogLevel.Warning);
             return;
         }
 
         Vector3i inputPos = selectedInputContainer.ToWorldPos();
-        DevLog($"INPUT CONTAINER — position = {inputPos}");
+        DevLog($"INPUT CONTAINER -> position = {inputPos}");
 
         var storage = selectedInputContainer.GetFeature<TEFeatureStorage>();
         if (storage == null)
         {
-            DevLog("ABORT — input container has NO TEFeatureStorage", DevLogLevel.Warning);
+            DevLog("ABORT -> input container has NO TEFeatureStorage", DevLogLevel.Warning);
             return;
         }
 
         if (storage.items == null)
         {
-            DevLog("ABORT — storage.items is NULL", DevLogLevel.Warning);
+            DevLog("ABORT -> storage.items is NULL", DevLogLevel.Warning);
             return;
         }
 
-        DevLog($"STORAGE — slot count = {storage.items.Length}");
+        DevLog($"STORAGE -> slot count = {storage.items.Length}");
         DevLog("----------------------------------------");
 
         foreach (var kvp in usedIngredients)
@@ -339,12 +339,12 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             string itemName = kvp.Key;
             int totalToRemove = kvp.Value;
 
-            DevLog($"INGREDIENT BEGIN — '{itemName}'");
-            DevLog($"TARGET REMOVE — {totalToRemove}");
+            DevLog($"INGREDIENT BEGIN -> '{itemName}'");
+            DevLog($"TARGET REMOVE -> {totalToRemove}");
 
             if (totalToRemove <= 0)
             {
-                DevLog("SKIP — remove amount <= 0");
+                DevLog("SKIP -> remove amount <= 0");
                 DevLog("----------------------------------------");
                 continue;
             }
@@ -359,7 +359,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 }
             }
 
-            DevLog($"CHEST TOTAL BEFORE — {beforeTotal}");
+            DevLog($"CHEST TOTAL BEFORE -> {beforeTotal}");
 
             int remainingToRemove = totalToRemove;
 
@@ -381,13 +381,13 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 remainingToRemove -= remove;
 
                 DevLog(
-                    $"  SLOT {i} — had {stackBefore}, removed {remove}, now {stack.count}, remainingToRemove={remainingToRemove}"
+                    $"  SLOT {i} -> had {stackBefore}, removed {remove}, now {stack.count}, remainingToRemove={remainingToRemove}"
                 );
 
                 if (stack.count <= 0)
                 {
                     storage.items[i] = ItemStack.Empty;
-                    DevLog($"  SLOT {i} — stack emptied");
+                    DevLog($"  SLOT {i} -> stack emptied");
                 }
             }
 
@@ -401,18 +401,18 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 }
             }
 
-            DevLog($"CHEST TOTAL AFTER — {afterTotal}");
+            DevLog($"CHEST TOTAL AFTER -> {afterTotal}");
 
             if (remainingToRemove > 0)
             {
                 DevLog(
-                    $"WARNING — Unable to remove full amount for '{itemName}', missing {remainingToRemove}",
+                    $"WARNING -> Unable to remove full amount for '{itemName}', missing {remainingToRemove}",
                     DevLogLevel.Warning
                 );
             }
             else
             {
-                DevLog($"INGREDIENT COMPLETE — '{itemName}' removal successful");
+                DevLog($"INGREDIENT COMPLETE -> '{itemName}' removal successful");
             }
 
             DevLog("----------------------------------------");
@@ -420,7 +420,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         storage.SetModified();
 
-        DevLog("APPLY USED INGREDIENTS — COMPLETE");
+        DevLog("APPLY USED INGREDIENTS -> COMPLETE");
         DevLog("========================================");
     }
 
@@ -442,7 +442,6 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             return;
 
         availableInputTargets = DiscoverAvailableInputTargets(world);
-        DevLog($"RefreshAvailableInputTargets — count={availableInputTargets?.Count ?? 0}");
     }
 
     private List<InputTargetInfo> DiscoverAvailableInputTargets(WorldBase world)
@@ -510,7 +509,6 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             return;
 
         availableOutputTargets = MachineOutputDiscovery.GetAvailableOutputs(world, 0, ToWorldPos(), 8);
-        DevLog($"RefreshAvailableOutputTargets — count={availableOutputTargets?.Count ?? 0}");
     }
 
     private bool HasValidSelectedOutput(WorldBase world)
@@ -584,7 +582,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (outputs == null || outputs.Count == 0)
         {
-            DevLog("ResolveSelectedOutputIfNeeded — no available outputs found");
+            DevLog("ResolveSelectedOutputIfNeeded -> no available outputs found");
             return changed;
         }
 
@@ -611,7 +609,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (fallbackTarget == null)
         {
-            DevLog("ResolveSelectedOutputIfNeeded — selected pipe output could not be refreshed");
+            DevLog("ResolveSelectedOutputIfNeeded -> selected pipe output could not be refreshed");
             return changed;
         }
 
@@ -619,7 +617,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         {
             SelectedPipeGraphId = fallbackTarget.PipeGraphId;
             changed = true;
-            DevLog($"ResolveSelectedOutputIfNeeded — refreshed pipe graph id to {SelectedPipeGraphId}");
+            DevLog($"ResolveSelectedOutputIfNeeded -> refreshed pipe graph id to {SelectedPipeGraphId}");
         }
 
         return changed;
@@ -629,13 +627,13 @@ public class TileEntityUniversalCrafter : TileEntityMachine
     {
         if (remaining == null || remaining.IsEmpty() || remaining.count <= 0)
         {
-            DevLog("TryAddToSelectedAdjacentStorage ABORT — remaining stack was null/empty");
+            DevLog("TryAddToSelectedAdjacentStorage ABORT -> remaining stack was null/empty");
             return true;
         }
 
         if (SelectedOutputChestPos == Vector3i.zero)
         {
-            DevLog("TryAddToSelectedAdjacentStorage ABORT — no selected output chest");
+            DevLog("TryAddToSelectedAdjacentStorage ABORT -> no selected output chest");
             return false;
         }
 
@@ -645,31 +643,31 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         int manhattan = Math.Abs(delta.x) + Math.Abs(delta.y) + Math.Abs(delta.z);
         if (manhattan != 1)
         {
-            DevLog($"TryAddToSelectedAdjacentStorage ABORT — selected chest at {SelectedOutputChestPos} is not directly adjacent");
+            DevLog($"TryAddToSelectedAdjacentStorage ABORT -> selected chest at {SelectedOutputChestPos} is not directly adjacent");
             return false;
         }
 
         if (!(world.GetTileEntity(0, SelectedOutputChestPos) is TileEntityComposite comp))
         {
-            DevLog($"TryAddToSelectedAdjacentStorage FAIL — no composite TE at {SelectedOutputChestPos}");
+            DevLog($"TryAddToSelectedAdjacentStorage FAIL -> no composite TE at {SelectedOutputChestPos}");
             return false;
         }
 
         TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
         if (storage == null || storage.items == null)
         {
-            DevLog($"TryAddToSelectedAdjacentStorage FAIL — selected chest at {SelectedOutputChestPos} has no storage feature");
+            DevLog($"TryAddToSelectedAdjacentStorage FAIL -> selected chest at {SelectedOutputChestPos} has no storage feature");
             return false;
         }
 
         if (storage.IsUserAccessing())
         {
-            DevLog($"TryAddToSelectedAdjacentStorage WAIT — selected chest at {SelectedOutputChestPos} is currently in use");
+            DevLog($"TryAddToSelectedAdjacentStorage WAIT -> selected chest at {SelectedOutputChestPos} is currently in use");
             return false;
         }
 
         string itemName = remaining.itemValue?.ItemClass?.GetItemName() ?? "unknown";
-        DevLog($"TryAddToSelectedAdjacentStorage BEGIN — {remaining.count}x {itemName} into {SelectedOutputChestPos}");
+        DevLog($"TryAddToSelectedAdjacentStorage BEGIN -> {remaining.count}x {itemName} into {SelectedOutputChestPos}");
 
         bool changed = false;
 
@@ -716,11 +714,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (remaining.count <= 0)
         {
-            DevLog("TryAddToSelectedAdjacentStorage SUCCESS — fully deposited");
+            DevLog("TryAddToSelectedAdjacentStorage SUCCESS -> fully deposited");
             return true;
         }
 
-        DevLog($"TryAddToSelectedAdjacentStorage BLOCKED — selected chest full, {remaining.count} remaining");
+        DevLog($"TryAddToSelectedAdjacentStorage BLOCKED -> selected chest full, {remaining.count} remaining");
         return false;
     }
 
@@ -730,7 +728,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (pendingOutput.Count == 0)
         {
-            DevLog("FLUSH ABORT — No pending output");
+            DevLog("FLUSH ABORT -> No pending output");
             DevLog("========== FLUSH END ==========");
             return;
         }
@@ -740,7 +738,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (SelectedOutputMode == OutputTransportMode.Pipe &&
             !PipeTransportManager.CanDispatch(LastPipeDispatchWorldTime, now))
         {
-            DevLog("FLUSH WAIT — pipe dispatch interval not ready yet");
+            DevLog("FLUSH WAIT -> pipe dispatch interval not ready yet");
             DevLog("========== FLUSH END ==========");
             return;
         }
@@ -754,7 +752,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
             if (pipeJobsAllowedThisPass <= 0)
             {
-                DevLog($"FLUSH PIPE BLOCKED — graph {SelectedPipeGraphId} has no remaining job capacity");
+                DevLog($"FLUSH PIPE BLOCKED -> graph {SelectedPipeGraphId} has no remaining job capacity");
                 DevLog("========== FLUSH END ==========");
                 return;
             }
@@ -764,7 +762,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         {
             if (SelectedOutputChestPos == Vector3i.zero || SelectedPipeGraphId == Guid.Empty)
             {
-                DevLog("FLUSH BLOCKED — pipe output selected but target/graph is invalid");
+                DevLog("FLUSH BLOCKED -> pipe output selected but target/graph is invalid");
                 DevLog("========== FLUSH END ==========");
                 return;
             }
@@ -786,11 +784,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                     if (!pendingOutput.TryGetValue(itemName, out int count))
                         continue;
 
-                    DevLog($"FLUSH ATTEMPT — {count}x {itemName}");
+                    DevLog($"FLUSH ATTEMPT -> {count}x {itemName}");
 
                     if (count <= 0)
                     {
-                        DevLog($"FLUSH CLEANUP — removing zero-count entry '{itemName}'");
+                        DevLog($"FLUSH CLEANUP -> removing zero-count entry '{itemName}'");
                         pendingOutput.Remove(itemName);
                         continue;
                     }
@@ -798,7 +796,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                     ItemValue itemValue = ItemClass.GetItem(itemName, false);
                     if (itemValue == null || itemValue.type == ItemValue.None.type)
                     {
-                        DevLog($"FLUSH FAILED — invalid item '{itemName}', removing");
+                        DevLog($"FLUSH FAILED -> invalid item '{itemName}', removing");
                         pendingOutput.Remove(itemName);
                         continue;
                     }
@@ -823,17 +821,17 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                         dispatchedAnyThisCycle = true;
                         pendingOutputRoundRobinIndex = index + 1;
 
-                        DevLog($"FLUSH PIPE SUCCESS — queued job {job.JobId} for {acceptedAmount}x {itemName} routeLen={job.RoutePipePositions.Count}");
+                        DevLog($"FLUSH PIPE SUCCESS -> queued job {job.JobId} for {acceptedAmount}x {itemName} routeLen={job.RoutePipePositions.Count}");
                     }
                     else
                     {
-                        DevLog($"FLUSH PIPE BLOCKED — could not create transport job for {count}x {itemName}");
+                        DevLog($"FLUSH PIPE BLOCKED -> could not create transport job for {count}x {itemName}");
                     }
                 }
 
                 if (!dispatchedAnyThisCycle)
                 {
-                    DevLog("FLUSH PIPE STOP — no dispatches succeeded this cycle");
+                    DevLog("FLUSH PIPE STOP -> no dispatches succeeded this cycle");
                     break;
                 }
             }
@@ -841,7 +839,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             if (pipeJobsDispatchedThisPass > 0)
             {
                 LastPipeDispatchWorldTime = now;
-                DevLog($"FLUSH PIPE PASS COMPLETE — dispatched {pipeJobsDispatchedThisPass}/{pipeJobsAllowedThisPass} jobs this pass");
+                DevLog($"FLUSH PIPE PASS COMPLETE -> dispatched {pipeJobsDispatchedThisPass}/{pipeJobsAllowedThisPass} jobs this pass");
             }
 
             DevLog("========== FLUSH END ==========");
@@ -853,11 +851,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             string itemName = kvp.Key;
             int count = kvp.Value;
 
-            DevLog($"FLUSH ATTEMPT — {count}x {itemName}");
+            DevLog($"FLUSH ATTEMPT -> {count}x {itemName}");
 
             if (count <= 0)
             {
-                DevLog($"FLUSH CLEANUP — removing zero-count entry '{itemName}'");
+                DevLog($"FLUSH CLEANUP -> removing zero-count entry '{itemName}'");
                 pendingOutput.Remove(itemName);
                 continue;
             }
@@ -865,14 +863,14 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             ItemValue itemValue = ItemClass.GetItem(itemName, false);
             if (itemValue == null || itemValue.type == ItemValue.None.type)
             {
-                DevLog($"FLUSH FAILED — invalid item '{itemName}', removing");
+                DevLog($"FLUSH FAILED -> invalid item '{itemName}', removing");
                 pendingOutput.Remove(itemName);
                 continue;
             }
 
             if (SelectedOutputChestPos == Vector3i.zero)
             {
-                DevLog("FLUSH BLOCKED — adjacent output selected but no chest is selected");
+                DevLog("FLUSH BLOCKED -> adjacent output selected but no chest is selected");
                 break;
             }
 
@@ -882,11 +880,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             if (success)
             {
                 pendingOutput.Remove(itemName);
-                DevLog($"FLUSH ADJACENT SUCCESS — deposited {count}x {itemName} into selected chest");
+                DevLog($"FLUSH ADJACENT SUCCESS -> deposited {count}x {itemName} into selected chest");
             }
             else
             {
-                DevLog($"FLUSH ADJACENT BLOCKED — selected chest could not accept {count}x {itemName}");
+                DevLog($"FLUSH ADJACENT BLOCKED -> selected chest could not accept {count}x {itemName}");
                 break;
             }
         }
@@ -903,14 +901,23 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         bool resolvedOutput = ResolveSelectedOutputIfNeeded(world);
         if (resolvedOutput)
-            DevLog("UpdateTick — selected output runtime state refreshed");
+            DevLog("UpdateTick -> selected output runtime state refreshed");
 
         RefreshAvailableInputTargets(world);
         RefreshAvailableOutputTargets(world);
 
+        if (SelectedInputChestPos != Vector3i.zero)
+            TryResolveInputPipeGraphFromSelectedChest(world);
+
+        reqHasNearbyStorage =
+            SelectedInputChestPos != Vector3i.zero ||
+            SelectedOutputChestPos != Vector3i.zero ||
+            (availableInputTargets != null && availableInputTargets.Count > 0) ||
+            (availableOutputTargets != null && availableOutputTargets.Count > 0);
+
         if (pendingOutput.Count > 0)
         {
-            DevLog($"UPDATE — PendingOutput detected ({pendingOutput.Count}), attempting flush");
+            DevLog($"UPDATE -> PendingOutput detected ({pendingOutput.Count}), attempting flush");
             FlushPendingOutput(world);
         }
 
@@ -919,7 +926,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             Recipe pendingRecipe = CraftingManager.GetRecipe(PendingSelectedRecipeName);
             if (pendingRecipe == null)
             {
-                DevLog($"APPLY QUEUED RECIPE FAILED — '{PendingSelectedRecipeName}' not found", DevLogLevel.Warning);
+                DevLog($"APPLY QUEUED RECIPE FAILED -> '{PendingSelectedRecipeName}' not found", DevLogLevel.Warning);
                 PendingSelectedRecipeName = "";
                 PendingSelectedRecipeDuration = 0f;
             }
@@ -929,7 +936,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 _recipe = pendingRecipe;
                 BaseRecipeDuration = PendingSelectedRecipeDuration > 0f ? PendingSelectedRecipeDuration : 10f;
 
-                DevLog($"APPLY QUEUED RECIPE — '{PendingSelectedRecipeName}'");
+                DevLog($"APPLY QUEUED RECIPE -> '{PendingSelectedRecipeName}'");
 
                 PendingSelectedRecipeName = "";
                 PendingSelectedRecipeDuration = 0f;
@@ -944,7 +951,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         {
             if (isCrafting || isWaitingForIngredients)
             {
-                DevLog("UPDATE — disabled, clearing runtime craft state");
+                DevLog("UPDATE -> disabled, clearing runtime craft state");
                 isCrafting = false;
                 isWaitingForIngredients = false;
                 setModified();
@@ -961,7 +968,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             Recipe activeRecipe = GetActiveRecipe();
             if (activeRecipe == null)
             {
-                DevLog("CRAFT STOP — Active recipe is null", DevLogLevel.Warning);
+                DevLog("CRAFT STOP -> Active recipe is null", DevLogLevel.Warning);
                 ResetCraftRuntimeState(false);
                 disabledByPlayer = true;
                 setModified();
@@ -971,7 +978,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
             if (!HasBufferedIngredientsForNextCraft())
             {
-                DevLog("CRAFT PAUSED — Buffered ingredients missing", DevLogLevel.Warning);
+                DevLog("CRAFT PAUSED -> Buffered ingredients missing", DevLogLevel.Warning);
                 isCrafting = false;
                 isWaitingForIngredients = true;
                 setModified();
@@ -988,7 +995,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             int craftsToRun = Mathf.FloorToInt(secondsPassed / actualDuration);
 
             DevLog(
-                $"CRAFT TICK — elapsed={secondsPassed:0.000}s " +
+                $"CRAFT TICK -> elapsed={secondsPassed:0.000}s " +
                 $"duration={actualDuration:0.000}s " +
                 $"speed={speed:0.00} " +
                 $"cycles={craftsToRun}"
@@ -1002,13 +1009,13 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 {
                     if (!ValidateCraftStart(activeRecipe))
                     {
-                        DevLog($"CRAFT STOP — Validation failed at cycle {i}", DevLogLevel.Warning);
+                        DevLog($"CRAFT STOP -> Validation failed at cycle {i}", DevLogLevel.Warning);
                         break;
                     }
 
                     if (!ConsumeIngredients(activeRecipe))
                     {
-                        DevLog($"CRAFT STOP — Ingredient consumption failed at cycle {i}", DevLogLevel.Warning);
+                        DevLog($"CRAFT STOP -> Ingredient consumption failed at cycle {i}", DevLogLevel.Warning);
                         break;
                     }
 
@@ -1018,11 +1025,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                     );
 
                     completed++;
-                    DevLog($"CRAFT OK — Cycle {i + 1}/{craftsToRun}");
+                    DevLog($"CRAFT OK -> Cycle {i + 1}/{craftsToRun}");
                 }
 
                 craftStartTime += (ulong)(completed * actualDuration * 20f);
-                DevLog($"CRAFT ADVANCE — completed={completed} newStartTime={craftStartTime}");
+                DevLog($"CRAFT ADVANCE -> completed={completed} newStartTime={craftStartTime}");
             }
         }
 
@@ -1034,7 +1041,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 {
                     StartCraft();
                     isWaitingForIngredients = false;
-                    DevLog("UPDATE — craft started from buffered ingredients");
+                    DevLog("UPDATE -> craft started from buffered ingredients");
                 }
             }
             else
@@ -1043,7 +1050,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
                 if (IsInputBufferEmpty() && !HasValidUpstreamInputSource(world))
                 {
-                    DevLog("UPDATE — no buffered ingredients and no valid upstream input source, disabling");
+                    DevLog("UPDATE -> no buffered ingredients and no valid upstream input source, disabling");
                     disabledByPlayer = true;
                     isWaitingForIngredients = false;
                     setModified();
@@ -1078,13 +1085,13 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (_recipe == null)
         {
-            DevLog("GET NEEDED INPUT ITEM NAMES — ABORT (_recipe is null)", DevLogLevel.Warning);
+            DevLog("GET NEEDED INPUT ITEM NAMES -> ABORT (_recipe is null)", DevLogLevel.Warning);
             return needed;
         }
 
         if (_recipe.ingredients == null || _recipe.ingredients.Count == 0)
         {
-            DevLog("GET NEEDED INPUT ITEM NAMES — ABORT (recipe has no ingredients)", DevLogLevel.Warning);
+            DevLog("GET NEEDED INPUT ITEM NAMES -> ABORT (recipe has no ingredients)", DevLogLevel.Warning);
             return needed;
         }
 
@@ -1106,9 +1113,9 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 needed.Add(itemName);
         }
 
-        DevLog($"GET NEEDED INPUT ITEM NAMES — count={needed.Count}");
+        DevLog($"GET NEEDED INPUT ITEM NAMES -> count={needed.Count}");
         foreach (string itemName in needed)
-            DevLog($"GET NEEDED INPUT ITEM NAMES — needs '{itemName}'");
+            DevLog($"GET NEEDED INPUT ITEM NAMES -> needs '{itemName}'");
 
         return needed;
     }
@@ -1117,13 +1124,13 @@ public class TileEntityUniversalCrafter : TileEntityMachine
     {
         if (world == null)
         {
-            DevLog("CAN REQUEST INPUTS — FALSE (world is null)", DevLogLevel.Warning);
+            DevLog("CAN REQUEST INPUTS -> FALSE (world is null)", DevLogLevel.Warning);
             return false;
         }
 
         if (disabledByPlayer)
         {
-            DevLog("CAN REQUEST INPUTS — FALSE (disabled by player)");
+            DevLog("CAN REQUEST INPUTS -> FALSE (disabled by player)");
             return false;
         }
 
@@ -1131,29 +1138,29 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (_recipe == null)
         {
-            DevLog("CAN REQUEST INPUTS — FALSE (_recipe is null)", DevLogLevel.Warning);
+            DevLog("CAN REQUEST INPUTS -> FALSE (_recipe is null)", DevLogLevel.Warning);
             return false;
         }
 
         if (_recipe.ingredients == null || _recipe.ingredients.Count == 0)
         {
-            DevLog("CAN REQUEST INPUTS — FALSE (recipe has no ingredients)", DevLogLevel.Warning);
+            DevLog("CAN REQUEST INPUTS -> FALSE (recipe has no ingredients)", DevLogLevel.Warning);
             return false;
         }
 
         if (HasBufferedIngredientsForNextCraft())
         {
-            DevLog("CAN REQUEST INPUTS — FALSE (buffer already satisfies next craft)");
+            DevLog("CAN REQUEST INPUTS -> FALSE (buffer already satisfies next craft)");
             return false;
         }
 
         if (!HasValidUpstreamInputSource(world))
         {
-            DevLog("CAN REQUEST INPUTS — FALSE (no valid upstream input source)");
+            DevLog("CAN REQUEST INPUTS -> FALSE (no valid upstream input source)");
             return false;
         }
 
-        DevLog("CAN REQUEST INPUTS — TRUE");
+        DevLog("CAN REQUEST INPUTS -> TRUE");
         return true;
     }
 
@@ -1169,21 +1176,21 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (SelectedInputChestPos == Vector3i.zero)
         {
-            DevLog("TRY REQUEST INPUTS — ABORT (no selected input chest)", DevLogLevel.Warning);
+            DevLog("TRY REQUEST INPUTS -> ABORT (no selected input chest)", DevLogLevel.Warning);
             return;
         }
 
         if (SelectedInputPipeGraphId == Guid.Empty &&
             !TryResolveInputPipeGraphFromSelectedChest(world))
         {
-            DevLog("TRY REQUEST INPUTS — ABORT (no selected input pipe graph)", DevLogLevel.Warning);
+            DevLog("TRY REQUEST INPUTS -> ABORT (no selected input pipe graph)", DevLogLevel.Warning);
             return;
         }
 
         HashSet<string> neededItemNames = GetNeededInputItemNames();
         if (neededItemNames == null || neededItemNames.Count == 0)
         {
-            DevLog("TRY REQUEST INPUTS — ABORT (no needed item names)");
+            DevLog("TRY REQUEST INPUTS -> ABORT (no needed item names)");
             return;
         }
 
@@ -1196,7 +1203,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             neededItemNames
         );
 
-        DevLog($"TRY REQUEST INPUTS — requested={requested} neededTypes={neededItemNames.Count}");
+        DevLog($"TRY REQUEST INPUTS -> requested={requested} neededTypes={neededItemNames.Count}");
     }
 
     private void UpdateBlockState()
@@ -1209,8 +1216,14 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (world == null || SelectedInputChestPos == Vector3i.zero)
             return false;
 
-        if (SelectedInputPipeGraphId != Guid.Empty)
+        if (SelectedInputPipeGraphId != Guid.Empty &&
+            PipeGraphManager.TryGetGraph(SelectedInputPipeGraphId, out PipeGraphData existingGraph) &&
+            existingGraph != null &&
+            existingGraph.StorageEndpoints != null &&
+            existingGraph.StorageEndpoints.Contains(SelectedInputChestPos))
+        {
             return true;
+        }
 
         RefreshAvailableInputTargets(world);
 
@@ -1223,7 +1236,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         for (int i = 0; i < availableInputTargets.Count; i++)
         {
             InputTargetInfo target = availableInputTargets[i];
-            if (target == null || target.BlockPos != SelectedInputChestPos)
+            if (target == null || target.BlockPos != SelectedInputChestPos || target.PipeGraphId == Guid.Empty)
                 continue;
 
             if (resolved == Guid.Empty)
@@ -1242,9 +1255,13 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (hasConflict || resolved == Guid.Empty)
             return false;
 
-        SelectedInputPipeGraphId = resolved;
-        MarkCrafterDirty();
-        DevLog($"Resolved SelectedInputPipeGraphId from selected chest: {SelectedInputPipeGraphId}");
+        if (SelectedInputPipeGraphId != resolved)
+        {
+            SelectedInputPipeGraphId = resolved;
+            MarkCrafterDirty();
+            DevLog($"Re-resolved SelectedInputPipeGraphId from selected chest: {SelectedInputPipeGraphId}");
+        }
+
         return true;
     }
 
@@ -1303,7 +1320,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         isWaitingForIngredients = false;
         craftStartTime = world.worldTime;
 
-        DevLog($"START CRAFT — SelectedRecipe='{SelectedRecipeName}' ActiveRecipe='{ActiveCraftRecipeName}'");
+        DevLog($"START CRAFT -> SelectedRecipe='{SelectedRecipeName}' ActiveRecipe='{ActiveCraftRecipeName}'");
 
         base.setModified();
     }
@@ -1641,7 +1658,6 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (string.IsNullOrEmpty(SelectedRecipeName))
         {
             _recipe = null;
-            DevLog("RESOLVE RECIPE — ABORT (SelectedRecipeName is empty)", DevLogLevel.Warning);
             return;
         }
 
@@ -1653,12 +1669,10 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (resolved == null)
         {
             _recipe = null;
-            DevLog($"RESOLVE RECIPE — FAILED (CraftingManager returned NULL for '{SelectedRecipeName}')", DevLogLevel.Warning);
             return;
         }
 
         _recipe = resolved;
-        DevLog($"RESOLVE RECIPE — SUCCESS '{_recipe.GetName()}'");
     }
 
     public Dictionary<string, int> GetMissingIngredientsForNextCraft()
@@ -1669,13 +1683,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (_recipe == null)
         {
-            DevLog("GET MISSING INGREDIENTS — ABORT (_recipe is null)", DevLogLevel.Warning);
             return missing;
         }
 
         if (_recipe.ingredients == null || _recipe.ingredients.Count == 0)
         {
-            DevLog("GET MISSING INGREDIENTS — ABORT (recipe has no ingredients)", DevLogLevel.Warning);
             return missing;
         }
 
@@ -1699,10 +1711,6 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 missing[itemName] = missingCount;
         }
 
-        DevLog($"GET MISSING INGREDIENTS — missingCount={missing.Count}");
-        foreach (var kvp in missing)
-            DevLog($"GET MISSING INGREDIENTS — {kvp.Key} missing={kvp.Value}");
-
         return missing;
     }
 
@@ -1712,13 +1720,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (_recipe == null)
         {
-            DevLog("HAS BUFFERED INGREDIENTS — FALSE (_recipe is null)", DevLogLevel.Warning);
             return false;
         }
 
         if (_recipe.ingredients == null || _recipe.ingredients.Count == 0)
         {
-            DevLog("HAS BUFFERED INGREDIENTS — FALSE (recipe has no ingredients)", DevLogLevel.Warning);
             return false;
         }
 
@@ -1738,12 +1744,10 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             int buffered = GetBufferedItemCount(itemName);
             if (buffered < required)
             {
-                DevLog($"HAS BUFFERED INGREDIENTS — FALSE ({itemName} buffered={buffered} required={required})");
                 return false;
             }
         }
 
-        DevLog("HAS BUFFERED INGREDIENTS — TRUE");
         return true;
     }
 
@@ -1753,19 +1757,19 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (_recipe == null)
         {
-            DevLog("CONSUME BUFFERED INGREDIENTS — FALSE (_recipe is null)", DevLogLevel.Warning);
+            DevLog("CONSUME BUFFERED INGREDIENTS -> FALSE (_recipe is null)", DevLogLevel.Warning);
             return false;
         }
 
         if (_recipe.ingredients == null || _recipe.ingredients.Count == 0)
         {
-            DevLog("CONSUME BUFFERED INGREDIENTS — FALSE (recipe has no ingredients)", DevLogLevel.Warning);
+            DevLog("CONSUME BUFFERED INGREDIENTS -> FALSE (recipe has no ingredients)", DevLogLevel.Warning);
             return false;
         }
 
         if (!HasBufferedIngredientsForNextCraft())
         {
-            DevLog("CONSUME BUFFERED INGREDIENTS — FALSE (insufficient buffered ingredients)");
+            DevLog("CONSUME BUFFERED INGREDIENTS -> FALSE (insufficient buffered ingredients)");
             return false;
         }
 
@@ -1784,7 +1788,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
             if (!inputBuffer.TryGetValue(itemName, out int buffered))
             {
-                DevLog($"CONSUME BUFFERED INGREDIENTS — FALSE ({itemName} missing from buffer)", DevLogLevel.Warning);
+                DevLog($"CONSUME BUFFERED INGREDIENTS -> FALSE ({itemName} missing from buffer)", DevLogLevel.Warning);
                 return false;
             }
 
@@ -1792,12 +1796,12 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             if (newCount > 0)
             {
                 inputBuffer[itemName] = newCount;
-                DevLog($"CONSUME BUFFERED INGREDIENTS — {itemName} consumed={required} remaining={newCount}");
+                DevLog($"CONSUME BUFFERED INGREDIENTS -> {itemName} consumed={required} remaining={newCount}");
             }
             else
             {
                 inputBuffer.Remove(itemName);
-                DevLog($"CONSUME BUFFERED INGREDIENTS — {itemName} consumed={required} removed from buffer");
+                DevLog($"CONSUME BUFFERED INGREDIENTS -> {itemName} consumed={required} removed from buffer");
             }
         }
 
@@ -1851,7 +1855,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (!changed)
         {
-            DevLog($"SERVER SELECT RECIPE — same recipe '{recipeName}', no change");
+            DevLog($"SERVER SELECT RECIPE -> same recipe '{recipeName}', no change");
             return true;
         }
 
@@ -1863,7 +1867,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             PendingSelectedRecipeName = recipeName;
             PendingSelectedRecipeDuration = recipe.craftingTime > 0f ? recipe.craftingTime : 10f;
 
-            DevLog($"SERVER SELECT RECIPE — queued '{recipeName}' until pending output is flushed");
+            DevLog($"SERVER SELECT RECIPE -> queued '{recipeName}' until pending output is flushed");
             MarkCrafterDirty();
             return true;
         }
@@ -1872,7 +1876,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         _recipe = recipe;
         BaseRecipeDuration = recipe.craftingTime > 0f ? recipe.craftingTime : 10f;
 
-        DevLog($"SERVER SELECT RECIPE — applied '{recipeName}' immediately");
+        DevLog($"SERVER SELECT RECIPE -> applied '{recipeName}' immediately");
         MarkCrafterDirty();
         return true;
     }
@@ -1903,11 +1907,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             {
                 ResetCraftRuntimeState(false);
                 disabledByPlayer = true;
-                DevLog("SERVER SELECT INPUT — cleared (changed, crafter disabled)");
+                DevLog("SERVER SELECT INPUT -> cleared (changed, crafter disabled)");
             }
             else
             {
-                DevLog("SERVER SELECT INPUT — cleared (no change)");
+                DevLog("SERVER SELECT INPUT -> cleared (no change)");
             }
 
             MarkCrafterDirty();
@@ -1964,11 +1968,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         {
             ResetCraftRuntimeState(false);
             disabledByPlayer = true;
-            DevLog($"SERVER SELECT INPUT — {chestPos} pipeGraphId={parsedPipeGraphId} (changed, crafter disabled)");
+            DevLog($"SERVER SELECT INPUT -> {chestPos} pipeGraphId={parsedPipeGraphId} (changed, crafter disabled)");
         }
         else
         {
-            DevLog($"SERVER SELECT INPUT — {chestPos} pipeGraphId={parsedPipeGraphId} (same selection, crafting state preserved)");
+            DevLog($"SERVER SELECT INPUT -> {chestPos} pipeGraphId={parsedPipeGraphId} (same selection, crafting state preserved)");
         }
 
         MarkCrafterDirty();
@@ -2003,11 +2007,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             {
                 ResetCraftRuntimeState(false);
                 disabledByPlayer = true;
-                DevLog("SERVER SELECT OUTPUT — cleared (changed, crafter disabled)");
+                DevLog("SERVER SELECT OUTPUT -> cleared (changed, crafter disabled)");
             }
             else
             {
-                DevLog("SERVER SELECT OUTPUT — cleared (no change)");
+                DevLog("SERVER SELECT OUTPUT -> cleared (no change)");
             }
 
             MarkCrafterDirty();
@@ -2067,11 +2071,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         {
             ResetCraftRuntimeState(false);
             disabledByPlayer = true;
-            DevLog($"SERVER SELECT OUTPUT — {chestPos} mode={mode} pipeGraphId={parsedPipeGraphId} (changed, crafter disabled)");
+            DevLog($"SERVER SELECT OUTPUT -> {chestPos} mode={mode} pipeGraphId={parsedPipeGraphId} (changed, crafter disabled)");
         }
         else
         {
-            DevLog($"SERVER SELECT OUTPUT — {chestPos} mode={mode} pipeGraphId={parsedPipeGraphId} (same selection, crafting state preserved)");
+            DevLog($"SERVER SELECT OUTPUT -> {chestPos} mode={mode} pipeGraphId={parsedPipeGraphId} (same selection, crafting state preserved)");
         }
 
         MarkCrafterDirty();
@@ -2096,7 +2100,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             isCrafting = false;
             isWaitingForIngredients = false;
 
-            DevLog("SERVER SET ENABLED — disabled");
+            DevLog("SERVER SET ENABLED -> disabled");
             MarkCrafterDirty();
             return true;
         }
@@ -2109,13 +2113,13 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             isWaitingForIngredients = true;
             craftStartTime = GameManager.Instance.World.worldTime;
 
-            DevLog("SERVER SET ENABLED — enabled, waiting for valid craft start");
+            DevLog("SERVER SET ENABLED -> enabled, waiting for valid craft start");
             MarkCrafterDirty();
             return true;
         }
 
         StartCraft();
-        DevLog("SERVER SET ENABLED — enabled, craft started");
+        DevLog("SERVER SET ENABLED -> enabled, craft started");
         return true;
     }
 
@@ -2131,17 +2135,55 @@ public class TileEntityUniversalCrafter : TileEntityMachine
     {
         base.write(_bw, mode);
 
-        const int VERSION = 8;
+        const int VERSION = 9;
 
         if (IsDevLogging)
         {
             Log.Out("========================================");
-            Log.Out($"[Crafter][WRITE] BEGIN — mode={mode}");
+            Log.Out($"[Crafter][WRITE] BEGIN -> mode={mode}");
             Log.Out("========================================");
         }
 
         _bw.Write(VERSION);
-        _bw.Write((int)0);
+
+        var inputTargetsToSync = new List<InputTargetInfo>(availableInputTargets ?? new List<InputTargetInfo>());
+        if (SelectedInputChestPos != Vector3i.zero)
+        {
+            bool hasSelectedInput = false;
+            for (int i = 0; i < inputTargetsToSync.Count; i++)
+            {
+                InputTargetInfo target = inputTargetsToSync[i];
+                if (target != null &&
+                    target.BlockPos == SelectedInputChestPos &&
+                    target.PipeGraphId == SelectedInputPipeGraphId)
+                {
+                    hasSelectedInput = true;
+                    break;
+                }
+            }
+
+            if (!hasSelectedInput)
+                inputTargetsToSync.Add(new InputTargetInfo(SelectedInputChestPos, SelectedInputPipeGraphId));
+        }
+
+        _bw.Write(inputTargetsToSync.Count);
+        for (int i = 0; i < inputTargetsToSync.Count; i++)
+        {
+            InputTargetInfo target = inputTargetsToSync[i];
+            if (target == null)
+            {
+                _bw.Write(0);
+                _bw.Write(0);
+                _bw.Write(0);
+                _bw.Write(Guid.Empty.ToString());
+                continue;
+            }
+
+            _bw.Write(target.BlockPos.x);
+            _bw.Write(target.BlockPos.y);
+            _bw.Write(target.BlockPos.z);
+            _bw.Write(target.PipeGraphId.ToString());
+        }
 
         _bw.Write(SelectedRecipeName ?? "");
 
@@ -2192,6 +2234,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             Log.Out($"[Crafter][WRITE] SelectedRecipeName='{SelectedRecipeName}'");
             Log.Out($"[Crafter][WRITE] InputChestPos={SelectedInputChestPos}");
             Log.Out($"[Crafter][WRITE] SelectedInputPipeGraphId={SelectedInputPipeGraphId}");
+            Log.Out($"[Crafter][WRITE] availableInputTargets={inputTargetsToSync.Count}");
             Log.Out($"[Crafter][WRITE] OutputChestPos={SelectedOutputChestPos}");
             Log.Out($"[Crafter][WRITE] SelectedOutputMode={SelectedOutputMode}");
             Log.Out($"[Crafter][WRITE] SelectedPipeGraphId={SelectedPipeGraphId}");
@@ -2215,7 +2258,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (IsDevLogging)
         {
             Log.Out("========================================");
-            Log.Out($"[Crafter][READ] BEGIN — mode={mode}");
+            Log.Out($"[Crafter][READ] BEGIN -> mode={mode}");
             Log.Out("========================================");
         }
 
@@ -2223,7 +2266,30 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         int count = _br.ReadInt32();
 
         if (IsDevLogging)
-            Log.Out($"[Crafter][READ] Header — version={version} count={count}");
+            Log.Out($"[Crafter][READ] Header -> version={version} count={count}");
+
+        if (version >= 9)
+        {
+            availableInputTargets = new List<InputTargetInfo>(count);
+
+            for (int i = 0; i < count; i++)
+            {
+                int tx = _br.ReadInt32();
+                int ty = _br.ReadInt32();
+                int tz = _br.ReadInt32();
+
+                string syncedInputPipeGraphId = _br.ReadString();
+                Guid parsedInputGraphId;
+                if (!Guid.TryParse(syncedInputPipeGraphId, out parsedInputGraphId))
+                    parsedInputGraphId = Guid.Empty;
+
+                availableInputTargets.Add(new InputTargetInfo(new Vector3i(tx, ty, tz), parsedInputGraphId));
+            }
+        }
+        else
+        {
+            availableInputTargets = new List<InputTargetInfo>();
+        }
 
         SelectedRecipeName = _br.ReadString();
 
@@ -2351,6 +2417,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             Log.Out($"[Crafter][READ] Recipe='{SelectedRecipeName}'");
             Log.Out($"[Crafter][READ] InputChestPos={SelectedInputChestPos}");
             Log.Out($"[Crafter][READ] SelectedInputPipeGraphId={SelectedInputPipeGraphId}");
+            Log.Out($"[Crafter][READ] availableInputTargets={availableInputTargets?.Count ?? 0}");
             Log.Out($"[Crafter][READ] OutputChestPos={SelectedOutputChestPos}");
             Log.Out($"[Crafter][READ] SelectedOutputMode={SelectedOutputMode}");
             Log.Out($"[Crafter][READ] SelectedPipeGraphId={SelectedPipeGraphId}");

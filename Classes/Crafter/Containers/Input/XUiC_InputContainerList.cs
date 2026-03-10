@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 public class XUiC_InputContainerList : XUiController
@@ -73,7 +73,6 @@ public class XUiC_InputContainerList : XUiController
 
         if (te == null)
         {
-            Log.Error("[Crafter][InputList] Update: TE is NULL");
             IsDirty = false;
             return;
         }
@@ -81,19 +80,15 @@ public class XUiC_InputContainerList : XUiController
         World world = GameManager.Instance.World;
         if (world == null)
         {
-            Log.Error("[Crafter][InputList] Update: world is NULL");
             IsDirty = false;
             return;
         }
 
         List<InputTargetInfo> list = te.GetAvailableInputTargets(world);
-        int inputCount = list?.Count ?? -1;
 
-        Log.Out($"[Crafter][InputList] Update: inputTargets={inputCount} slots={entries.Length}");
 
         if (list == null || list.Count == 0)
         {
-            Log.Warning("[Crafter][InputList] Update: No input targets, clearing all slots");
 
             for (int i = 0; i < entries.Length; i++)
             {
@@ -117,7 +112,6 @@ public class XUiC_InputContainerList : XUiController
                 InputTargetInfo target = list[i];
                 TileEntityComposite comp = world.GetTileEntity(0, target.BlockPos) as TileEntityComposite;
 
-                Log.Out($"[Crafter][InputList] Slot {i}: targetPos={target.BlockPos} graph={target.PipeGraphId} te={(comp != null ? "OK" : "NULL")}");
 
                 entries[i].SetContainer(comp, target.BlockPos, target.PipeGraphId);
                 entries[i].ViewComponent.Enabled = true;
@@ -134,11 +128,9 @@ public class XUiC_InputContainerList : XUiController
                 if (isSelected)
                     SelectedEntry = entries[i];
 
-                Log.Out($"[Crafter][InputList] Slot {i}: entryPos={target.BlockPos} selectedPos={te.SelectedInputChestPos} entryGraph={target.PipeGraphId} selectedGraph={te.SelectedInputPipeGraphId} IsSelected={entries[i].IsSelected}");
             }
             else
             {
-                Log.Out($"[Crafter][InputList] Slot {i}: cleared (no container)");
                 entries[i].SetContainer(null, Vector3i.zero, Guid.Empty);
                 entries[i].SetSelected(false);
                 entries[i].ViewComponent.Enabled = false;

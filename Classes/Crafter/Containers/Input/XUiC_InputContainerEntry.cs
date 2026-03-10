@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 public class XUiC_InputContainerEntry : XUiController
@@ -154,6 +154,12 @@ public class XUiC_InputContainerEntry : XUiController
         if (bindingName == "isselected")
         {
             value = IsSelected ? "true" : "false";
+            return true;
+        }
+
+        if (bindingName == "backgroundcolor")
+        {
+            value = IsSelected ? "0,255,170,110" : "255,255,255,0";
             return true;
         }
 
