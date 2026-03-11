@@ -1,4 +1,4 @@
-﻿<configs>
+<configs>
     <append xpath="/blocks">
         <!-- Universal Extractor - Iron T1 -->
         <block name="universalIronExtractort1">
@@ -336,6 +336,91 @@
             <property name="PipeLatency" value="100"/>
             <property name="DevLogs" value="true"/>
         </block>
+
+        <block name="liquidPipe">
+            <property name="Class" value="LiquidPipeBlock, 7DaysToAutomate"/>
+            <property name="Material" value="Mmetal_hard"/>
+            <property name="Shape" value="ModelEntity"/>
+            <property name="Model" value="@:Entities/Industrial/pipeSmall_1x1Prefab.prefab"/>
+            <property name="Place" value="TowardsPlacer"/>
+            <property name="OnlySimpleRotations" value="false"/>
+            <property name="MaxDamage" value="550"/>
+            <property name="CustomIcon" value="pipeSmall1x1"/>
+            <property name="CustomIconTint" value="2B7A78"/>
+            <property name="Stacknumber" value="100"/>
+            <property name="EconomicValue" value="30"/>
+            <property name="DescriptionKey" value="liquidPipeDesc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="FluidPipeCapacityGps" value="250"/>
+        </block>
+
+        <block name="liquidPipeElbow">
+            <property name="Class" value="LiquidPipeBlock, 7DaysToAutomate"/>
+            <property name="Material" value="Mmetal_hard"/>
+            <property name="Shape" value="ModelEntity"/>
+            <property name="Model" value="@:Entities/Industrial/pipeSmallCornerPrefab.prefab"/>
+            <property name="Place" value="TowardsPlacer"/>
+            <property name="OnlySimpleRotations" value="false"/>
+            <property name="MaxDamage" value="550"/>
+            <property name="CustomIcon" value="pipeSmallCorner"/>
+            <property name="CustomIconTint" value="2B7A78"/>
+            <property name="Stacknumber" value="100"/>
+            <property name="EconomicValue" value="30"/>
+            <property name="DescriptionKey" value="liquidPipeElbowDesc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="FluidPipeCapacityGps" value="250"/>
+        </block>
+
+        <block name="liquidPipeSmallJoint">
+            <property name="Class" value="LiquidPipeBlock, 7DaysToAutomate"/>
+            <property name="Material" value="Mmetal_hard"/>
+            <property name="Shape" value="ModelEntity"/>
+            <property name="Model" value="@:Entities/Industrial/pipeSmallJointPrefab.prefab"/>
+            <property name="Place" value="TowardsPlacer"/>
+            <property name="OnlySimpleRotations" value="false"/>
+            <property name="MaxDamage" value="550"/>
+            <property name="CustomIcon" value="pipeSmallJoint"/>
+            <property name="CustomIconTint" value="2B7A78"/>
+            <property name="Stacknumber" value="100"/>
+            <property name="EconomicValue" value="30"/>
+            <property name="DescriptionKey" value="liquidPipeTJunctionDesc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="FluidPipeCapacityGps" value="250"/>
+        </block>
+
+        <block name="fluidPump">
+            <property name="Class" value="FluidPumpBlock, 7DaysToAutomate"/>
+            <property name="Material" value="Mmetal_hard"/>
+            <property name="Shape" value="ModelEntity"/>
+            <property name="Model" value="@:Entities/Electrical/smallGeneratorPrefab.prefab"/>
+            <property name="CustomIcon" value="questGeneratorSmall"/>
+            <property name="Place" value="TowardsPlacer"/>
+            <property name="OnlySimpleRotations" value="true"/>
+            <property name="MaxDamage" value="700"/>
+            <property name="Stacknumber" value="20"/>
+            <property name="EconomicValue" value="120"/>
+            <property name="DescriptionKey" value="fluidPumpDesc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="FluidPumpOutputCapGps" value="250"/>
+        </block>
+
+        <block name="fluidStorageTank">
+            <property name="Class" value="FluidStorageBlock, 7DaysToAutomate"/>
+            <property name="Material" value="Mmetal_hard"/>
+            <property name="Shape" value="ModelEntity"/>
+            <property name="Model" value="@:Entities/Industrial/barrelGenericPrefab.prefab"/>
+            <property name="CustomIcon" value="cntBarrelAcidSingle00"/>
+            <property name="Place" value="TowardsPlacer"/>
+            <property name="OnlySimpleRotations" value="true"/>
+            <property name="MaxDamage" value="1200"/>
+            <property name="Stacknumber" value="10"/>
+            <property name="EconomicValue" value="180"/>
+            <property name="DescriptionKey" value="fluidStorageTankDesc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="FluidStorageCapacityGallons" value="2000"/>
+            <property name="FluidInputCapGps" value="250"/>
+            <property name="FluidOutputCapGps" value="250"/>
+        </block>
         <block name="universalWasher">
             <property name="Class" value="UniversalWasherBlock, 7DaysToAutomate"/>
             <property name="Material" value="Mmetal_hard"/>
@@ -497,3 +582,9 @@
      <property name="PipeSpeed" value="2" />
      <property name="PipeLatency" value="3" />
 -->
+
+
+
+
+
+

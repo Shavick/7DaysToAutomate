@@ -9,6 +9,9 @@ public static class UCTileEntityIDs
     public const int UniversalWasher = 134;
     public const int NetworkController = 135;
     public const int ItemPipe = 136;
+    public const int LiquidPipe = 137;
+    public const int FluidPump = 138;
+    public const int FluidStorage = 139;
 }
 
 public class TileEntityUniversalExtractor : TileEntityMachine
@@ -1148,4 +1151,5 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
     }
 }
+
 

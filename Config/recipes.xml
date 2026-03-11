@@ -132,9 +132,34 @@
       <ingredient name="resourceMechanicalParts" count="3" />
       <ingredient name="resourceElectricParts" count="2" />
     </recipe>
+    <recipe name="liquidPipe" count="12" craft_area="workbench" craft_time="15" tags="learnable,workbenchCrafting,liquidPipe">
+      <ingredient name="resourceScrapIron" count="30" />
+      <ingredient name="resourceMechanicalParts" count="2" />
+    </recipe>
+    <recipe name="liquidPipeElbow" count="8" craft_area="workbench" craft_time="12" tags="learnable,workbenchCrafting,liquidPipeElbow">
+      <ingredient name="resourceScrapIron" count="24" />
+      <ingredient name="resourceMechanicalParts" count="1" />
+    </recipe>
+    <recipe name="liquidPipeSmallJoint" count="8" craft_area="workbench" craft_time="12" tags="learnable,workbenchCrafting,liquidPipeSmallJoint">
+      <ingredient name="resourceScrapIron" count="24" />
+      <ingredient name="resourceMechanicalParts" count="1" />
+    </recipe>
+    <recipe name="fluidPump" count="1" craft_area="workbench" craft_time="20" tags="learnable,workbenchCrafting,fluidPump">
+      <ingredient name="resourceForgedIron" count="12" />
+      <ingredient name="resourceMechanicalParts" count="8" />
+      <ingredient name="resourceElectricParts" count="4" />
+      <ingredient name="resourceOil" count="10" />
+    </recipe>
+    <recipe name="fluidStorageTank" count="1" craft_area="workbench" craft_time="30" tags="learnable,workbenchCrafting,fluidStorageTank">
+      <ingredient name="resourceForgedIron" count="20" />
+      <ingredient name="resourceScrapIron" count="80" />
+      <ingredient name="resourceMechanicalParts" count="6" />
+      <ingredient name="resourceDuctTape" count="4" />
+    </recipe>
     <!-- WASHER RECIPES -->
     <recipe name="resourceScrapIron" count="1" craft_area="washer" craft_time="10" tags="fluid:water,fluid_amount:2">
       <ingredient name="resourceScrapBrass" count="10" />
     </recipe>
   </append>
 </configs>
+

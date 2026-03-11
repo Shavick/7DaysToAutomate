@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -116,7 +116,7 @@
     <Compile Include="Classes\Net Packages\NetPackageExtractor.cs" />
     <Compile Include="Classes\Net Packages\NetPackageExtractorControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageOpenMachineUi.cs" />
-    <Compile Include="Classes\Net Packages\NetPackageToggleMachinePower.cs" />
+    <Compile Include="Classes\\Net Packages\\NetPackageToggleMachinePower.cs" />
     <Compile Include="Classes\Networks\NetworkControllerBlock.cs" />
     <Compile Include="Classes\Networks\TileEntityNetworkController.cs" />
     <Compile Include="Classes\Pipes\ItemPipeBlock.cs" />
@@ -126,6 +126,16 @@
     <Compile Include="Classes\Pipes\PipeTransportManager.cs" />
     <Compile Include="Classes\Pipes\SafeWorldRead.cs" />
     <Compile Include="Classes\Pipes\TileEntityItemPipe.cs" />
+    <Compile Include="Classes\Fluids\FluidConstants.cs" />
+    <Compile Include="Classes\Fluids\FluidGraphData.cs" />
+    <Compile Include="Classes\Fluids\FluidGraphManager.cs" />
+    <Compile Include="Classes\Fluids\FluidPumpBlock.cs" />
+    <Compile Include="Classes\Fluids\FluidStorageBlock.cs" />
+    <Compile Include="Classes\Fluids\FluidTransportManager.cs" />
+    <Compile Include="Classes\Fluids\LiquidPipeBlock.cs" />
+    <Compile Include="Classes\Fluids\TileEntityFluidPump.cs" />
+    <Compile Include="Classes\Fluids\TileEntityFluidStorage.cs" />
+    <Compile Include="Classes\Fluids\TileEntityLiquidPipe.cs" />
     <Compile Include="Classes\TechTree\TechTreeRegistry.cs" />
     <Compile Include="Classes\TechTree\XUi\XUiC_ResearchWindow.cs" />
     <Compile Include="Classes\Washer\TileEntityUniversalWasher.cs" />
@@ -144,3 +154,5 @@
     <PostBuildEvent>call build.cmd</PostBuildEvent>
   </PropertyGroup>
 </Project>
+
+

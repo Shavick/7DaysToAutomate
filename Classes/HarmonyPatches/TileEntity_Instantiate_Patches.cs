@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using System;
 using System.Reflection;
 
@@ -61,6 +61,31 @@ public static class UCPatch_TileEntity_Instantiate
             return false;
         }
 
+
+        if (tid == 137)
+        {
+            Log.Out("[UCPatch][TE.Instantiate] Handling tid=137 -> TileEntityLiquidPipe");
+            __result = new TileEntityLiquidPipe(_chunk);
+            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
+            return false;
+        }
+
+        if (tid == 138)
+        {
+            Log.Out("[UCPatch][TE.Instantiate] Handling tid=138 -> TileEntityFluidPump");
+            __result = new TileEntityFluidPump(_chunk);
+            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
+            return false;
+        }
+
+        if (tid == 139)
+        {
+            Log.Out("[UCPatch][TE.Instantiate] Handling tid=139 -> TileEntityFluidStorage");
+            __result = new TileEntityFluidStorage(_chunk);
+            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
+            return false;
+        }
         return true;
     }
 }
+

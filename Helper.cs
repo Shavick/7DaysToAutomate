@@ -1,4 +1,4 @@
-﻿using _7DaysToAutomate.Classes.Net_Packages;
+using _7DaysToAutomate.Classes.Net_Packages;
 
 public static class Helper
 {
@@ -110,7 +110,6 @@ public static class Helper
         Log.Out($"[PowerToggle][SERVER] Apply clrIdx={clrIdx} pos={blockPos} powerState={powerState}");
         te.SetPowerState(powerState);
     }
-
     public static void RequestCrafterSelectRecipe(Vector3i blockPos, string recipeName)
     {
         var world = GameManager.Instance.World;
@@ -322,3 +321,5 @@ public static class Helper
         te.ServerSetPipePriority(priority);
     }
 }
+
+
