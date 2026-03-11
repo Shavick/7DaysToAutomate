@@ -31,89 +31,75 @@ public static class PipeTransportManager
     {
         if (world == null || world.IsRemote())
         {
-            Log.Out("[PipeTransportManager] TryRequestCrafterInputs rejected — world null or remote");
             return false;
         }
 
         if (pipeGraphId == Guid.Empty)
         {
-            Log.Out("[PipeTransportManager] TryRequestCrafterInputs rejected — pipeGraphId is empty");
             return false;
         }
 
         if (sourceStoragePos == Vector3i.zero)
         {
-            Log.Out("[PipeTransportManager] TryRequestCrafterInputs rejected — sourceStoragePos is zero");
             return false;
         }
 
         if (targetMachinePos == Vector3i.zero)
         {
-            Log.Out("[PipeTransportManager] TryRequestCrafterInputs rejected — targetMachinePos is zero");
             return false;
         }
 
         if (neededItemNames == null || neededItemNames.Count == 0)
         {
-            Log.Out("[PipeTransportManager] TryRequestCrafterInputs rejected — no needed item names");
             return false;
         }
 
         if (!PipeGraphManager.TryGetGraph(pipeGraphId, out PipeGraphData graph) || graph == null)
         {
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs rejected — graph {pipeGraphId} not found");
             return false;
         }
 
         if (graph.StorageEndpoints == null || !graph.StorageEndpoints.Contains(sourceStoragePos))
         {
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs rejected — source storage {sourceStoragePos} is not on graph {pipeGraphId}");
             return false;
         }
 
         if (!PipeGraphManager.TryFindRoute(world, clrIdx, pipeGraphId, targetMachinePos, sourceStoragePos, out List<Vector3i> route))
         {
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs rejected — no route found graph={pipeGraphId} source={sourceStoragePos} target={targetMachinePos}");
             return false;
         }
 
         if (route == null || route.Count == 0)
         {
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs rejected — empty route graph={pipeGraphId} source={sourceStoragePos} target={targetMachinePos}");
             return false;
         }
 
         TileEntity te = world.GetTileEntity(clrIdx, sourceStoragePos);
         if (!(te is TileEntityComposite comp))
         {
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs rejected — no composite storage at {sourceStoragePos}");
             return false;
         }
 
         TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
         if (storage == null || storage.items == null)
         {
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs rejected — source storage at {sourceStoragePos} has no TEFeatureStorage");
             return false;
         }
 
         if (storage.IsUserAccessing())
         {
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs blocked — source storage at {sourceStoragePos} is in use");
             return false;
         }
 
         int remainingCapacity = GetRemainingCapacityForGraph(pipeGraphId);
         if (remainingCapacity <= 0)
         {
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs rejected — graph {pipeGraphId} at job cap");
             return false;
         }
 
         int routeThroughput = GetRouteThroughput(world, clrIdx, route);
         if (routeThroughput <= 0)
         {
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs rejected — route throughput <= 0");
             return false;
         }
 
@@ -121,19 +107,16 @@ public static class PipeTransportManager
         ulong travelTicks = (ulong)route.Count * PerPipeTravelTicks;
         bool createdAnyJobs = false;
 
-        Log.Out($"[PipeTransportManager] TryRequestCrafterInputs BEGIN graph={pipeGraphId} source={sourceStoragePos} target={targetMachinePos} neededTypes={neededItemNames.Count} routeLen={route.Count} throughput={routeThroughput} remainingCapacity={remainingCapacity}");
 
         foreach (string itemName in neededItemNames)
         {
             if (remainingCapacity <= 0)
             {
-                Log.Out("[PipeTransportManager] TryRequestCrafterInputs STOP — no remaining graph capacity");
                 break;
             }
 
             if (string.IsNullOrEmpty(itemName))
             {
-                Log.Out("[PipeTransportManager] TryRequestCrafterInputs skip — empty item name");
                 continue;
             }
 
@@ -183,24 +166,20 @@ public static class PipeTransportManager
 
             int availableToQueue = availableInStorage - alreadyQueuedForThisItem;
 
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs item='{itemName}' availableInStorage={availableInStorage} alreadyQueued={alreadyQueuedForThisItem} availableToQueue={availableToQueue}");
 
             if (availableToQueue <= 0)
             {
-                Log.Out($"[PipeTransportManager] TryRequestCrafterInputs skip '{itemName}' — no unqueued source amount available");
                 continue;
             }
 
             int acceptedAmount = Math.Min(availableToQueue, routeThroughput);
             if (acceptedAmount <= 0)
             {
-                Log.Out($"[PipeTransportManager] TryRequestCrafterInputs skip '{itemName}' — acceptedAmount <= 0");
                 continue;
             }
 
             ulong arrival = now + travelTicks;
 
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs item='{itemName}' acceptedAmount={acceptedAmount} now={now} arrival={arrival}");
 
             PipeTransportJob job = new PipeTransportJob(
                 pipeGraphId,
@@ -224,10 +203,8 @@ public static class PipeTransportManager
             remainingCapacity--;
             createdAnyJobs = true;
 
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs queued job {job.JobId} for {acceptedAmount}x {itemName} remainingCapacityNow={remainingCapacity}");
         }
 
-        Log.Out($"[PipeTransportManager] TryRequestCrafterInputs END createdAnyJobs={createdAnyJobs}");
         return createdAnyJobs;
     }
 
@@ -272,7 +249,6 @@ public static class PipeTransportManager
 
         if (!PipeGraphManager.TryFindRoute(world, clrIdx, pipeGraphId, sourceMachinePos, targetStoragePos, out List<Vector3i> route))
         {
-            Log.Out($"[PipeTransportManager] TryCreateJob rejected — no route found graph={pipeGraphId} source={sourceMachinePos} target={targetStoragePos}");
             return false;
         }
 
@@ -289,7 +265,6 @@ public static class PipeTransportManager
 
         if (GetActiveJobCountForGraph(pipeGraphId) >= MaxActiveJobsPerGraph)
         {
-            Log.Out($"[PipeTransportManager] TryCreateJob rejected — graph {pipeGraphId} is at active job cap ({MaxActiveJobsPerGraph})");
             return false;
         }
 
@@ -349,7 +324,6 @@ public static class PipeTransportManager
             return false;
 
         activeJobs[job.JobId] = job;
-        Log.Out($"[PipeTransportManager] Registered job {job}");
         return true;
     }
 
@@ -392,7 +366,6 @@ public static class PipeTransportManager
                 bool pickedUp = TryPickupInputJob(world, job);
                 if (!pickedUp)
                 {
-                    Log.Out($"[PipeTransportManager] Input job pickup blocked {job.JobId}");
                     continue;
                 }
             }
@@ -404,12 +377,7 @@ public static class PipeTransportManager
             if (delivered)
             {
                 job.IsComplete = true;
-                Log.Out($"[PipeTransportManager] Job complete {job.JobId}");
                 completedOrFailed.Add(kvp.Key);
-            }
-            else if (!job.IsStorageToMachine())
-            {
-                Log.Out($"[PipeTransportManager] Job blocked at delivery {job.JobId}");
             }
         }
 
@@ -425,7 +393,6 @@ public static class PipeTransportManager
         TileEntity te = world.GetTileEntity(job.SourcePos);
         if (!(te is TileEntityComposite comp))
         {
-            Log.Out($"[PipeTransportManager] Input job pickup blocked — source storage not loaded at {job.SourcePos} for job {job.JobId}");
             return false;
         }
 
@@ -528,7 +495,6 @@ public static class PipeTransportManager
             TileEntity te = world.GetTileEntity(job.TargetPos);
             if (!(te is TileEntityMachine machine))
             {
-                Log.Out($"[PipeTransportManager] Input job delivery blocked — target machine not loaded at {job.TargetPos} for job {job.JobId}");
                 return false;
             }
 
@@ -636,7 +602,4 @@ public static class PipeTransportManager
         return throughput;
     }
 }
-
-
-
 

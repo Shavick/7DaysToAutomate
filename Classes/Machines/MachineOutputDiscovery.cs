@@ -76,15 +76,12 @@ public static class MachineOutputDiscovery
         if (!(world.GetTileEntity(clrIdx, pipePos) is TileEntityItemPipe pipeTe))
             return;
 
-        Log.Out($"[MachineOutputDiscovery] TryAddPipeEndpoints pipePos={pipePos} remote={world.IsRemote()} pipeGraphId={pipeTe.PipeGraphId}");
 
         if (!PipeGraphManager.TryGetStorageEndpointsForPipe(world, clrIdx, pipePos, out List<Vector3i> endpoints))
         {
-            Log.Out($"[MachineOutputDiscovery] Pipe endpoint lookup FAILED pipePos={pipePos} graphId={pipeTe.PipeGraphId}");
             return;
         }
 
-        Log.Out($"[MachineOutputDiscovery] Pipe endpoint lookup SUCCESS pipePos={pipePos} graphId={pipeTe.PipeGraphId} count={endpoints.Count}");
 
         Guid pipeGraphId = pipeTe.PipeGraphId;
 
@@ -92,17 +89,14 @@ public static class MachineOutputDiscovery
         {
             Vector3i endpointPos = endpoints[i];
 
-            Log.Out($"[MachineOutputDiscovery] Pipe endpoint candidate {endpointPos}");
 
             string key = BuildTargetKey(endpointPos, OutputTransportMode.Pipe, pipeGraphId);
             if (!seenTargets.Add(key))
             {
-                Log.Out($"[MachineOutputDiscovery] Pipe endpoint skipped (already seen) {endpointPos} graphId={pipeGraphId}");
                 continue;
             }
 
             results.Add(new OutputTargetInfo(endpointPos, OutputTransportMode.Pipe, pipeGraphId));
-            Log.Out($"[MachineOutputDiscovery] Pipe endpoint ADDED {endpointPos} graphId={pipeGraphId}");
         }
     }
 
@@ -111,3 +105,4 @@ public static class MachineOutputDiscovery
         return $"{pos.x},{pos.y},{pos.z}|{(int)mode}|{pipeGraphId}";
     }
 }
+

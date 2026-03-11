@@ -5,6 +5,9 @@ using UnityEngine;
 
 public class TileEntityUniversalCrafter : TileEntityMachine
 {
+    private const int MaxSerializedInputTargets = 64;
+    private const int MaxSerializedOutputTargets = 64;
+    private const int MaxSerializedInputBufferEntries = 256;
     public bool IsDevLogging => blockValue.Block.Properties.GetBool("DevLogs");
 
     public string SelectedRecipeName = "";
@@ -75,6 +78,9 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (!IsDevLogging)
             return;
 
+        if (level == DevLogLevel.Info && !IsImportantDevLogMessage(msg))
+            return;
+
         string prefix = $"[Crafter][TE][{ToWorldPos()}] ";
 
         switch (level)
@@ -91,6 +97,24 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 Log.Out(msg, prefix);
                 break;
         }
+    }
+
+    private static bool IsImportantDevLogMessage(string msg)
+    {
+        if (string.IsNullOrEmpty(msg))
+            return false;
+
+        return
+            msg.IndexOf("SERVER SET ENABLED", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("SERVER SELECT ", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("craft started", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("queued", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("partial", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("failed", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("reject", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("block", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("warn", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("error", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     public int GetBufferedItemCount(string itemName)
@@ -2258,14 +2282,6 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         base.write(_bw, mode);
 
         const int VERSION = 9;
-
-        if (IsDevLogging)
-        {
-            Log.Out("========================================");
-            Log.Out($"[Crafter][WRITE] BEGIN -> mode={mode}");
-            Log.Out("========================================");
-        }
-
         _bw.Write(VERSION);
 
         var inputTargetsToSync = new List<InputTargetInfo>(availableInputTargets ?? new List<InputTargetInfo>());
@@ -2350,219 +2366,205 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 _bw.Write(kvp.Value);
             }
         }
-
-        if (IsDevLogging)
-        {
-            Log.Out($"[Crafter][WRITE] SelectedRecipeName='{SelectedRecipeName}'");
-            Log.Out($"[Crafter][WRITE] InputChestPos={SelectedInputChestPos}");
-            Log.Out($"[Crafter][WRITE] SelectedInputPipeGraphId={SelectedInputPipeGraphId}");
-            Log.Out($"[Crafter][WRITE] availableInputTargets={inputTargetsToSync.Count}");
-            Log.Out($"[Crafter][WRITE] OutputChestPos={SelectedOutputChestPos}");
-            Log.Out($"[Crafter][WRITE] SelectedOutputMode={SelectedOutputMode}");
-            Log.Out($"[Crafter][WRITE] SelectedPipeGraphId={SelectedPipeGraphId}");
-            Log.Out($"[Crafter][WRITE] availableOutputTargets={availableOutputTargets?.Count ?? 0}");
-            Log.Out($"[Crafter][WRITE] isCrafting={isCrafting}");
-            Log.Out($"[Crafter][WRITE] BaseRecipeDuration={BaseRecipeDuration}");
-            Log.Out($"[Crafter][WRITE] disabledByPlayer={disabledByPlayer}");
-            Log.Out($"[Crafter][WRITE] craftStartTime={craftStartTime}");
-            Log.Out($"[Crafter][WRITE] isWaitingForIngredients={isWaitingForIngredients}");
-            Log.Out($"[Crafter][WRITE] inputBufferCount={inputBuffer?.Count ?? 0}");
-            Log.Out("========================================");
-            Log.Out("[Crafter][WRITE] COMPLETE");
-            Log.Out("========================================");
-        }
     }
 
     public override void read(PooledBinaryReader _br, StreamModeRead mode)
     {
         base.read(_br, mode);
 
-        if (IsDevLogging)
+        try
         {
-            Log.Out("========================================");
-            Log.Out($"[Crafter][READ] BEGIN -> mode={mode}");
-            Log.Out("========================================");
-        }
+            int version = _br.ReadInt32();
+            int count = _br.ReadInt32();
 
-        int version = _br.ReadInt32();
-        int count = _br.ReadInt32();
+            if (count < 0 || count > MaxSerializedInputTargets)
+                throw new InvalidOperationException($"Invalid input target count: {count}");
 
-        if (IsDevLogging)
-            Log.Out($"[Crafter][READ] Header -> version={version} count={count}");
-
-        if (version >= 9)
-        {
-            availableInputTargets = new List<InputTargetInfo>(count);
-
-            for (int i = 0; i < count; i++)
+            if (version >= 9)
             {
-                int tx = _br.ReadInt32();
-                int ty = _br.ReadInt32();
-                int tz = _br.ReadInt32();
+                availableInputTargets = new List<InputTargetInfo>(count);
 
-                string syncedInputPipeGraphId = _br.ReadString();
-                Guid parsedInputGraphId;
-                if (!Guid.TryParse(syncedInputPipeGraphId, out parsedInputGraphId))
-                    parsedInputGraphId = Guid.Empty;
+                for (int i = 0; i < count; i++)
+                {
+                    int tx = _br.ReadInt32();
+                    int ty = _br.ReadInt32();
+                    int tz = _br.ReadInt32();
 
-                availableInputTargets.Add(new InputTargetInfo(new Vector3i(tx, ty, tz), parsedInputGraphId));
+                    string syncedInputPipeGraphId = _br.ReadString();
+                    Guid parsedInputGraphId;
+                    if (!Guid.TryParse(syncedInputPipeGraphId, out parsedInputGraphId))
+                        parsedInputGraphId = Guid.Empty;
+
+                    availableInputTargets.Add(new InputTargetInfo(new Vector3i(tx, ty, tz), parsedInputGraphId));
+                }
             }
-        }
-        else
-        {
-            availableInputTargets = new List<InputTargetInfo>();
-        }
+            else
+            {
+                availableInputTargets = new List<InputTargetInfo>();
+            }
 
-        SelectedRecipeName = _br.ReadString();
+            SelectedRecipeName = _br.ReadString();
 
-        int x = _br.ReadInt32();
-        int y = _br.ReadInt32();
-        int z = _br.ReadInt32();
-        SelectedInputChestPos = new Vector3i(x, y, z);
+            int x = _br.ReadInt32();
+            int y = _br.ReadInt32();
+            int z = _br.ReadInt32();
+            SelectedInputChestPos = new Vector3i(x, y, z);
 
-        if (version >= 8)
-        {
-            string inputPipeGraphId = _br.ReadString();
-            if (!Guid.TryParse(inputPipeGraphId, out SelectedInputPipeGraphId))
+            if (version >= 8)
+            {
+                string inputPipeGraphId = _br.ReadString();
+                if (!Guid.TryParse(inputPipeGraphId, out SelectedInputPipeGraphId))
+                    SelectedInputPipeGraphId = Guid.Empty;
+            }
+            else
+            {
                 SelectedInputPipeGraphId = Guid.Empty;
-        }
-        else
-        {
-            SelectedInputPipeGraphId = Guid.Empty;
-        }
+            }
 
-        int ox = _br.ReadInt32();
-        int oy = _br.ReadInt32();
-        int oz = _br.ReadInt32();
-        SelectedOutputChestPos = new Vector3i(ox, oy, oz);
+            int ox = _br.ReadInt32();
+            int oy = _br.ReadInt32();
+            int oz = _br.ReadInt32();
+            SelectedOutputChestPos = new Vector3i(ox, oy, oz);
 
-        if (version >= 5)
-        {
-            SelectedOutputMode = (OutputTransportMode)_br.ReadInt32();
+            if (version >= 5)
+            {
+                SelectedOutputMode = (OutputTransportMode)_br.ReadInt32();
 
-            string pipeGraphId = _br.ReadString();
-            if (!Guid.TryParse(pipeGraphId, out SelectedPipeGraphId))
+                string pipeGraphId = _br.ReadString();
+                if (!Guid.TryParse(pipeGraphId, out SelectedPipeGraphId))
+                    SelectedPipeGraphId = Guid.Empty;
+
+                int outputTargetCount = _br.ReadInt32();
+                if (outputTargetCount < 0 || outputTargetCount > MaxSerializedOutputTargets)
+                    throw new InvalidOperationException($"Invalid output target count: {outputTargetCount}");
+
+                availableOutputTargets = new List<OutputTargetInfo>(outputTargetCount);
+
+                for (int i = 0; i < outputTargetCount; i++)
+                {
+                    int tx = _br.ReadInt32();
+                    int ty = _br.ReadInt32();
+                    int tz = _br.ReadInt32();
+
+                    OutputTransportMode modeValue = (OutputTransportMode)_br.ReadInt32();
+
+                    string syncedPipeGraphId = _br.ReadString();
+                    Guid parsedGraphId;
+                    if (!Guid.TryParse(syncedPipeGraphId, out parsedGraphId))
+                        parsedGraphId = Guid.Empty;
+
+                    availableOutputTargets.Add(
+                        new OutputTargetInfo(new Vector3i(tx, ty, tz), modeValue, parsedGraphId)
+                    );
+                }
+            }
+            else
+            {
+                SelectedOutputMode = OutputTransportMode.Adjacent;
                 SelectedPipeGraphId = Guid.Empty;
-
-            int outputTargetCount = _br.ReadInt32();
-            availableOutputTargets = new List<OutputTargetInfo>(outputTargetCount);
-
-            for (int i = 0; i < outputTargetCount; i++)
-            {
-                int tx = _br.ReadInt32();
-                int ty = _br.ReadInt32();
-                int tz = _br.ReadInt32();
-
-                OutputTransportMode modeValue = (OutputTransportMode)_br.ReadInt32();
-
-                string syncedPipeGraphId = _br.ReadString();
-                Guid parsedGraphId;
-                if (!Guid.TryParse(syncedPipeGraphId, out parsedGraphId))
-                    parsedGraphId = Guid.Empty;
-
-                availableOutputTargets.Add(
-                    new OutputTargetInfo(new Vector3i(tx, ty, tz), modeValue, parsedGraphId)
-                );
-            }
-        }
-        else
-        {
-            SelectedOutputMode = OutputTransportMode.Adjacent;
-            SelectedPipeGraphId = Guid.Empty;
-            availableOutputTargets = new List<OutputTargetInfo>();
-        }
-
-        isCrafting = _br.ReadBoolean();
-        BaseRecipeDuration = _br.ReadSingle();
-        disabledByPlayer = _br.ReadBoolean();
-
-        if (version >= 4)
-        {
-            craftStartTime = _br.ReadUInt64();
-            isWaitingForIngredients = _br.ReadBoolean();
-        }
-        else
-        {
-            craftStartTime = 0;
-            isWaitingForIngredients = false;
-        }
-
-        if (version >= 7)
-        {
-            int inputBufferCount = _br.ReadInt32();
-            inputBuffer = new Dictionary<string, int>(inputBufferCount);
-
-            for (int i = 0; i < inputBufferCount; i++)
-            {
-                string itemName = _br.ReadString();
-                int itemCount = _br.ReadInt32();
-
-                if (!string.IsNullOrEmpty(itemName) && itemCount > 0)
-                    inputBuffer[itemName] = itemCount;
-            }
-        }
-        else if (version >= 6)
-        {
-            int inputBufferCount = _br.ReadInt32();
-            inputBuffer = new Dictionary<string, int>(inputBufferCount);
-
-            for (int i = 0; i < inputBufferCount; i++)
-            {
-                string itemName = _br.ReadString();
-                int itemCount = _br.ReadInt32();
-
-                if (!string.IsNullOrEmpty(itemName) && itemCount > 0)
-                    inputBuffer[itemName] = itemCount;
+                availableOutputTargets = new List<OutputTargetInfo>();
             }
 
-            int pendingInputRequestCount = _br.ReadInt32();
-            for (int i = 0; i < pendingInputRequestCount; i++)
+            isCrafting = _br.ReadBoolean();
+            BaseRecipeDuration = _br.ReadSingle();
+            disabledByPlayer = _br.ReadBoolean();
+
+            if (version >= 4)
             {
-                _br.ReadString();
+                craftStartTime = _br.ReadUInt64();
+                isWaitingForIngredients = _br.ReadBoolean();
+            }
+            else
+            {
+                craftStartTime = 0;
+                isWaitingForIngredients = false;
+            }
+
+            if (version >= 7)
+            {
+                int inputBufferCount = _br.ReadInt32();
+                if (inputBufferCount < 0 || inputBufferCount > MaxSerializedInputBufferEntries)
+                    throw new InvalidOperationException($"Invalid input buffer count: {inputBufferCount}");
+
+                inputBuffer = new Dictionary<string, int>(inputBufferCount);
+
+                for (int i = 0; i < inputBufferCount; i++)
+                {
+                    string itemName = _br.ReadString();
+                    int itemCount = _br.ReadInt32();
+
+                    if (!string.IsNullOrEmpty(itemName) && itemCount > 0)
+                        inputBuffer[itemName] = itemCount;
+                }
+            }
+            else if (version >= 6)
+            {
+                int inputBufferCount = _br.ReadInt32();
+                if (inputBufferCount < 0 || inputBufferCount > MaxSerializedInputBufferEntries)
+                    throw new InvalidOperationException($"Invalid input buffer count: {inputBufferCount}");
+
+                inputBuffer = new Dictionary<string, int>(inputBufferCount);
+
+                for (int i = 0; i < inputBufferCount; i++)
+                {
+                    string itemName = _br.ReadString();
+                    int itemCount = _br.ReadInt32();
+
+                    if (!string.IsNullOrEmpty(itemName) && itemCount > 0)
+                        inputBuffer[itemName] = itemCount;
+                }
+
+                int pendingInputRequestCount = _br.ReadInt32();
+                for (int i = 0; i < pendingInputRequestCount; i++)
+                {
+                    _br.ReadString();
+                    _br.ReadInt32();
+                }
+
                 _br.ReadInt32();
             }
+            else
+            {
+                inputBuffer = new Dictionary<string, int>();
+            }
 
-            _br.ReadInt32();
+            _recipe = null;
+            ResolveRecipeIfNeeded();
+            ResolveSelectedInputContainer();
+            ResolveSelectedOutputContainer();
         }
-        else
+        catch (Exception ex)
         {
-            inputBuffer = new Dictionary<string, int>();
-        }
-
-        _recipe = null;
-        ResolveRecipeIfNeeded();
-        ResolveSelectedInputContainer();
-        ResolveSelectedOutputContainer();
-
-        if (IsDevLogging)
-        {
-            Log.Out($"[Crafter][READ] Recipe='{SelectedRecipeName}'");
-            Log.Out($"[Crafter][READ] InputChestPos={SelectedInputChestPos}");
-            Log.Out($"[Crafter][READ] SelectedInputPipeGraphId={SelectedInputPipeGraphId}");
-            Log.Out($"[Crafter][READ] availableInputTargets={availableInputTargets?.Count ?? 0}");
-            Log.Out($"[Crafter][READ] OutputChestPos={SelectedOutputChestPos}");
-            Log.Out($"[Crafter][READ] SelectedOutputMode={SelectedOutputMode}");
-            Log.Out($"[Crafter][READ] SelectedPipeGraphId={SelectedPipeGraphId}");
-            Log.Out($"[Crafter][READ] availableOutputTargets={availableOutputTargets?.Count ?? 0}");
-            Log.Out($"[Crafter][READ] isCrafting={isCrafting}");
-            Log.Out($"[Crafter][READ] BaseRecipeDuration={BaseRecipeDuration}");
-            Log.Out($"[Crafter][READ] disabledByPlayer={disabledByPlayer}");
-            Log.Out($"[Crafter][READ] craftStartTime={craftStartTime}");
-            Log.Out($"[Crafter][READ] isWaitingForIngredients={isWaitingForIngredients}");
-            Log.Out($"[Crafter][READ] inputBufferCount={inputBuffer?.Count ?? 0}");
-            Log.Out("========================================");
-            Log.Out("[Crafter][READ] COMPLETE");
-            Log.Out("========================================");
+            Log.Error($"[Crafter][READ] Failed to deserialize at {ToWorldPos()} mode={mode}: {ex.Message}");
+            ResetSerializedStateToSafeDefaults();
         }
     }
+
+    private void ResetSerializedStateToSafeDefaults()
+    {
+        SelectedRecipeName = string.Empty;
+        _recipe = null;
+
+        SelectedInputChestPos = Vector3i.zero;
+        SelectedInputPipeGraphId = Guid.Empty;
+        availableInputTargets = new List<InputTargetInfo>();
+        selectedInputContainer = null;
+
+        SelectedOutputChestPos = Vector3i.zero;
+        SelectedOutputMode = OutputTransportMode.Adjacent;
+        SelectedPipeGraphId = Guid.Empty;
+        availableOutputTargets = new List<OutputTargetInfo>();
+        selectedOutputContainer = null;
+
+        isCrafting = false;
+        disabledByPlayer = true;
+        isWaitingForIngredients = false;
+        craftStartTime = 0;
+        BaseRecipeDuration = 10f;
+
+        inputBuffer = new Dictionary<string, int>();
+    }
 }
-
-
-
-
-
-
-
 
 
 

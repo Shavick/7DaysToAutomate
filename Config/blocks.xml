@@ -21,7 +21,7 @@
             <property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall"/>
             <property name="OutputCount" value="1,1-3"/>
             <property name="ExtractionSpeed" value="10,3"/>
-            <property name="DevLogs" value="true"/>
+            <property name="DevLogs" value="false"/>
         </block>
 
         <!-- Universal Extractor - Iron T2 -->
@@ -86,7 +86,7 @@
             <property name="ResourceGenerated" value="resourceCoal"/>
             <property name="ExtractionSpeed" value="1"/>
             <property name="OutputCount" value="1-5"/>
-            <property name="DevLogs" value="true"/>
+            <property name="DevLogs" value="false"/>
         </block>
 
         <!-- Universal Extractor - Nitrate -->
@@ -110,7 +110,7 @@
             <property name="ResourceGenerated" value="resourcePotassiumNitratePowder"/>
             <property name="ExtractionSpeed" value="1"/>
             <property name="OutputCount" value="1-5"/>
-            <property name="DevLogs" value="true"/>
+            <property name="DevLogs" value="false"/>
         </block>
 
         <!-- Universal Extractor - Lead -->
@@ -175,7 +175,7 @@
             <!-- Placeholder properties - fill later -->
             <property name="CraftingSpeed" value="2.5"/>
             <property name="InternalStorageMultiplier" value="1"/>
-            <property name="DevLogs" value="true"/>
+            <property name="DevLogs" value="false"/>
         </block>
 
         <block name="networkController">
@@ -206,7 +206,7 @@
             <property name="Stacknumber" value="100"/>
             <property name="EconomicValue" value="25"/>
             <property name="DescriptionKey" value="itemPipeDesc"/>
-            <property name="DevLogs" value="true"/>
+            <property name="DevLogs" value="false"/>
             <property name="PipeThroughput" value="5"/>
         </block>
 
@@ -223,7 +223,7 @@
             <property name="Stacknumber" value="100"/>
             <property name="EconomicValue" value="25"/>
             <property name="DescriptionKey" value="itemPipeElbowDesc"/>
-            <property name="DevLogs" value="true"/>
+            <property name="DevLogs" value="false"/>
             <property name="PipeThroughput" value="5"/>
         </block>
 
@@ -240,7 +240,7 @@
             <property name="Stacknumber" value="100"/>
             <property name="EconomicValue" value="25"/>
             <property name="DescriptionKey" value="itemPipeTJunctionDesc"/>
-            <property name="DevLogs" value="true"/>
+            <property name="DevLogs" value="false"/>
             <property name="PipeThroughput" value="5"/>
         </block>
 
@@ -259,7 +259,7 @@
             <property name="EconomicValue" value="1000"/>
             <property name="DescriptionKey" value="universalWasherDesc"/>
             <!-- Placeholder properties - fill later -->
-            <property name="DevLogs" value="true"/>
+            <property name="DevLogs" value="false"/>
             <property name="FluidMax" value="100"/>
         </block>
 

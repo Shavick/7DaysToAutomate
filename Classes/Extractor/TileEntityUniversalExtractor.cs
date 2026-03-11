@@ -63,7 +63,26 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         if (!IsDevLogging)
             return;
 
+        if (!IsImportantDevLogMessage(msg))
+            return;
+
         Log.Out($"[Extractor][TE][{ToWorldPos()}] {msg}");
+    }
+
+    private static bool IsImportantDevLogMessage(string msg)
+    {
+        if (string.IsNullOrEmpty(msg))
+            return false;
+
+        return
+            msg.IndexOf("SERVER SET ENABLED", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("SERVER SELECT OUTPUT", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("FAIL", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("WARN", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("ABORT", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("BLOCKED", StringComparison.OrdinalIgnoreCase) >= 0 ||
+            msg.IndexOf("partial", StringComparison.OrdinalIgnoreCase) >= 0;
     }
 
     public void ResolveSelectedOutputContainer(WorldBase world)
@@ -1125,5 +1144,4 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
     }
 }
-
 
