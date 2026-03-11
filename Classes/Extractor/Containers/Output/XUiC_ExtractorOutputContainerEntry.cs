@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class XUiC_ExtractorOutputContainerEntry : XUiController
 {
@@ -105,7 +105,7 @@ public class XUiC_ExtractorOutputContainerEntry : XUiController
                 return true;
 
             case "backgroundcolor":
-                value = IsSelected ? "0,255,0,80" : "255,255,255,0";
+                value = IsSelected ? "0,255,170,110" : "255,255,255,0";
                 return true;
         }
 

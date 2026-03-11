@@ -75,6 +75,8 @@ public class XUiC_ExtractorOutputContainerList : XUiController
             return;
         }
 
+        SelectedEntry = null;
+
         for (int i = 0; i < entries.Length; i++)
         {
             if (i < targets.Count)
@@ -140,3 +142,4 @@ public class XUiC_ExtractorOutputContainerList : XUiController
         RefreshBindings(true);
     }
 }
+

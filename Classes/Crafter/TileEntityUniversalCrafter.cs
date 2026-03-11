@@ -946,6 +946,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         }
 
         ResolveRecipeIfNeeded();
+        MoveNonRecipeBufferedInputsToPendingOutput();
 
         if (disabledByPlayer)
         {
@@ -1169,6 +1170,55 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         return inputBuffer == null || inputBuffer.Count == 0;
     }
 
+    private bool MoveNonRecipeBufferedInputsToPendingOutput()
+    {
+        ResolveRecipeIfNeeded();
+
+        if (_recipe == null || _recipe.ingredients == null || _recipe.ingredients.Count == 0)
+            return false;
+
+        if (inputBuffer == null || inputBuffer.Count == 0)
+            return false;
+
+        HashSet<string> allowedItems = new HashSet<string>();
+        foreach (ItemStack ingredient in _recipe.ingredients)
+        {
+            if (ingredient.itemValue?.ItemClass == null || ingredient.count <= 0)
+                continue;
+
+            string itemName = ingredient.itemValue.ItemClass.GetItemName();
+            if (!string.IsNullOrEmpty(itemName))
+                allowedItems.Add(itemName);
+        }
+
+        if (allowedItems.Count == 0)
+            return false;
+
+        bool movedAny = false;
+        foreach (var kvp in inputBuffer.ToList())
+        {
+            if (kvp.Value <= 0)
+            {
+                inputBuffer.Remove(kvp.Key);
+                movedAny = true;
+                continue;
+            }
+
+            if (allowedItems.Contains(kvp.Key))
+                continue;
+
+            AddPendingOutput(kvp.Key, kvp.Value);
+            inputBuffer.Remove(kvp.Key);
+            movedAny = true;
+
+            DevLog($"BUFFER CLEANUP -> moved {kvp.Value}x {kvp.Key} from inputBuffer to pendingOutput");
+        }
+
+        if (movedAny)
+            setModified();
+
+        return movedAny;
+    }
     private void TryRequestInputs(World world)
     {
         if (!CanRequestInputs(world))
@@ -1905,9 +1955,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
             if (changed)
             {
-                ResetCraftRuntimeState(false);
-                disabledByPlayer = true;
-                DevLog("SERVER SELECT INPUT -> cleared (changed, crafter disabled)");
+                DevLog("SERVER SELECT INPUT -> cleared (changed, crafting state preserved)");
             }
             else
             {
@@ -1966,9 +2014,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (changed)
         {
-            ResetCraftRuntimeState(false);
-            disabledByPlayer = true;
-            DevLog($"SERVER SELECT INPUT -> {chestPos} pipeGraphId={parsedPipeGraphId} (changed, crafter disabled)");
+            DevLog($"SERVER SELECT INPUT -> {chestPos} pipeGraphId={parsedPipeGraphId} (changed, crafting state preserved)");
         }
         else
         {
@@ -2005,9 +2051,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
             if (changed)
             {
-                ResetCraftRuntimeState(false);
-                disabledByPlayer = true;
-                DevLog("SERVER SELECT OUTPUT -> cleared (changed, crafter disabled)");
+                DevLog("SERVER SELECT OUTPUT -> cleared (changed, crafting state preserved)");
             }
             else
             {
@@ -2069,9 +2113,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (changed)
         {
-            ResetCraftRuntimeState(false);
-            disabledByPlayer = true;
-            DevLog($"SERVER SELECT OUTPUT -> {chestPos} mode={mode} pipeGraphId={parsedPipeGraphId} (changed, crafter disabled)");
+            DevLog($"SERVER SELECT OUTPUT -> {chestPos} mode={mode} pipeGraphId={parsedPipeGraphId} (changed, crafting state preserved)");
         }
         else
         {
@@ -2434,5 +2476,9 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         }
     }
 }
+
+
+
+
 
 
