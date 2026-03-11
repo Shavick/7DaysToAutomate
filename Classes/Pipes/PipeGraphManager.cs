@@ -7,11 +7,140 @@ public static class PipeGraphManager
     private const int TileEntitySnapshotMaxAttempts = 4;
     private static readonly Dictionary<Guid, PipeGraphData> graphsById = new Dictionary<Guid, PipeGraphData>();
     private static readonly HashSet<Vector3i> dirtyPipePositions = new HashSet<Vector3i>();
+    private static readonly Dictionary<Guid, int> graphRouteVersions = new Dictionary<Guid, int>();
+    private static readonly Dictionary<Guid, Dictionary<RouteCacheKey, RouteCacheEntry>> routeCacheByGraph = new Dictionary<Guid, Dictionary<RouteCacheKey, RouteCacheEntry>>();
+    private const int MaxRouteCacheEntriesPerGraph = 256;
+    private struct RouteCacheKey : IEquatable<RouteCacheKey>
+    {
+        public int ClrIdx;
+        public Vector3i SourceMachinePos;
+        public Vector3i TargetStoragePos;
+
+        public bool Equals(RouteCacheKey other)
+        {
+            return ClrIdx == other.ClrIdx &&
+                   SourceMachinePos == other.SourceMachinePos &&
+                   TargetStoragePos == other.TargetStoragePos;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return obj is RouteCacheKey other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = (hash * 31) + ClrIdx;
+                hash = (hash * 31) + SourceMachinePos.GetHashCode();
+                hash = (hash * 31) + TargetStoragePos.GetHashCode();
+                return hash;
+            }
+        }
+    }
+
+    private sealed class RouteCacheEntry
+    {
+        public int GraphVersion;
+        public List<Vector3i> Route;
+    }
+
+    private static int GetGraphRouteVersion(Guid graphId)
+    {
+        if (graphId == Guid.Empty)
+            return 0;
+
+        return graphRouteVersions.TryGetValue(graphId, out int version) ? version : 0;
+    }
+
+    private static void BumpGraphRouteVersion(Guid graphId)
+    {
+        if (graphId == Guid.Empty)
+            return;
+
+        int current = GetGraphRouteVersion(graphId);
+        graphRouteVersions[graphId] = current + 1;
+        routeCacheByGraph.Remove(graphId);
+    }
+
+    private static void RemoveGraphRouteState(Guid graphId)
+    {
+        if (graphId == Guid.Empty)
+            return;
+
+        graphRouteVersions.Remove(graphId);
+        routeCacheByGraph.Remove(graphId);
+    }
+
+    private static bool TryGetCachedRoute(Guid graphId, int clrIdx, Vector3i sourceMachinePos, Vector3i targetStoragePos, out List<Vector3i> route)
+    {
+        route = null;
+
+        if (graphId == Guid.Empty)
+            return false;
+
+        if (!routeCacheByGraph.TryGetValue(graphId, out Dictionary<RouteCacheKey, RouteCacheEntry> graphCache) || graphCache == null)
+            return false;
+
+        RouteCacheKey key = new RouteCacheKey
+        {
+            ClrIdx = clrIdx,
+            SourceMachinePos = sourceMachinePos,
+            TargetStoragePos = targetStoragePos
+        };
+
+        if (!graphCache.TryGetValue(key, out RouteCacheEntry entry) || entry == null || entry.Route == null || entry.Route.Count == 0)
+            return false;
+
+        if (entry.GraphVersion != GetGraphRouteVersion(graphId))
+            return false;
+
+        route = new List<Vector3i>(entry.Route);
+        return true;
+    }
+
+    private static void CacheRoute(Guid graphId, int clrIdx, Vector3i sourceMachinePos, Vector3i targetStoragePos, List<Vector3i> route)
+    {
+        if (graphId == Guid.Empty || route == null || route.Count == 0)
+            return;
+
+        if (!routeCacheByGraph.TryGetValue(graphId, out Dictionary<RouteCacheKey, RouteCacheEntry> graphCache) || graphCache == null)
+        {
+            graphCache = new Dictionary<RouteCacheKey, RouteCacheEntry>();
+            routeCacheByGraph[graphId] = graphCache;
+        }
+
+        if (graphCache.Count >= MaxRouteCacheEntriesPerGraph)
+        {
+            using (var e = graphCache.GetEnumerator())
+            {
+                if (e.MoveNext())
+                    graphCache.Remove(e.Current.Key);
+            }
+        }
+
+        RouteCacheKey key = new RouteCacheKey
+        {
+            ClrIdx = clrIdx,
+            SourceMachinePos = sourceMachinePos,
+            TargetStoragePos = targetStoragePos
+        };
+
+        graphCache[key] = new RouteCacheEntry
+        {
+            GraphVersion = GetGraphRouteVersion(graphId),
+            Route = new List<Vector3i>(route)
+        };
+    }
 
     public static void ClearAll(bool devLoggingEnabled = false)
     {
         graphsById.Clear();
         dirtyPipePositions.Clear();
+        graphRouteVersions.Clear();
+        routeCacheByGraph.Clear();
 
         if (devLoggingEnabled)
             Log.Out("[PipeGraphManager] ClearAll()");
@@ -41,13 +170,23 @@ public static class PipeGraphManager
         if (graph.PipePositions.Count == 0)
             return false;
 
+        if (TryGetCachedRoute(pipeGraphId, clrIdx, sourceMachinePos, targetStoragePos, out List<Vector3i> cachedRoute))
+        {
+            route = cachedRoute;
+            return true;
+        }
+
         HashSet<Vector3i> startPipes = GetGraphPipesAdjacentTo(world, clrIdx, graph, sourceMachinePos);
         HashSet<Vector3i> endPipes = GetGraphPipesAdjacentTo(world, clrIdx, graph, targetStoragePos);
 
         if (startPipes.Count == 0 || endPipes.Count == 0)
             return false;
 
-        return TryFindRouteBetweenPipeSets(world, clrIdx, graph, startPipes, endPipes, out route);
+        bool found = TryFindRouteBetweenPipeSets(world, clrIdx, graph, startPipes, endPipes, out route);
+        if (found)
+            CacheRoute(pipeGraphId, clrIdx, sourceMachinePos, targetStoragePos, route);
+
+        return found;
     }
 
     private static HashSet<Vector3i> GetGraphPipesAdjacentTo(
@@ -179,7 +318,7 @@ public static class PipeGraphManager
         }
 
         if (devLoggingEnabled)
-            Log.Out($"[PipeGraphManager] RebuildAllGraphs � found {pipePositions.Count} pipes");
+            Log.Out($"[PipeGraphManager] RebuildAllGraphs ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â found {pipePositions.Count} pipes");
 
         for (int i = 0; i < pipePositions.Count; i++)
         {
@@ -196,7 +335,7 @@ public static class PipeGraphManager
             ProcessDirtyGraphs(world, int.MaxValue);
 
         if (devLoggingEnabled)
-            Log.Out($"[PipeGraphManager] RebuildAllGraphs END � graphs={GetGraphCount()} dirty={GetDirtyPipeCount()}");
+            Log.Out($"[PipeGraphManager] RebuildAllGraphs END ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â graphs={GetGraphCount()} dirty={GetDirtyPipeCount()}");
     }
 
 
@@ -335,6 +474,7 @@ public static class PipeGraphManager
     {
         PipeGraphData graph = new PipeGraphData();
         graphsById[graph.PipeGraphId] = graph;
+        BumpGraphRouteVersion(graph.PipeGraphId);
         return graph;
     }
 
@@ -344,6 +484,7 @@ public static class PipeGraphManager
             return;
 
         graphsById.Remove(pipeGraphId);
+        RemoveGraphRouteState(pipeGraphId);
     }
 
     public static void RegisterGraph(PipeGraphData graph)
@@ -352,6 +493,7 @@ public static class PipeGraphManager
             return;
 
         graphsById[graph.PipeGraphId] = graph;
+        BumpGraphRouteVersion(graph.PipeGraphId);
     }
 
     public static IReadOnlyDictionary<Guid, PipeGraphData> GetAllGraphs()
@@ -439,6 +581,8 @@ public static class PipeGraphManager
             }
 
             graphsById.Remove(oldGraphId);
+            RemoveGraphRouteState(oldGraphId);
+
         }
 
         PipeGraphData newGraph = new PipeGraphData();
@@ -472,6 +616,7 @@ public static class PipeGraphManager
 
         newGraph.PruneStorageSnapshotsToEndpoints();
         graphsById[newGraph.PipeGraphId] = newGraph;
+        BumpGraphRouteVersion(newGraph.PipeGraphId);
 
         if (graphDevLoggingEnabled)
             Log.Out($"[PipeGraphManager] Rebuilt graph {newGraph.PipeGraphId} Pipes={newGraph.PipePositions.Count} StorageEndpoints={newGraph.StorageEndpoints.Count}");

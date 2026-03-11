@@ -179,7 +179,7 @@
             <property name="UnlockedBy" value="craftingWorkstations"/>
             <!-- Placeholder properties - fill later -->
             <property name="CraftingSpeed" value="1"/>
-            <property name="InternalStorageMultiplier" value="5"/>
+            <property name="InternalStorageMultiplier" value="25"/>
             <property name="DevLogs" value="false"/>
         </block>
 
@@ -305,7 +305,7 @@
             <property name="EconomicValue" value="60"/>
             <property name="DescriptionKey" value="itemPipeT3Desc"/>
             <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="PipeThroughput" value="13"/>
+            <property name="PipeThroughput" value="30"/>
             <property name="PipeSpeed" value="10"/>
             <property name="PipeLatency" value="100"/>
             <property name="DevLogs" value="true"/>
@@ -318,7 +318,7 @@
             <property name="EconomicValue" value="60"/>
             <property name="DescriptionKey" value="itemPipeElbowT3Desc"/>
             <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="PipeThroughput" value="13"/>
+            <property name="PipeThroughput" value="30"/>
             <property name="PipeSpeed" value="10"/>
             <property name="PipeLatency" value="100"/>
             <property name="DevLogs" value="true"/>
@@ -331,7 +331,7 @@
             <property name="EconomicValue" value="60"/>
             <property name="DescriptionKey" value="itemPipeSmallJointT3Desc"/>
             <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="PipeThroughput" value="13"/>
+            <property name="PipeThroughput" value="30"/>
             <property name="PipeSpeed" value="10"/>
             <property name="PipeLatency" value="100"/>
             <property name="DevLogs" value="true"/>

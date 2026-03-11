@@ -3,7 +3,10 @@ using System.Collections.Generic;
 
 public static class PipeTransportManager
 {
-    private const int MaxActiveJobsPerGraph = 10;
+    // Active in-flight job window scales with graph throughput so higher tiers can sustain factory concurrency.
+    private const int MinActiveJobsPerGraph = 24;
+    private const int ActiveJobsPerThroughputUnit = 4;
+    private const int MaxActiveJobsPerGraph = 256;
 
     private static readonly Dictionary<Guid, PipeTransportJob> activeJobs = new Dictionary<Guid, PipeTransportJob>();
     private const int DefaultPipeThroughput = 1;
@@ -12,11 +15,16 @@ public static class PipeTransportManager
     private const ulong BaseDispatchIntervalTicks = 20UL; // 1 second at 20 ticks/sec
     private const ulong BasePerPipeTravelTicks = 5UL;     // 0.25 sec per pipe
     private const ulong MachineRequestTimeoutTicks = 200UL;
+    private const int PrefetchPipesPerPacketStep = 8;
+    private const int MaxPrefetchPacketSteps = 3;
 
     private sealed class GraphDispatchState
     {
         public readonly Dictionary<Vector3i, int> MachinePriority = new Dictionary<Vector3i, int>();
         public readonly Dictionary<Vector3i, ulong> LastRequestWorldTime = new Dictionary<Vector3i, ulong>();
+        public readonly Dictionary<Vector3i, int> MachineFairCredits = new Dictionary<Vector3i, int>();
+        public ulong BudgetWindowWorldTime = ulong.MaxValue;
+        public int RemainingThroughputBudget = 0;
         public int RoundRobinCursor = 0;
     }
 
@@ -112,42 +120,44 @@ public static class PipeTransportManager
             Vector3i machinePos = staleMachines[i];
             state.LastRequestWorldTime.Remove(machinePos);
             state.MachinePriority.Remove(machinePos);
+            state.MachineFairCredits.Remove(machinePos);
         }
 
         if (state.RoundRobinCursor < 0)
             state.RoundRobinCursor = 0;
     }
 
-    private static List<Vector3i> BuildHighestPriorityContenders(GraphDispatchState state)
+    private static List<Vector3i> BuildActiveContenders(GraphDispatchState state)
     {
         List<Vector3i> contenders = new List<Vector3i>();
         if (state == null || state.LastRequestWorldTime.Count == 0)
             return contenders;
 
-        int highestPriority = int.MinValue;
-
         foreach (var kvp in state.LastRequestWorldTime)
-        {
-            Vector3i machinePos = kvp.Key;
-            if (!state.MachinePriority.TryGetValue(machinePos, out int priority))
-                priority = TileEntityMachine.DefaultPipePriority;
-
-            priority = NormalizePriority(priority);
-
-            if (priority > highestPriority)
-            {
-                highestPriority = priority;
-                contenders.Clear();
-                contenders.Add(machinePos);
-                continue;
-            }
-
-            if (priority == highestPriority)
-                contenders.Add(machinePos);
-        }
+            contenders.Add(kvp.Key);
 
         contenders.Sort(CompareMachinePos);
         return contenders;
+    }
+
+    private static int GetPriorityWeight(int machinePriority)
+    {
+        int clamped = NormalizePriority(machinePriority);
+        return clamped + 1;
+    }
+
+    private static int FindMachineIndex(List<Vector3i> contenders, Vector3i machinePos)
+    {
+        if (contenders == null)
+            return -1;
+
+        for (int i = 0; i < contenders.Count; i++)
+        {
+            if (contenders[i] == machinePos)
+                return i;
+        }
+
+        return -1;
     }
 
     private static bool TryReserveMachineTurn(Guid pipeGraphId, Vector3i machinePos, int machinePriority, ulong now)
@@ -161,15 +171,57 @@ public static class PipeTransportManager
 
         PruneInactiveMachines(state, now);
 
-        List<Vector3i> contenders = BuildHighestPriorityContenders(state);
+        List<Vector3i> contenders = BuildActiveContenders(state);
         if (contenders.Count == 0)
             return true;
+
+        for (int i = 0; i < contenders.Count; i++)
+        {
+            Vector3i contender = contenders[i];
+            if (!state.MachineFairCredits.ContainsKey(contender))
+                state.MachineFairCredits[contender] = 0;
+        }
+
+        int machineIndex = FindMachineIndex(contenders, machinePos);
+        if (machineIndex < 0)
+            return false;
 
         int cursor = state.RoundRobinCursor % contenders.Count;
         if (cursor < 0)
             cursor = 0;
 
-        return contenders[cursor] == machinePos;
+        for (int pass = 0; pass < 2; pass++)
+        {
+            for (int offset = 0; offset < contenders.Count; offset++)
+            {
+                int idx = (cursor + offset) % contenders.Count;
+                Vector3i contender = contenders[idx];
+                int credits = state.MachineFairCredits.TryGetValue(contender, out int existingCredits) ? existingCredits : 0;
+                if (credits <= 0)
+                    continue;
+
+                if (contender != machinePos)
+                    return false;
+
+                state.MachineFairCredits[contender] = credits - 1;
+                state.RoundRobinCursor = (idx + 1) % contenders.Count;
+                return true;
+            }
+
+            // Start a new weighted round when all contenders consumed their credits.
+            for (int i = 0; i < contenders.Count; i++)
+            {
+                Vector3i contender = contenders[i];
+                int priority = state.MachinePriority.TryGetValue(contender, out int p)
+                    ? p
+                    : TileEntityMachine.DefaultPipePriority;
+                int weight = GetPriorityWeight(priority);
+                int credits = state.MachineFairCredits.TryGetValue(contender, out int existingCredits) ? existingCredits : 0;
+                state.MachineFairCredits[contender] = credits + weight;
+            }
+        }
+
+        return false;
     }
 
     private static void AdvanceMachineTurn(Guid pipeGraphId, Vector3i machinePos, ulong now)
@@ -182,7 +234,7 @@ public static class PipeTransportManager
 
         PruneInactiveMachines(state, now);
 
-        List<Vector3i> contenders = BuildHighestPriorityContenders(state);
+        List<Vector3i> contenders = BuildActiveContenders(state);
         if (contenders.Count == 0)
         {
             state.RoundRobinCursor = 0;
@@ -212,7 +264,80 @@ public static class PipeTransportManager
         return NormalizePriority(machine.PipePriority);
     }
 
+    private static int ComputeGraphThroughputBudget(WorldBase world, int clrIdx, Guid pipeGraphId)
+    {
+        if (world == null || world.IsRemote() || pipeGraphId == Guid.Empty)
+            return DefaultPipeThroughput;
 
+        if (!PipeGraphManager.TryGetGraph(pipeGraphId, out PipeGraphData graph) || graph == null || graph.PipePositions == null || graph.PipePositions.Count == 0)
+            return DefaultPipeThroughput;
+
+        int lowestThroughput = int.MaxValue;
+
+        foreach (Vector3i pipePos in graph.PipePositions)
+        {
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, pipePos, out BlockValue blockValue))
+                continue;
+
+            int throughput = GetPipeThroughput(blockValue);
+            if (throughput <= 0)
+                continue;
+
+            if (throughput < lowestThroughput)
+                lowestThroughput = throughput;
+        }
+
+        if (lowestThroughput == int.MaxValue)
+            return DefaultPipeThroughput;
+
+        return lowestThroughput;
+    }
+
+    private static int GetRemainingThroughputBudget(WorldBase world, int clrIdx, Guid pipeGraphId, ulong now)
+    {
+        if (pipeGraphId == Guid.Empty)
+            return 0;
+
+        GraphDispatchState state = GetOrCreateDispatchState(pipeGraphId);
+        if (state.BudgetWindowWorldTime != now)
+        {
+            state.BudgetWindowWorldTime = now;
+            state.RemainingThroughputBudget = ComputeGraphThroughputBudget(world, clrIdx, pipeGraphId);
+        }
+
+        if (state.RemainingThroughputBudget < 0)
+            state.RemainingThroughputBudget = 0;
+
+        return state.RemainingThroughputBudget;
+    }
+
+    private static void ConsumeThroughputBudget(Guid pipeGraphId, ulong now, int amount)
+    {
+        if (pipeGraphId == Guid.Empty || amount <= 0)
+            return;
+
+        GraphDispatchState state = GetOrCreateDispatchState(pipeGraphId);
+        if (state.BudgetWindowWorldTime != now)
+            return;
+
+        state.RemainingThroughputBudget -= amount;
+        if (state.RemainingThroughputBudget < 0)
+            state.RemainingThroughputBudget = 0;
+    }
+    private static int ComputeInputPrefetchReserveItems(List<Vector3i> routePipePositions, int routeThroughput)
+    {
+        if (routePipePositions == null || routePipePositions.Count == 0 || routeThroughput <= 0)
+            return 0;
+
+        int extraPacketSteps = routePipePositions.Count / PrefetchPipesPerPacketStep;
+        if (extraPacketSteps <= 0)
+            return 0;
+
+        if (extraPacketSteps > MaxPrefetchPacketSteps)
+            extraPacketSteps = MaxPrefetchPacketSteps;
+
+        return extraPacketSteps * routeThroughput;
+    }
     public static bool TryRequestCrafterInputs(
     WorldBase world,
     int clrIdx,
@@ -222,55 +347,32 @@ public static class PipeTransportManager
     HashSet<string> neededItemNames)
     {
         if (world == null || world.IsRemote())
-        {
             return false;
-        }
 
         if (pipeGraphId == Guid.Empty)
-        {
             return false;
-        }
 
-        if (sourceStoragePos == Vector3i.zero)
-        {
+        if (sourceStoragePos == Vector3i.zero || targetMachinePos == Vector3i.zero)
             return false;
-        }
-
-        if (targetMachinePos == Vector3i.zero)
-        {
-            return false;
-        }
 
         if (neededItemNames == null || neededItemNames.Count == 0)
-        {
             return false;
-        }
 
         if (!PipeGraphManager.TryGetGraph(pipeGraphId, out PipeGraphData graph) || graph == null)
-        {
             return false;
-        }
 
         if (graph.StorageEndpoints == null || !graph.StorageEndpoints.Contains(sourceStoragePos))
-        {
             return false;
-        }
 
         if (!PipeGraphManager.TryFindRoute(world, clrIdx, pipeGraphId, targetMachinePos, sourceStoragePos, out List<Vector3i> route))
-        {
             return false;
-        }
 
         if (route == null || route.Count == 0)
-        {
             return false;
-        }
 
         // Resolve source availability from graph state (live storage or unload snapshot).
         if (!PipeGraphManager.TryGetStorageItemCounts(world, clrIdx, pipeGraphId, sourceStoragePos, out Dictionary<string, int> sourceItemCounts))
-        {
             return false;
-        }
 
         // Preserve the "don't touch while player is using" rule when the source chest is loaded.
         if (SafeWorldRead.TryGetTileEntity(world, clrIdx, sourceStoragePos, out TileEntity te) &&
@@ -281,44 +383,47 @@ public static class PipeTransportManager
                 return false;
         }
 
-        int remainingCapacity = GetRemainingCapacityForGraph(pipeGraphId);
+        int remainingCapacity = GetRemainingCapacityForGraph(world, clrIdx, pipeGraphId);
         if (remainingCapacity <= 0)
-        {
             return false;
-        }
 
         int routeThroughput = GetRouteThroughput(world, clrIdx, route);
         if (routeThroughput <= 0)
-        {
             return false;
-        }
+
+        int inputPrefetchReserve = ComputeInputPrefetchReserveItems(route, routeThroughput);
 
         if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, targetMachinePos, out TileEntity targetTe))
-        {
             return false;
-        }
 
         if (!(targetTe is TileEntityMachine targetMachine))
-        {
             return false;
-        }
 
         ulong now = world.GetWorldTime();
         ulong travelTicks = GetRouteTravelTicks(world, clrIdx, route);
-        bool createdAnyJobs = false;
+        int machinePriority = GetMachinePriority(world, clrIdx, targetMachinePos);
 
+        int remainingBudget = GetRemainingThroughputBudget(world, clrIdx, pipeGraphId, now);
+        if (remainingBudget <= 0)
+            return false;
 
-        foreach (string itemName in neededItemNames)
+        int packetCapacity = Math.Min(routeThroughput, remainingBudget);
+        if (packetCapacity <= 0)
+            return false;
+
+        if (!TryReserveMachineTurn(pipeGraphId, targetMachinePos, machinePriority, now))
+            return false;
+
+        List<string> orderedNeededItems = new List<string>(neededItemNames);
+        orderedNeededItems.Sort(StringComparer.Ordinal);
+
+        Dictionary<string, int> packetItems = new Dictionary<string, int>();
+
+        for (int i = 0; i < orderedNeededItems.Count && packetCapacity > 0; i++)
         {
-            if (remainingCapacity <= 0)
-            {
-                break;
-            }
-
+            string itemName = orderedNeededItems[i];
             if (string.IsNullOrEmpty(itemName))
-            {
                 continue;
-            }
 
             int alreadyQueuedForThisItem = 0;
             foreach (var kvp in activeJobs)
@@ -336,90 +441,88 @@ public static class PipeTransportManager
                 if (existingJob.PipeGraphId != pipeGraphId)
                     continue;
 
-                if (existingJob.SourcePos != sourceStoragePos)
+                if (existingJob.SourcePos != sourceStoragePos || existingJob.TargetPos != targetMachinePos)
                     continue;
 
-                if (existingJob.TargetPos != targetMachinePos)
-                    continue;
-
-                if (!string.Equals(existingJob.ItemName, itemName, StringComparison.Ordinal))
-                    continue;
-
-                alreadyQueuedForThisItem += existingJob.ItemCount;
+                alreadyQueuedForThisItem += existingJob.GetItemCount(itemName);
             }
 
             int availableInStorage = sourceItemCounts.TryGetValue(itemName, out int inStorage) ? inStorage : 0;
-
             int availableToQueue = availableInStorage - alreadyQueuedForThisItem;
-
-
             if (availableToQueue <= 0)
-            {
                 continue;
-            }
 
             int machineRemainingCapacity = targetMachine.GetBufferedInputRemainingCapacity(itemName);
-            int machineQueueRoom = machineRemainingCapacity - alreadyQueuedForThisItem;
+            int machineQueueRoom = machineRemainingCapacity + inputPrefetchReserve - alreadyQueuedForThisItem;
             if (machineQueueRoom <= 0)
-            {
                 continue;
-            }
 
-            int acceptedAmount = Math.Min(Math.Min(availableToQueue, routeThroughput), machineQueueRoom);
+            int acceptedAmount = Math.Min(Math.Min(availableToQueue, machineQueueRoom), packetCapacity);
             if (acceptedAmount <= 0)
-            {
                 continue;
-            }
 
-            int machinePriority = GetMachinePriority(world, clrIdx, targetMachinePos);
-            if (!TryReserveMachineTurn(pipeGraphId, targetMachinePos, machinePriority, now))
-            {
-                break;
-            }
-
-            ulong arrival = now + travelTicks;
-
-
-            PipeTransportJob job = new PipeTransportJob(
-                pipeGraphId,
-                PipeTransportJobDirection.StorageToMachine,
-                PipeTransportJobTargetType.Machine,
-                sourceStoragePos,
-                targetMachinePos,
-                itemName,
-                acceptedAmount,
-                route,
-                now,
-                arrival
-            );
-
-            if (!RegisterJob(job))
-            {
-                Log.Out($"[PipeTransportManager] TryRequestCrafterInputs failed to register job for {acceptedAmount}x {itemName}");
-                continue;
-            }
-
-            remainingCapacity--;
-            createdAnyJobs = true;
-            AdvanceMachineTurn(pipeGraphId, targetMachinePos, now);
-
+            packetItems[itemName] = acceptedAmount;
+            packetCapacity -= acceptedAmount;
         }
 
-        return createdAnyJobs;
+        if (packetItems.Count == 0)
+            return false;
+
+        ulong arrival = now + travelTicks;
+        PipeTransportJob job = new PipeTransportJob(
+            pipeGraphId,
+            PipeTransportJobDirection.StorageToMachine,
+            PipeTransportJobTargetType.Machine,
+            sourceStoragePos,
+            targetMachinePos,
+            packetItems,
+            route,
+            now,
+            arrival
+        );
+
+        if (!RegisterJob(job))
+        {
+            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs failed to register packet job for machine={targetMachinePos}");
+            return false;
+        }
+
+        remainingCapacity--;
+        int packetItemCount = job.GetTotalItemCount();
+        ConsumeThroughputBudget(pipeGraphId, now, packetItemCount);
+        AdvanceMachineTurn(pipeGraphId, targetMachinePos, now);
+
+        return true;
     }
 
     public static bool TryGetJob(Guid jobId, out PipeTransportJob job)
     {
         return activeJobs.TryGetValue(jobId, out job);
     }
+    private static int ComputeMaxActiveJobsForGraph(WorldBase world, int clrIdx, Guid pipeGraphId)
+    {
+        int throughput = ComputeGraphThroughputBudget(world, clrIdx, pipeGraphId);
+        if (throughput <= 0)
+            throughput = DefaultPipeThroughput;
+
+        int scaled = throughput * ActiveJobsPerThroughputUnit;
+        int capped = Math.Min(MaxActiveJobsPerGraph, Math.Max(MinActiveJobsPerGraph, scaled));
+        return capped > 0 ? capped : MinActiveJobsPerGraph;
+    }
 
     public static int GetRemainingCapacityForGraph(Guid pipeGraphId)
+    {
+        return GetRemainingCapacityForGraph(null, 0, pipeGraphId);
+    }
+
+    public static int GetRemainingCapacityForGraph(WorldBase world, int clrIdx, Guid pipeGraphId)
     {
         if (pipeGraphId == Guid.Empty)
             return 0;
 
         int active = GetActiveJobCountForGraph(pipeGraphId);
-        int remaining = MaxActiveJobsPerGraph - active;
+        int capacity = ComputeMaxActiveJobsForGraph(world, clrIdx, pipeGraphId);
+        int remaining = capacity - active;
 
         return remaining > 0 ? remaining : 0;
     }
@@ -463,12 +566,19 @@ public static class PipeTransportManager
         if (acceptedAmount <= 0)
             return false;
 
-        if (GetActiveJobCountForGraph(pipeGraphId) >= MaxActiveJobsPerGraph)
+        if (GetRemainingCapacityForGraph(world, clrIdx, pipeGraphId) <= 0)
         {
             return false;
         }
 
         ulong now = world.GetWorldTime();
+        int remainingBudget = GetRemainingThroughputBudget(world, clrIdx, pipeGraphId, now);
+        if (remainingBudget <= 0)
+            return false;
+
+        acceptedAmount = Math.Min(acceptedAmount, remainingBudget);
+        if (acceptedAmount <= 0)
+            return false;
 
         int machinePriority = GetMachinePriority(world, clrIdx, sourceMachinePos);
         if (!TryReserveMachineTurn(pipeGraphId, sourceMachinePos, machinePriority, now))
@@ -496,7 +606,10 @@ public static class PipeTransportManager
 
         bool registered = RegisterJob(job);
         if (registered)
+        {
+            ConsumeThroughputBudget(pipeGraphId, now, acceptedAmount);
             AdvanceMachineTurn(pipeGraphId, sourceMachinePos, now);
+        }
 
         return registered;
     }
@@ -601,7 +714,6 @@ public static class PipeTransportManager
         for (int i = 0; i < completedOrFailed.Count; i++)
             activeJobs.Remove(completedOrFailed[i]);
     }
-
     private static bool TryPickupInputJob(WorldBase world, PipeTransportJob job)
     {
         if (world == null || job == null)
@@ -616,24 +728,33 @@ public static class PipeTransportManager
                 return false;
         }
 
-        Dictionary<string, int> request = new Dictionary<string, int>
-        {
-            [job.ItemName] = job.ItemCount
-        };
+        Dictionary<string, int> request = job.GetPacketItemCountsCopy();
+        if (request == null || request.Count == 0)
+            return false;
 
         if (!PipeGraphManager.TryConsumeStorageItems(world, 0, job.PipeGraphId, job.SourcePos, request, out Dictionary<string, int> consumed))
             return false;
 
-        int actuallyRemoved = consumed.TryGetValue(job.ItemName, out int removed) ? removed : 0;
-        if (actuallyRemoved <= 0)
-            return false;
+        Dictionary<string, int> pickedPacket = new Dictionary<string, int>();
+        int totalPicked = 0;
 
-        if (actuallyRemoved != job.ItemCount)
+        foreach (var kvp in request)
         {
-            job.ItemCount = actuallyRemoved;
-            Log.Out($"[PipeTransportManager] Input job partial pickup {job.JobId} amount={actuallyRemoved}");
+            int removed = consumed != null && consumed.TryGetValue(kvp.Key, out int value) ? value : 0;
+            if (removed <= 0)
+                continue;
+
+            pickedPacket[kvp.Key] = removed;
+            totalPicked += removed;
         }
 
+        if (totalPicked <= 0)
+            return false;
+
+        if (totalPicked != job.GetTotalItemCount())
+            Log.Out($"[PipeTransportManager] Input packet partial pickup {job.JobId} picked={totalPicked}");
+
+        job.SetPacketItemCounts(pickedPacket);
         job.HasPickedUpItems = true;
         job.TransitStartWorldTime = world.GetWorldTime();
 
@@ -659,7 +780,6 @@ public static class PipeTransportManager
 
         return count;
     }
-
     private static bool TryDeliverJob(WorldBase world, PipeTransportJob job)
     {
         if (job == null || world == null)
@@ -679,12 +799,22 @@ public static class PipeTransportManager
             if (storage.IsUserAccessing())
                 return false;
 
-            ItemValue itemValue = ItemClass.GetItem(job.ItemName, false);
-            if (itemValue == null || itemValue.type == ItemValue.None.type)
+            Dictionary<string, int> packet = job.GetPacketItemCountsCopy();
+            if (packet.Count == 0)
                 return false;
 
-            ItemStack remaining = new ItemStack(itemValue, job.ItemCount);
-            return TryAddToStorage(storage, remaining);
+            foreach (var kvp in packet)
+            {
+                ItemValue itemValue = ItemClass.GetItem(kvp.Key, false);
+                if (itemValue == null || itemValue.type == ItemValue.None.type)
+                    return false;
+
+                ItemStack remaining = new ItemStack(itemValue, kvp.Value);
+                if (!TryAddToStorage(storage, remaining))
+                    return false;
+            }
+
+            return true;
         }
 
         if (job.IsStorageToMachine())
@@ -692,20 +822,44 @@ public static class PipeTransportManager
             if (!SafeWorldRead.TryGetTileEntity(world, job.TargetPos, out TileEntity te))
                 return false;
             if (!(te is TileEntityMachine machine))
-            {
                 return false;
+
+            Dictionary<string, int> requestedPacket = job.GetPacketItemCountsCopy();
+            if (requestedPacket.Count == 0)
+                return false;
+
+            Dictionary<string, int> remainingPacket = new Dictionary<string, int>();
+            int deliveredTotal = 0;
+
+            foreach (var kvp in requestedPacket)
+            {
+                int requested = kvp.Value;
+                if (requested <= 0)
+                    continue;
+
+                int accepted = machine.ReceiveBufferedInput(kvp.Key, requested);
+                if (accepted < 0)
+                    accepted = 0;
+
+                if (accepted > requested)
+                    accepted = requested;
+
+                deliveredTotal += accepted;
+
+                int stillNeeded = requested - accepted;
+                if (stillNeeded > 0)
+                    remainingPacket[kvp.Key] = stillNeeded;
             }
 
-            int accepted = machine.ReceiveBufferedInput(job.ItemName, job.ItemCount);
-            if (accepted <= 0)
+            if (deliveredTotal <= 0)
                 return false;
 
-            if (accepted >= job.ItemCount)
+            if (remainingPacket.Count == 0)
                 return true;
 
-            job.ItemCount -= accepted;
+            job.SetPacketItemCounts(remainingPacket);
             if (IsDevLoggingEnabledForJob(world, job))
-                Log.Out($"[PipeTransportManager] Input job partial delivery {job.JobId} accepted={accepted} remaining={job.ItemCount}");
+                Log.Out($"[PipeTransportManager] Input packet partial delivery {job.JobId} delivered={deliveredTotal} remaining={job.GetTotalItemCount()}");
             return false;
         }
 

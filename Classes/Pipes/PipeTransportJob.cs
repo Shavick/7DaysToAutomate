@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 public enum PipeTransportJobDirection
@@ -27,8 +27,12 @@ public class PipeTransportJob
     public Vector3i SourcePos;
     public Vector3i TargetPos;
 
+    // Legacy single-item fields are kept for compatibility and machine->storage jobs.
     public string ItemName;
     public int ItemCount;
+
+    // Packet payload for mixed-ingredient jobs.
+    public readonly Dictionary<string, int> PacketItemCounts = new Dictionary<string, int>();
 
     public readonly List<Vector3i> RoutePipePositions = new List<Vector3i>();
 
@@ -66,6 +70,35 @@ public class PipeTransportJob
         StartWorldTime = startWorldTime;
         ArrivalWorldTime = arrivalWorldTime;
 
+        if (!string.IsNullOrEmpty(ItemName) && ItemCount > 0)
+            PacketItemCounts[ItemName] = ItemCount;
+
+        if (routePipePositions != null)
+            RoutePipePositions.AddRange(routePipePositions);
+    }
+
+    public PipeTransportJob(
+        Guid pipeGraphId,
+        PipeTransportJobDirection direction,
+        PipeTransportJobTargetType targetType,
+        Vector3i sourcePos,
+        Vector3i targetPos,
+        Dictionary<string, int> packetItemCounts,
+        IEnumerable<Vector3i> routePipePositions,
+        ulong startWorldTime,
+        ulong arrivalWorldTime)
+    {
+        JobId = Guid.NewGuid();
+        PipeGraphId = pipeGraphId;
+        Direction = direction;
+        TargetType = targetType;
+        SourcePos = sourcePos;
+        TargetPos = targetPos;
+        StartWorldTime = startWorldTime;
+        ArrivalWorldTime = arrivalWorldTime;
+
+        SetPacketItemCounts(packetItemCounts);
+
         if (routePipePositions != null)
             RoutePipePositions.AddRange(routePipePositions);
     }
@@ -77,7 +110,83 @@ public class PipeTransportJob
 
     public bool HasValidItem()
     {
-        return !string.IsNullOrEmpty(ItemName) && ItemCount > 0;
+        return GetTotalItemCount() > 0;
+    }
+
+    public int GetTotalItemCount()
+    {
+        int total = 0;
+
+        foreach (var kvp in PacketItemCounts)
+        {
+            if (string.IsNullOrEmpty(kvp.Key) || kvp.Value <= 0)
+                continue;
+
+            total += kvp.Value;
+        }
+
+        if (total > 0)
+            return total;
+
+        return !string.IsNullOrEmpty(ItemName) && ItemCount > 0 ? ItemCount : 0;
+    }
+
+    public int GetItemCount(string itemName)
+    {
+        if (string.IsNullOrEmpty(itemName))
+            return 0;
+
+        if (PacketItemCounts.TryGetValue(itemName, out int packetCount) && packetCount > 0)
+            return packetCount;
+
+        if (string.Equals(ItemName, itemName, StringComparison.Ordinal) && ItemCount > 0)
+            return ItemCount;
+
+        return 0;
+    }
+
+    public Dictionary<string, int> GetPacketItemCountsCopy()
+    {
+        Dictionary<string, int> copy = new Dictionary<string, int>();
+
+        foreach (var kvp in PacketItemCounts)
+        {
+            if (string.IsNullOrEmpty(kvp.Key) || kvp.Value <= 0)
+                continue;
+
+            copy[kvp.Key] = kvp.Value;
+        }
+
+        if (copy.Count == 0 && !string.IsNullOrEmpty(ItemName) && ItemCount > 0)
+            copy[ItemName] = ItemCount;
+
+        return copy;
+    }
+
+    public void SetPacketItemCounts(Dictionary<string, int> packetItemCounts)
+    {
+        PacketItemCounts.Clear();
+
+        if (packetItemCounts != null)
+        {
+            foreach (var kvp in packetItemCounts)
+            {
+                if (string.IsNullOrEmpty(kvp.Key) || kvp.Value <= 0)
+                    continue;
+
+                PacketItemCounts[kvp.Key] = kvp.Value;
+            }
+        }
+
+        ItemName = string.Empty;
+        ItemCount = 0;
+
+        foreach (var kvp in PacketItemCounts)
+        {
+            ItemName = kvp.Key;
+            ItemCount = kvp.Value;
+            break;
+        }
     }
 
     public bool HasValidEndpoints()
@@ -122,6 +231,6 @@ public class PipeTransportJob
 
     public override string ToString()
     {
-        return $"JobId={JobId} PipeGraphId={PipeGraphId} Direction={Direction} TargetType={TargetType} Source={SourcePos} Target={TargetPos} Item={ItemName} Count={ItemCount} RouteLen={RoutePipePositions.Count} Start={StartWorldTime} Arrival={ArrivalWorldTime} Complete={IsComplete} Failed={IsFailed}";
+        return $"JobId={JobId} PipeGraphId={PipeGraphId} Direction={Direction} TargetType={TargetType} Source={SourcePos} Target={TargetPos} Items={GetTotalItemCount()} Types={PacketItemCounts.Count} RouteLen={RoutePipePositions.Count} Start={StartWorldTime} Arrival={ArrivalWorldTime} Complete={IsComplete} Failed={IsFailed}";
     }
 }
