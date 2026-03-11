@@ -16,7 +16,6 @@ public class TileEntityUniversalCrafter : TileEntityMachine
     // Storage scanning
     public List<TileEntityComposite> nearbyContainers = new List<TileEntityComposite>();
     public Dictionary<string, RecipeScanResult> LastScanResults = new Dictionary<string, RecipeScanResult>();
-    private Dictionary<string, int> _pendingUsedIngredients;
     public bool reqHasNearbyStorage = false;
 
     public Vector3i SelectedInputChestPos = Vector3i.zero;
@@ -279,10 +278,13 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             CraftStartTime = craftStartTime,
             BaseRecipeDuration = BaseRecipeDuration,
             CraftSpeed = this.CraftSpeed,
+            SelectedInputChestPos = SelectedInputChestPos,
+            SelectedInputPipeGraphId = SelectedInputPipeGraphId,
+            SelectedOutputChestPos = SelectedOutputChestPos,
+            SelectedOutputPipeGraphId = SelectedPipeGraphId,
             LastHLRSimTime = world.GetWorldTime(),
             IngredientCount = new Dictionary<string, int>(),
             OwedResources = new Dictionary<string, int>(),
-            UsedIngredients = new Dictionary<string, int>()
         };
 
         DevLog("SNAPSHOT -> Base fields populated");
@@ -379,6 +381,10 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         );
 
         SelectedRecipeName = snapshot.RecipeName;
+        SelectedInputChestPos = snapshot.SelectedInputChestPos;
+        SelectedInputPipeGraphId = snapshot.SelectedInputPipeGraphId;
+        SelectedOutputChestPos = snapshot.SelectedOutputChestPos;
+        SelectedPipeGraphId = snapshot.SelectedOutputPipeGraphId;
         _recipe = CraftingManager.GetRecipe(snapshot.RecipeName);
 
         isCrafting = snapshot.IsCrafting;
@@ -386,8 +392,6 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         BaseRecipeDuration = snapshot.BaseRecipeDuration;
         CraftSpeed = snapshot.CraftSpeed;
-
-        _pendingUsedIngredients = snapshot.UsedIngredients;
 
         if (snapshot.OwedResources != null && snapshot.OwedResources.Count > 0)
         {
@@ -405,142 +409,6 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         simulatedByHLR = false;
         DevLog("HLR SNAPSHOT APPLY - END");
     }
-
-    public void ApplyUsedIngredients(Dictionary<string, int> usedIngredients)
-    {
-        DevLog("========================================");
-        DevLog("APPLY USED INGREDIENTS -> ENTER");
-        DevLog("========================================");
-
-        if (usedIngredients == null)
-        {
-            DevLog("ABORT -> usedIngredients dictionary is NULL", DevLogLevel.Warning);
-            return;
-        }
-
-        DevLog($"STATE -> usedIngredients.Count = {usedIngredients.Count}");
-
-        if (usedIngredients.Count == 0)
-        {
-            DevLog("ABORT -> no ingredients to apply");
-            return;
-        }
-
-        if (selectedInputContainer == null)
-        {
-            DevLog("ABORT -> selectedInputContainer is NULL", DevLogLevel.Warning);
-            return;
-        }
-
-        Vector3i inputPos = selectedInputContainer.ToWorldPos();
-        DevLog($"INPUT CONTAINER -> position = {inputPos}");
-
-        var storage = selectedInputContainer.GetFeature<TEFeatureStorage>();
-        if (storage == null)
-        {
-            DevLog("ABORT -> input container has NO TEFeatureStorage", DevLogLevel.Warning);
-            return;
-        }
-
-        if (storage.items == null)
-        {
-            DevLog("ABORT -> storage.items is NULL", DevLogLevel.Warning);
-            return;
-        }
-
-        DevLog($"STORAGE -> slot count = {storage.items.Length}");
-        DevLog("----------------------------------------");
-
-        foreach (var kvp in usedIngredients)
-        {
-            string itemName = kvp.Key;
-            int totalToRemove = kvp.Value;
-
-            DevLog($"INGREDIENT BEGIN -> '{itemName}'");
-            DevLog($"TARGET REMOVE -> {totalToRemove}");
-
-            if (totalToRemove <= 0)
-            {
-                DevLog("SKIP -> remove amount <= 0");
-                DevLog("----------------------------------------");
-                continue;
-            }
-
-            int beforeTotal = 0;
-            foreach (var s in storage.items)
-            {
-                if (!s.IsEmpty() &&
-                    s.itemValue.ItemClass.GetItemName() == itemName)
-                {
-                    beforeTotal += s.count;
-                }
-            }
-
-            DevLog($"CHEST TOTAL BEFORE -> {beforeTotal}");
-
-            int remainingToRemove = totalToRemove;
-
-            for (int i = 0; i < storage.items.Length && remainingToRemove > 0; i++)
-            {
-                var stack = storage.items[i];
-
-                if (stack.IsEmpty())
-                    continue;
-
-                string stackName = stack.itemValue.ItemClass.GetItemName();
-                if (stackName != itemName)
-                    continue;
-
-                int stackBefore = stack.count;
-                int remove = System.Math.Min(stackBefore, remainingToRemove);
-
-                stack.count -= remove;
-                remainingToRemove -= remove;
-
-                DevLog(
-                    $"  SLOT {i} -> had {stackBefore}, removed {remove}, now {stack.count}, remainingToRemove={remainingToRemove}"
-                );
-
-                if (stack.count <= 0)
-                {
-                    storage.items[i] = ItemStack.Empty;
-                    DevLog($"  SLOT {i} -> stack emptied");
-                }
-            }
-
-            int afterTotal = 0;
-            foreach (var s in storage.items)
-            {
-                if (!s.IsEmpty() &&
-                    s.itemValue.ItemClass.GetItemName() == itemName)
-                {
-                    afterTotal += s.count;
-                }
-            }
-
-            DevLog($"CHEST TOTAL AFTER -> {afterTotal}");
-
-            if (remainingToRemove > 0)
-            {
-                DevLog(
-                    $"WARNING -> Unable to remove full amount for '{itemName}', missing {remainingToRemove}",
-                    DevLogLevel.Warning
-                );
-            }
-            else
-            {
-                DevLog($"INGREDIENT COMPLETE -> '{itemName}' removal successful");
-            }
-
-            DevLog("----------------------------------------");
-        }
-
-        storage.SetModified();
-
-        DevLog("APPLY USED INGREDIENTS -> COMPLETE");
-        DevLog("========================================");
-    }
-
     public List<InputTargetInfo> GetAvailableInputTargets(WorldBase world)
     {
         if (world == null)
@@ -2584,4 +2452,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         inputBuffer = new Dictionary<string, int>();
     }
 }
+
+
+
 

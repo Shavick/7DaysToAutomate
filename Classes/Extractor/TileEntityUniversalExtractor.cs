@@ -323,6 +323,8 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             IsOn = isExtractorOn,
             IsEnabledByPlayer = isEnabledByPlayer,
             LastHLRSimTime = world.GetWorldTime(),
+            SelectedOutputChestPos = SelectedOutputChestPos,
+            SelectedOutputPipeGraphId = SelectedPipeGraphId,
             Timers = new List<ResourceTimer>(timers),
             OwedResources = new Dictionary<string, int>()
         };
@@ -353,6 +355,8 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         timers.Clear();
         timers.AddRange(snapshot.Timers);
         isExtractorOn = snapshot.IsOn;
+        SelectedOutputChestPos = snapshot.SelectedOutputChestPos;
+        SelectedPipeGraphId = snapshot.SelectedOutputPipeGraphId;
         isEnabledByPlayer = snapshot.IsEnabledByPlayer;
 
         for (int i = 0; i < timers.Count; i++)
@@ -1144,3 +1148,4 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
     }
 }
+

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using static TileEntityUniversalExtractor;
@@ -8,7 +8,7 @@ public class HigherLogicRegistry
     private readonly World world;
     private readonly Dictionary<Guid, IHLRSnapshot> snapshots;
     private ulong lastUpdateTime;
-    private const ulong UPDATE_INTERVAL = 12; // About 2 seconds (world time ticks)
+    private const ulong UPDATE_INTERVAL = 12; // 12 world ticks ~= 0.6s at 20 TPS
     private const ulong SAVE_INTERVAL = 360;
     private ulong lastSaveTime;
     private bool isDirty;
@@ -192,9 +192,7 @@ public class HigherLogicRegistry
 
         for (int i = 0; i < count; i++)
         {
-            var ingredientCounts = new Dictionary<string, int>();
-            var usedIngredients = new Dictionary<string, int>();
-            var owedResources = new Dictionary<string, int>();
+            var ingredientCounts = new Dictionary<string, int>();            var owedResources = new Dictionary<string, int>();
 
             foreach (var ingredient in recipe.ingredients)
             {
@@ -216,7 +214,6 @@ public class HigherLogicRegistry
                 BaseRecipeDuration = recipe.craftingTime,
                 CraftSpeed = 1f,
                 IngredientCount = ingredientCounts,
-                UsedIngredients = usedIngredients,
                 OwedResources = owedResources,
                 LastHLRSimTime = worldTime
             };
@@ -304,44 +301,30 @@ public class HigherLogicRegistry
             return;
         }
 
+        if (!HasValidGraphStorageEndpoint(extractor.SelectedOutputPipeGraphId, extractor.SelectedOutputChestPos))
+        {
+            extractor.IsOn = false;
+            extractor.IsEnabledByPlayer = false;
+            HLRDevLog("[HLR][Extractor] STOP — Missing output graph/storage endpoint; shutting down extractor");
+            return;
+        }
+
         HLRDevLog($"[HLR][Extractor] Simulate BEGIN @ {extractor.Position} ticks={hlrTicksToSimulate}");
+
+        FlushOwedResourcesToGraph(extractor.SelectedOutputPipeGraphId, extractor.SelectedOutputChestPos, extractor.OwedResources, "Extractor");
 
         foreach (var timer in extractor.Timers)
         {
-            HLRDevLog(
-                $"[HLR][Extractor] Timer BEFORE — {timer.Resource} " +
-                $"counter={timer.Counter}/{timer.Speed}"
-            );
-
             timer.Counter += hlrTicksToSimulate;
 
-            HLRDevLog(
-                $"[HLR][Extractor] Timer ADVANCE — {timer.Resource} " +
-                $"counter={timer.Counter}/{timer.Speed}"
-            );
-
             if (timer.Speed <= 0)
-            {
-                HLRDevLog($"[HLR][Extractor] Timer SKIP — invalid speed for {timer.Resource}");
                 continue;
-            }
 
             int completedCycles = timer.Counter / timer.Speed;
             timer.Counter = timer.Counter % timer.Speed;
 
-            HLRDevLog(
-                $"[HLR][Extractor] Timer AFTER — {timer.Resource} " +
-                $"counter={timer.Counter}/{timer.Speed} cycles={completedCycles}"
-            );
-
             if (completedCycles <= 0)
-            {
-                HLRDevLog(
-                    $"[HLR][Extractor] Timer WAIT — {timer.Resource} " +
-                    $"({timer.Speed - timer.Counter} ticks remaining)"
-                );
                 continue;
-            }
 
             int totalProduced = 0;
 
@@ -349,26 +332,34 @@ public class HigherLogicRegistry
             {
                 int amount = timer.MinCount;
                 if (timer.MinCount < timer.MaxCount)
-                {
                     amount = UnityEngine.Random.Range(timer.MinCount, timer.MaxCount + 1);
-                }
 
                 totalProduced += amount;
             }
 
-            if (!extractor.OwedResources.TryGetValue(timer.Resource, out int existing))
-                extractor.OwedResources[timer.Resource] = totalProduced;
-            else
-                extractor.OwedResources[timer.Resource] = existing + totalProduced;
+            if (totalProduced <= 0)
+                continue;
 
-            HLRDevLog(
-                $"[HLR][Extractor] PRODUCED — {totalProduced}x {timer.Resource} " +
-                $"cycles={completedCycles} owed={extractor.OwedResources[timer.Resource]}"
-            );
+            var produced = new Dictionary<string, int>
+            {
+                [timer.Resource] = totalProduced
+            };
+
+            TryDepositSnapshotOutput(extractor.SelectedOutputPipeGraphId, extractor.SelectedOutputChestPos, produced, out Dictionary<string, int> deposited);
+
+            int accepted = 0;
+            if (deposited != null && deposited.TryGetValue(timer.Resource, out int acceptedCount))
+                accepted = acceptedCount;
+
+            int remaining = totalProduced - accepted;
+            if (remaining > 0)
+                AddToOwedDictionary(extractor.OwedResources, timer.Resource, remaining);
+
+            int nowOwed = extractor.OwedResources.TryGetValue(timer.Resource, out int owedValue) ? owedValue : 0;
+            HLRDevLog($"[HLR][Extractor] PRODUCED — {totalProduced}x {timer.Resource} deposited={accepted} owed={nowOwed}");
         }
 
         extractor.WorldTime = worldTime;
-
         HLRDevLog($"[HLR][Extractor] Simulate END @ {extractor.Position}");
     }
 
@@ -376,174 +367,221 @@ public class HigherLogicRegistry
     {
         HLRDevLog($"[HLR][Crafter] ========================================");
         HLRDevLog($"[HLR][Crafter] SIMULATE BEGIN @ {crafter.Position} ticks={hlrTicksToSimulate}");
-        HLRDevLog($"[HLR][Crafter] Recipe='{crafter.RecipeName}' IsCrafting={crafter.IsCrafting} Disabled={crafter.DisabledByPlayer}");
 
-        // ─────────────────────────
-        // Gates
-        // ─────────────────────────
-        if (!crafter.IsCrafting)
-        {
-            HLRDevLog("[HLR][Crafter] ABORT — IsCrafting == false");
+        if (!crafter.IsCrafting || crafter.DisabledByPlayer || string.IsNullOrEmpty(crafter.RecipeName))
             return;
-        }
-
-        if (crafter.DisabledByPlayer)
-        {
-            HLRDevLog("[HLR][Crafter] ABORT — DisabledByPlayer == true");
-            return;
-        }
-
-        if (string.IsNullOrEmpty(crafter.RecipeName))
-        {
-            HLRDevLog("[HLR][Crafter] ABORT — RecipeName is NULL/EMPTY");
-            return;
-        }
 
         Recipe recipe = CraftingManager.GetRecipe(crafter.RecipeName);
         if (recipe == null)
-        {
-            HLRDevLog($"[HLR][Crafter] ABORT — Recipe '{crafter.RecipeName}' not found");
             return;
-        }
-
-        HLRDevLog($"[HLR][Crafter] Recipe resolved: {recipe.GetName()}");
-
-        // ─────────────────────────
-        // Batch-aware elapsed-time math
-        // ─────────────────────────
-        float simulatedSeconds = 2f * hlrTicksToSimulate;
 
         if (crafter.CraftSpeed <= 0f)
-        {
-            HLRDevLog("[HLR][Crafter] ABORT — CraftSpeed <= 0");
             return;
-        }
 
         float effectiveCraftTime = crafter.BaseRecipeDuration / crafter.CraftSpeed;
         if (effectiveCraftTime <= 0f)
+            return;
+
+        if (crafter.SelectedInputPipeGraphId == Guid.Empty || crafter.SelectedInputChestPos == Vector3i.zero)
         {
-            HLRDevLog("[HLR][Crafter] ABORT — effectiveCraftTime <= 0");
+            HLRDevLog("[HLR][Crafter] STOP — Missing input graph/chest context");
+            crafter.IsCrafting = false;
+            crafter.DisabledByPlayer = true;
             return;
         }
 
+        if (!HasValidGraphStorageEndpoint(crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos))
+        {
+            HLRDevLog("[HLR][Crafter] STOP — Input graph/storage endpoint unavailable");
+            crafter.IsCrafting = false;
+            crafter.DisabledByPlayer = true;
+            return;
+        }
+
+        if (crafter.SelectedOutputPipeGraphId == Guid.Empty || crafter.SelectedOutputChestPos == Vector3i.zero)
+        {
+            HLRDevLog("[HLR][Crafter] STOP — Missing output graph/chest context");
+            crafter.IsCrafting = false;
+            crafter.DisabledByPlayer = true;
+            return;
+        }
+
+        if (!HasValidGraphStorageEndpoint(crafter.SelectedOutputPipeGraphId, crafter.SelectedOutputChestPos))
+        {
+            HLRDevLog("[HLR][Crafter] STOP — Output graph/storage endpoint unavailable");
+            crafter.IsCrafting = false;
+            crafter.DisabledByPlayer = true;
+            return;
+        }
+
+        FlushOwedResourcesToGraph(crafter.SelectedOutputPipeGraphId, crafter.SelectedOutputChestPos, crafter.OwedResources, "Crafter");
+
+        float simulatedSeconds = ((float)UPDATE_INTERVAL * hlrTicksToSimulate) / 20f;
         crafter.CraftProgressSeconds += simulatedSeconds;
 
-        HLRDevLog(
-            $"[HLR][Crafter] Timing — Base={crafter.BaseRecipeDuration}s " +
-            $"Speed={crafter.CraftSpeed} Effective={effectiveCraftTime:0.000}s " +
-            $"AddedSeconds={simulatedSeconds:0.000}s ProgressNow={crafter.CraftProgressSeconds:0.000}s"
-        );
-
         int craftsThisTick = (int)(crafter.CraftProgressSeconds / effectiveCraftTime);
-        HLRDevLog(
-            $"[HLR][Crafter] CraftsThisTick initial = floor({crafter.CraftProgressSeconds:0.000} / {effectiveCraftTime:0.000}) = {craftsThisTick}"
-        );
-
         if (craftsThisTick <= 0)
+            return;
+
+
+        if (!PipeGraphManager.TryGetStorageItemCounts(world, 0, crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos, out Dictionary<string, int> availableCounts))
         {
-            HLRDevLog(
-                $"[HLR][Crafter] WAIT — insufficient progress " +
-                $"({crafter.CraftProgressSeconds:0.000}/{effectiveCraftTime:0.000}s)"
-            );
+            HLRDevLog("[HLR][Crafter] STOP — Input storage snapshot unavailable");
+            crafter.IsCrafting = false;
+            crafter.DisabledByPlayer = true;
             return;
         }
 
-        // ─────────────────────────
-        // Clamp by ingredients
-        // ─────────────────────────
+        Dictionary<string, int> requiredForCrafts = new Dictionary<string, int>();
+
         foreach (var ingredient in recipe.ingredients)
         {
-            if (ingredient.count <= 0)
+            if (ingredient.count <= 0 || ingredient.itemValue?.ItemClass == null)
                 continue;
 
             string itemName = ingredient.itemValue.ItemClass.GetItemName();
-
-            if (!crafter.IngredientCount.TryGetValue(itemName, out int available))
-            {
-                HLRDevLog($"[HLR][Crafter] STOP — Missing ingredient '{itemName}'");
-                crafter.IsCrafting = false;
-                return;
-            }
-
+            int available = availableCounts.TryGetValue(itemName, out int found) ? found : 0;
             int maxForIngredient = available / ingredient.count;
 
-            HLRDevLog(
-                $"[HLR][Crafter] Ingredient '{itemName}' — " +
-                $"available={available} perCraft={ingredient.count} " +
-                $"maxCrafts={maxForIngredient}"
-            );
-
-            craftsThisTick = System.Math.Min(craftsThisTick, maxForIngredient);
-
+            craftsThisTick = Math.Min(craftsThisTick, maxForIngredient);
             if (craftsThisTick <= 0)
             {
-                HLRDevLog($"[HLR][Crafter] STOP — Ingredient '{itemName}' limits crafts to 0");
                 crafter.IsCrafting = false;
+                HLRDevLog($"[HLR][Crafter] STOP — Ingredient '{itemName}' unavailable");
                 return;
             }
         }
 
-        HLRDevLog($"[HLR][Crafter] CraftsThisTick FINAL = {craftsThisTick}");
-
-        // Consume only the progress actually used after ingredient clamp
-        crafter.CraftProgressSeconds -= craftsThisTick * effectiveCraftTime;
-
-        HLRDevLog(
-            $"[HLR][Crafter] Progress AFTER craft = {crafter.CraftProgressSeconds:0.000}s"
-        );
-
-        // ─────────────────────────
-        // Consume ingredients (logical)
-        // ─────────────────────────
         foreach (var ingredient in recipe.ingredients)
         {
-            if (ingredient.count <= 0)
+            if (ingredient.count <= 0 || ingredient.itemValue?.ItemClass == null)
                 continue;
 
             string itemName = ingredient.itemValue.ItemClass.GetItemName();
-            int used = ingredient.count * craftsThisTick;
-
-            int before = crafter.IngredientCount[itemName];
-            crafter.IngredientCount[itemName] -= used;
-            int after = crafter.IngredientCount[itemName];
-
-            if (!crafter.UsedIngredients.ContainsKey(itemName))
-                crafter.UsedIngredients[itemName] = used;
-            else
-                crafter.UsedIngredients[itemName] += used;
-
-            HLRDevLog(
-                $"[HLR][Crafter] CONSUME — {itemName}: " +
-                $"used={used} before={before} after={after}"
-            );
+            int requiredCount = ingredient.count * craftsThisTick;
+            if (requiredCount > 0)
+                requiredForCrafts[itemName] = requiredCount;
         }
 
-        // ─────────────────────────
-        // Produce output (owed only)
-        // ─────────────────────────
+        if (!PipeGraphManager.TryConsumeStorageItems(world, 0, crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos, requiredForCrafts, out Dictionary<string, int> consumed))
+        {
+            HLRDevLog("[HLR][Crafter] STOP — Failed to consume required ingredients from graph snapshot");
+            crafter.IsCrafting = false;
+            return;
+        }
+
+        crafter.CraftProgressSeconds -= craftsThisTick * effectiveCraftTime;
+
         ItemClass outputClass = recipe.GetOutputItemClass();
         if (outputClass != null)
         {
             string outputName = outputClass.GetItemName();
             int produced = recipe.count * craftsThisTick;
 
-            if (!crafter.OwedResources.ContainsKey(outputName))
-                crafter.OwedResources[outputName] = produced;
-            else
-                crafter.OwedResources[outputName] += produced;
+            var producedMap = new Dictionary<string, int>
+            {
+                [outputName] = produced
+            };
 
-            HLRDevLog(
-                $"[HLR][Crafter] PRODUCE — {outputName}: +" +
-                $"{produced} (total owed={crafter.OwedResources[outputName]})"
-            );
-        }
-        else
-        {
-            HLRDevLog("[HLR][Crafter] WARNING — Recipe output class is NULL");
+            TryDepositSnapshotOutput(crafter.SelectedOutputPipeGraphId, crafter.SelectedOutputChestPos, producedMap, out Dictionary<string, int> deposited);
+
+            int depositedCount = 0;
+            if (deposited != null && deposited.TryGetValue(outputName, out int d))
+                depositedCount = d;
+
+            int remaining = produced - depositedCount;
+            if (remaining > 0)
+                AddToOwedDictionary(crafter.OwedResources, outputName, remaining);
+
+            int owedNow = crafter.OwedResources.TryGetValue(outputName, out int owed) ? owed : 0;
+            HLRDevLog($"[HLR][Crafter] PRODUCE — {produced}x {outputName} deposited={depositedCount} owed={owedNow}");
         }
 
         HLRDevLog($"[HLR][Crafter] SIMULATE END @ {crafter.Position}");
-        HLRDevLog($"[HLR][Crafter] ========================================");
+    }
+
+    private void FlushOwedResourcesToGraph(Guid pipeGraphId, Vector3i storagePos, Dictionary<string, int> owedResources, string snapshotKind)
+    {
+        if (owedResources == null || owedResources.Count == 0)
+            return;
+
+        if (pipeGraphId == Guid.Empty || storagePos == Vector3i.zero)
+            return;
+
+        Dictionary<string, int> request = new Dictionary<string, int>();
+        foreach (var kvp in owedResources)
+        {
+            if (string.IsNullOrEmpty(kvp.Key) || kvp.Value <= 0)
+                continue;
+
+            request[kvp.Key] = kvp.Value;
+        }
+
+        if (request.Count == 0)
+            return;
+
+        if (!TryDepositSnapshotOutput(pipeGraphId, storagePos, request, out Dictionary<string, int> deposited) || deposited == null || deposited.Count == 0)
+            return;
+
+        List<string> toRemove = null;
+
+        foreach (var kvp in deposited)
+        {
+            if (!owedResources.TryGetValue(kvp.Key, out int existing))
+                continue;
+
+            int remaining = existing - kvp.Value;
+            if (remaining > 0)
+                owedResources[kvp.Key] = remaining;
+            else
+            {
+                if (toRemove == null)
+                    toRemove = new List<string>();
+
+                toRemove.Add(kvp.Key);
+            }
+        }
+
+        if (toRemove != null)
+        {
+            for (int i = 0; i < toRemove.Count; i++)
+                owedResources.Remove(toRemove[i]);
+        }
+
+        HLRDevLog($"[HLR][{snapshotKind}] Flushed owed resources to graph={pipeGraphId} pos={storagePos} depositedTypes={deposited.Count}");
+    }
+
+    private bool TryDepositSnapshotOutput(
+        Guid pipeGraphId,
+        Vector3i storagePos,
+        Dictionary<string, int> toDeposit,
+        out Dictionary<string, int> deposited)
+    {
+        deposited = new Dictionary<string, int>();
+
+        if (pipeGraphId == Guid.Empty || storagePos == Vector3i.zero)
+            return false;
+
+        return PipeGraphManager.TryDepositStorageItems(world, 0, pipeGraphId, storagePos, toDeposit, out deposited);
+    }
+
+    private bool HasValidGraphStorageEndpoint(Guid pipeGraphId, Vector3i storagePos)
+    {
+        if (pipeGraphId == Guid.Empty || storagePos == Vector3i.zero)
+            return false;
+
+        return PipeGraphManager.TryGetStorageItemCounts(world, 0, pipeGraphId, storagePos, out _);
+    }
+
+    private static void AddToOwedDictionary(Dictionary<string, int> map, string itemName, int amount)
+    {
+        if (map == null || string.IsNullOrEmpty(itemName) || amount <= 0)
+            return;
+
+        if (map.TryGetValue(itemName, out int existing))
+            map[itemName] = existing + amount;
+        else
+            map[itemName] = amount;
     }
 
     private int GetMissedHLRTicks(IHLRSnapshot snapshot, ulong worldTime)
@@ -670,6 +708,8 @@ public class HigherLogicRegistry
             IsPhantom = source.IsPhantom,
             WorldTime = source.WorldTime,
             LastHLRSimTime = source.LastHLRSimTime,
+            SelectedOutputChestPos = source.SelectedOutputChestPos,
+            SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
             Timers = new List<ResourceTimer>(),
             OwedResources = new Dictionary<string, int>()
         };
@@ -714,8 +754,11 @@ public class HigherLogicRegistry
             CraftSpeed = source.CraftSpeed,
             CraftProgressSeconds = source.CraftProgressSeconds,
             LastHLRSimTime = source.LastHLRSimTime,
+            SelectedInputChestPos = source.SelectedInputChestPos,
+            SelectedInputPipeGraphId = source.SelectedInputPipeGraphId,
+            SelectedOutputChestPos = source.SelectedOutputChestPos,
+            SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
             IngredientCount = new Dictionary<string, int>(),
-            UsedIngredients = new Dictionary<string, int>(),
             OwedResources = new Dictionary<string, int>()
         };
 
@@ -724,14 +767,6 @@ public class HigherLogicRegistry
             foreach (var kvp in source.IngredientCount)
             {
                 clone.IngredientCount[kvp.Key] = kvp.Value;
-            }
-        }
-
-        if (source.UsedIngredients != null)
-        {
-            foreach (var kvp in source.UsedIngredients)
-            {
-                clone.UsedIngredients[kvp.Key] = kvp.Value;
             }
         }
 
@@ -858,9 +893,9 @@ public class HigherLogicRegistry
         return count;
     }
 
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // REGISTRATION
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     public void RegisterMachine(Guid machineId, IHLRSnapshot snapshot)
     {
         HLRDevLog($"[HLR] RegisterMachine — BEGIN id={machineId}");
@@ -899,9 +934,9 @@ public class HigherLogicRegistry
         HLRDevLog($"[HLR] RegisterMachine — Active snapshots = {snapshots.Count}");
     }
 
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // UNREGISTRATION
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     public bool TryUnregisterMachine(Guid machineId, out IHLRSnapshot snapshot)
     {
         HLRDevLog($"[HLR] TryUnregisterMachine — BEGIN id={machineId}");
@@ -940,7 +975,7 @@ public class HigherLogicRegistry
         switch (kind)
         {
             case "Extractor":
-                if (version == 1)
+                if (version == 1 || version == 2)
                 {
                     return new ExtractorSnapshotV1();
                 }
@@ -948,7 +983,7 @@ public class HigherLogicRegistry
                 return null;
 
             case "Crafter":
-                if (version == 1)
+                if (version == 1 || version == 2)
                 {
                     return new CrafterSnapshot();
                 }
@@ -1116,6 +1151,12 @@ public class HigherLogicRegistry
             }
         }
 
+        bw.Write(extractor.SelectedOutputChestPos.x);
+        bw.Write(extractor.SelectedOutputChestPos.y);
+        bw.Write(extractor.SelectedOutputChestPos.z);
+        bw.Write(extractor.SelectedOutputPipeGraphId.ToString());
+
+        HLRDevLog($"[HLR][Extractor][Save] PipeGraph={extractor.SelectedOutputPipeGraphId} OutputPos={extractor.SelectedOutputChestPos}");
         HLRDevLog($"[HLR][Extractor][Save] END");
     }
 
@@ -1152,22 +1193,8 @@ public class HigherLogicRegistry
                 HLRDevLog($"[HLR][Crafter][Save] Ingredient {kvp.Key} x{kvp.Value}");
             }
         }
-
-        // Used Ingredients (dictionary)
-
-        int usedCount = crafter.UsedIngredients?.Count ?? 0;
-        bw.Write(usedCount);
-
-        if (crafter.UsedIngredients != null)
-        {
-            foreach (var kvp in crafter.UsedIngredients)
-            {
-                bw.Write(kvp.Key);
-                bw.Write(kvp.Value);
-
-                HLRDevLog($"[HLR][Crafter][Save] Used {kvp.Key} x{kvp.Value}");
-            }
-        }
+        // UsedIngredients removed from active simulation state, keep a zero count for compatibility with existing save layout.
+        bw.Write(0);
 
         // Owed Resources (dictionary)
 
@@ -1184,6 +1211,18 @@ public class HigherLogicRegistry
             }
         }
 
+        bw.Write(crafter.SelectedInputChestPos.x);
+        bw.Write(crafter.SelectedInputChestPos.y);
+        bw.Write(crafter.SelectedInputChestPos.z);
+        bw.Write(crafter.SelectedInputPipeGraphId.ToString());
+
+        bw.Write(crafter.SelectedOutputChestPos.x);
+        bw.Write(crafter.SelectedOutputChestPos.y);
+        bw.Write(crafter.SelectedOutputChestPos.z);
+        bw.Write(crafter.SelectedOutputPipeGraphId.ToString());
+
+        HLRDevLog($"[HLR][Crafter][Save] InputGraph={crafter.SelectedInputPipeGraphId} InputPos={crafter.SelectedInputChestPos}");
+        HLRDevLog($"[HLR][Crafter][Save] OutputGraph={crafter.SelectedOutputPipeGraphId} OutputPos={crafter.SelectedOutputChestPos}");
         HLRDevLog($"[HLR][Crafter][Save] END");
     }
 
@@ -1251,11 +1290,9 @@ public class HigherLogicRegistry
                     HLRDevLog($"[HLR][IO] Loaded snapshot id={machineId} pos={snapshot.Position} kind={kind}");
 
                     if (snapshot is ExtractorSnapshotV1 extractor)
-                        LoadExtractorSnapshot(br, extractor);
-
+                        LoadExtractorSnapshot(br, extractor, snapshotVersion);
                     if (snapshot is CrafterSnapshot crafter)
-                        LoadCrafterSnapshot(br, crafter);
-
+                        LoadCrafterSnapshot(br, crafter, snapshotVersion);
                     snapshots[machineId] = snapshot;
                 }
             }
@@ -1272,7 +1309,7 @@ public class HigherLogicRegistry
         HLRDevLog($"[HLR] Load Called! file={hlrFile}");
     }
 
-    private void LoadExtractorSnapshot(BinaryReader br, ExtractorSnapshotV1 extractor)
+    private void LoadExtractorSnapshot(BinaryReader br, ExtractorSnapshotV1 extractor, int snapshotVersion)
     {
         HLRDevLog($"[HLR][Extractor][Load] BEGIN MachineId={extractor.MachineId}");
 
@@ -1325,16 +1362,32 @@ public class HigherLogicRegistry
             HLRDevLog($"[HLR][Extractor][Load] Owed {key} x{value}");
         }
 
+        extractor.SelectedOutputChestPos = Vector3i.zero;
+        extractor.SelectedOutputPipeGraphId = Guid.Empty;
+
+        if (snapshotVersion >= 2)
+        {
+            int outX = br.ReadInt32();
+            int outY = br.ReadInt32();
+            int outZ = br.ReadInt32();
+            extractor.SelectedOutputChestPos = new Vector3i(outX, outY, outZ);
+
+            string outputGraph = br.ReadString();
+            if (!Guid.TryParse(outputGraph, out extractor.SelectedOutputPipeGraphId))
+                extractor.SelectedOutputPipeGraphId = Guid.Empty;
+        }
+
+        HLRDevLog($"[HLR][Extractor][Load] PipeGraph={extractor.SelectedOutputPipeGraphId} OutputPos={extractor.SelectedOutputChestPos}");
         HLRDevLog($"[HLR][Extractor][Load] END");
     }
 
-    private void LoadCrafterSnapshot(BinaryReader br, CrafterSnapshot crafter)
+    private void LoadCrafterSnapshot(BinaryReader br, CrafterSnapshot crafter, int snapshotVersion)
     {
         HLRDevLog($"[HLR][Crafter][Load] BEGIN MachineId={crafter.MachineId}");
 
-        // ─────────────
+        // -------------
         // Core state
-        // ─────────────
+        // -------------
         crafter.IsCrafting = br.ReadBoolean();
         crafter.DisabledByPlayer = br.ReadBoolean();
 
@@ -1349,9 +1402,9 @@ public class HigherLogicRegistry
             $"Base={crafter.BaseRecipeDuration} Speed={crafter.CraftSpeed}"
         );
 
-        // ─────────────
+        // -------------
         // IngredientCount
-        // ─────────────
+        // -------------
         int ingredientCount = br.ReadInt32();
         crafter.IngredientCount = new Dictionary<string, int>(ingredientCount);
 
@@ -1365,27 +1418,21 @@ public class HigherLogicRegistry
 
             HLRDevLog($"[HLR][Crafter][Load] Ingredient {key} x{value}");
         }
-
-        // ─────────────
-        // UsedIngredients
-        // ─────────────
+        // -------------
+        // UsedIngredients removed from active simulation state; consume and discard legacy data.
         int usedCount = br.ReadInt32();
-        crafter.UsedIngredients = new Dictionary<string, int>(usedCount);
 
-        HLRDevLog($"[HLR][Crafter][Load] UsedIngredients COUNT={usedCount}");
+        HLRDevLog($"[HLR][Crafter][Load] UsedIngredients COUNT={usedCount} (discarded)");
 
         for (int i = 0; i < usedCount; i++)
         {
-            string key = br.ReadString();
-            int value = br.ReadInt32();
-            crafter.UsedIngredients[key] = value;
-
-            HLRDevLog($"[HLR][Crafter][Load] Used {key} x{value}");
+            br.ReadString();
+            br.ReadInt32();
         }
 
-        // ─────────────
+        // -------------
         // OwedResources
-        // ─────────────
+        // -------------
         int owedCount = br.ReadInt32();
         crafter.OwedResources = new Dictionary<string, int>(owedCount);
 
@@ -1400,7 +1447,56 @@ public class HigherLogicRegistry
             HLRDevLog($"[HLR][Crafter][Load] Owed {key} x{value}");
         }
 
+        crafter.SelectedInputChestPos = Vector3i.zero;
+        crafter.SelectedInputPipeGraphId = Guid.Empty;
+        crafter.SelectedOutputChestPos = Vector3i.zero;
+        crafter.SelectedOutputPipeGraphId = Guid.Empty;
+
+        if (snapshotVersion >= 2)
+        {
+            int inX = br.ReadInt32();
+            int inY = br.ReadInt32();
+            int inZ = br.ReadInt32();
+            crafter.SelectedInputChestPos = new Vector3i(inX, inY, inZ);
+
+            string inputGraph = br.ReadString();
+            if (!Guid.TryParse(inputGraph, out crafter.SelectedInputPipeGraphId))
+                crafter.SelectedInputPipeGraphId = Guid.Empty;
+
+            int outX = br.ReadInt32();
+            int outY = br.ReadInt32();
+            int outZ = br.ReadInt32();
+            crafter.SelectedOutputChestPos = new Vector3i(outX, outY, outZ);
+
+            string outputGraph = br.ReadString();
+            if (!Guid.TryParse(outputGraph, out crafter.SelectedOutputPipeGraphId))
+                crafter.SelectedOutputPipeGraphId = Guid.Empty;
+        }
+
+        HLRDevLog($"[HLR][Crafter][Load] InputGraph={crafter.SelectedInputPipeGraphId} InputPos={crafter.SelectedInputChestPos}");
+        HLRDevLog($"[HLR][Crafter][Load] OutputGraph={crafter.SelectedOutputPipeGraphId} OutputPos={crafter.SelectedOutputChestPos}");
         HLRDevLog($"[HLR][Crafter][Load] END");
     }
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

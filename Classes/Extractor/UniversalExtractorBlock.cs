@@ -1,37 +1,37 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 public class UniversalExtractorBlock
     : MachineBlock<TileEntityUniversalExtractor>
 {
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // CONSTRUCTOR
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     public UniversalExtractorBlock()
     {
         // HasTileEntity enforced by MachineBlock
     }
 
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // TILE ENTITY CREATION
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     protected override TileEntityUniversalExtractor CreateTileEntity(Chunk chunk)
     {
         Log.Out("[Extractor][BLOCK] CreateTileEntity()");
         return new TileEntityUniversalExtractor(chunk);
     }
 
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // INIT
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     public override void Init()
     {
         base.Init();
         Log.Out("[Extractor][BLOCK] Init()");
     }
 
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // PLACEMENT VALIDATION
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     public override bool CanPlaceBlockAt(
         WorldBase world,
         int clrIdx,
@@ -51,9 +51,9 @@ public class UniversalExtractorBlock
         return valid && base.CanPlaceBlockAt(world, clrIdx, blockPos, blockValue, bOmitCollideCheck);
     }
 
-    // ─────────────────────────────────────────────
-    // BLOCK LOADED (HLR → TE HANDOFF)
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
+    // BLOCK LOADED (HLR ? TE HANDOFF)
+    // ---------------------------------------------
     public override void OnBlockLoaded(
     WorldBase world,
     int clrIdx,
@@ -65,27 +65,27 @@ public class UniversalExtractorBlock
         var te = world.GetTileEntity(clrIdx, blockPos) as TileEntityUniversalExtractor;
         if (te == null)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD — NO TILE ENTITY");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD � NO TILE ENTITY");
             return;
         }
 
         if (te.IsDevLogging)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD — BEGIN");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD � BEGIN");
         }
 
         var hlr = WorldHLR.GetOrCreate((World)world);
 
         if (te.IsDevLogging)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] TRY CLAIM — TE MachineGuid={te.MachineGuid}");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] TRY CLAIM � TE MachineGuid={te.MachineGuid}");
         }
 
         if (hlr.TryUnregisterMachine(te.MachineGuid, out var snapshot))
         {
             if (te.IsDevLogging)
             {
-                Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD — Snapshot FOUND, applying");
+                Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD � Snapshot FOUND, applying");
             }
 
             te.ApplyHLRSnapshot(snapshot);
@@ -94,7 +94,7 @@ public class UniversalExtractorBlock
         {
             if (te.IsDevLogging)
             {
-                Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD — No snapshot (live machine)");
+                Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD � No snapshot (live machine)");
             }
         }
 
@@ -102,14 +102,14 @@ public class UniversalExtractorBlock
 
         if (te.IsDevLogging)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD — COMPLETE (HLR → TE)");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD � COMPLETE (HLR ? TE)");
         }
     }
 
 
-    // ─────────────────────────────────────────────
-    // BLOCK UNLOADED (TE → HLR HANDOFF)
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
+    // BLOCK UNLOADED (TE ? HLR HANDOFF)
+    // ---------------------------------------------
     public override void OnBlockUnloaded(
     WorldBase world,
     int clrIdx,
@@ -121,20 +121,22 @@ public class UniversalExtractorBlock
         var te = world.GetTileEntity(clrIdx, blockPos) as TileEntityUniversalExtractor;
         if (te == null)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] UNLOAD — NO TILE ENTITY");
+            bool devLogs = blockValue.Block?.Properties?.GetBool("DevLogs") == true;
+            if (devLogs)
+                Log.Out($"[Extractor][BLOCK][{blockPos}] UNLOAD � NO TILE ENTITY");
             return;
         }
 
         if (te.IsDevLogging)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] UNLOAD — BEGIN");
-            Log.Out($"[Extractor][BLOCK][{blockPos}] UNLOAD — Building snapshot");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] UNLOAD � BEGIN");
+            Log.Out($"[Extractor][BLOCK][{blockPos}] UNLOAD � Building snapshot");
         }
 
         var snapshot = te.BuildHLRSnapshot(world);
         if (snapshot == null)
         {
-            Log.Error($"[Extractor][BLOCK][{blockPos}] UNLOAD — Snapshot FAILED");
+            Log.Error($"[Extractor][BLOCK][{blockPos}] UNLOAD � Snapshot FAILED");
             return;
         }
 
@@ -145,14 +147,14 @@ public class UniversalExtractorBlock
 
         if (te.IsDevLogging)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] UNLOAD — COMPLETE (TE → HLR)");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] UNLOAD � COMPLETE (TE ? HLR)");
         }
     }
 
 
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // ACTIVATION / UI
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     public override bool HasBlockActivationCommands(
         WorldBase world,
         BlockValue blockValue,
@@ -230,3 +232,5 @@ public class UniversalExtractorBlock
         return $"{key} Open {name}";
     }
 }
+
+

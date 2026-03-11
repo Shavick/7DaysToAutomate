@@ -266,24 +266,19 @@ public static class PipeTransportManager
             return false;
         }
 
-        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, sourceStoragePos, out TileEntity te))
-        {
-            return false;
-        }
-        if (!(te is TileEntityComposite comp))
-        {
-            return false;
-        }
-
-        TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
-        if (storage == null || storage.items == null)
+        // Resolve source availability from graph state (live storage or unload snapshot).
+        if (!PipeGraphManager.TryGetStorageItemCounts(world, clrIdx, pipeGraphId, sourceStoragePos, out Dictionary<string, int> sourceItemCounts))
         {
             return false;
         }
 
-        if (storage.IsUserAccessing())
+        // Preserve the "don't touch while player is using" rule when the source chest is loaded.
+        if (SafeWorldRead.TryGetTileEntity(world, clrIdx, sourceStoragePos, out TileEntity te) &&
+            te is TileEntityComposite comp)
         {
-            return false;
+            TEFeatureStorage sourceStorage = comp.GetFeature<TEFeatureStorage>();
+            if (sourceStorage != null && sourceStorage.items != null && sourceStorage.IsUserAccessing())
+                return false;
         }
 
         int remainingCapacity = GetRemainingCapacityForGraph(pipeGraphId);
@@ -353,21 +348,7 @@ public static class PipeTransportManager
                 alreadyQueuedForThisItem += existingJob.ItemCount;
             }
 
-            int availableInStorage = 0;
-            for (int i = 0; i < storage.items.Length; i++)
-            {
-                ItemStack stack = storage.items[i];
-                if (stack.IsEmpty())
-                    continue;
-
-                if (stack.itemValue?.ItemClass == null)
-                    continue;
-
-                if (stack.itemValue.ItemClass.GetItemName() != itemName)
-                    continue;
-
-                availableInStorage += stack.count;
-            }
+            int availableInStorage = sourceItemCounts.TryGetValue(itemName, out int inStorage) ? inStorage : 0;
 
             int availableToQueue = availableInStorage - alreadyQueuedForThisItem;
 
@@ -626,45 +607,24 @@ public static class PipeTransportManager
         if (world == null || job == null)
             return false;
 
-        if (!SafeWorldRead.TryGetTileEntity(world, job.SourcePos, out TileEntity te))
-            return false;
-        if (!(te is TileEntityComposite comp))
+        // If the source chest is loaded and open, preserve existing behavior and wait.
+        if (SafeWorldRead.TryGetTileEntity(world, job.SourcePos, out TileEntity te) &&
+            te is TileEntityComposite comp)
         {
-            return false;
+            TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
+            if (storage != null && storage.items != null && storage.IsUserAccessing())
+                return false;
         }
 
-        TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
-        if (storage == null || storage.items == null)
-            return false;
-
-        if (storage.IsUserAccessing())
-            return false;
-
-        int remainingToRemove = job.ItemCount;
-
-        for (int i = 0; i < storage.items.Length && remainingToRemove > 0; i++)
+        Dictionary<string, int> request = new Dictionary<string, int>
         {
-            ItemStack stack = storage.items[i];
-            if (stack.IsEmpty())
-                continue;
+            [job.ItemName] = job.ItemCount
+        };
 
-            if (stack.itemValue?.ItemClass == null)
-                continue;
+        if (!PipeGraphManager.TryConsumeStorageItems(world, 0, job.PipeGraphId, job.SourcePos, request, out Dictionary<string, int> consumed))
+            return false;
 
-            if (stack.itemValue.ItemClass.GetItemName() != job.ItemName)
-                continue;
-
-            int remove = Math.Min(stack.count, remainingToRemove);
-            stack.count -= remove;
-            remainingToRemove -= remove;
-
-            if (stack.count <= 0)
-                storage.items[i] = ItemStack.Empty;
-            else
-                storage.items[i] = stack;
-        }
-
-        int actuallyRemoved = job.ItemCount - remainingToRemove;
+        int actuallyRemoved = consumed.TryGetValue(job.ItemName, out int removed) ? removed : 0;
         if (actuallyRemoved <= 0)
             return false;
 
@@ -676,7 +636,6 @@ public static class PipeTransportManager
 
         job.HasPickedUpItems = true;
         job.TransitStartWorldTime = world.GetWorldTime();
-        storage.SetModified();
 
         return true;
     }

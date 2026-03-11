@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 public class ExtractorSnapshotV1 : IHLRSnapshot
@@ -6,7 +6,7 @@ public class ExtractorSnapshotV1 : IHLRSnapshot
     public string SnapshotKind => "Extractor";
     public bool IsPhantom;
     public ulong LastHLRSimTime;
-    int IHLRSnapshot.SnapshotVersion => 1;
+    int IHLRSnapshot.SnapshotVersion => 2;
     Guid IHLRSnapshot.MachineId
     {
         get => MachineId;
@@ -24,6 +24,10 @@ public class ExtractorSnapshotV1 : IHLRSnapshot
     public bool IsEnabledByPlayer;
     public Guid MachineId;
     public Vector3i Position;
+
+    // Pipe graph context for HLR push planning.
+    public Vector3i SelectedOutputChestPos;
+    public Guid SelectedOutputPipeGraphId;
 
     // Production State
     public List<TileEntityUniversalExtractor.ResourceTimer> Timers;

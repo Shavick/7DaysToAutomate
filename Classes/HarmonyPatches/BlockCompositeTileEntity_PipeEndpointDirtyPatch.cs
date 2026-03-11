@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 
 [HarmonyPatch(typeof(BlockCompositeTileEntity))]
 public static class BlockCompositeTileEntity_PipeEndpointDirtyPatch
@@ -46,6 +46,40 @@ public static class BlockCompositeTileEntity_PipeEndpointDirtyPatch
             return;
 
         MarkAdjacentPipesDirty(_world, _chunk.ClrIdx, _blockPos);
+    }
+
+    [HarmonyPostfix]
+    [HarmonyPatch("OnBlockLoaded")]
+    public static void OnBlockLoaded_Postfix(
+        WorldBase _world,
+        int _clrIdx,
+        Vector3i _blockPos,
+        BlockValue _blockValue)
+    {
+        if (_world == null || _world.IsRemote() || _blockValue.ischild)
+            return;
+
+        if (!HasStorageFeature(_world, _clrIdx, _blockPos))
+            return;
+
+        PipeGraphManager.TryApplyStorageSnapshotForPosition(_world, _clrIdx, _blockPos);
+    }
+
+    [HarmonyPrefix]
+    [HarmonyPatch("OnBlockUnloaded")]
+    public static void OnBlockUnloaded_Prefix(
+        WorldBase _world,
+        int _clrIdx,
+        Vector3i _blockPos,
+        BlockValue _blockValue)
+    {
+        if (_world == null || _world.IsRemote() || _blockValue.ischild)
+            return;
+
+        if (!HasStorageFeature(_world, _clrIdx, _blockPos))
+            return;
+
+        PipeGraphManager.CaptureStorageSnapshotForPosition(_world, _clrIdx, _blockPos);
     }
 
     private static bool HasStorageFeature(WorldBase world, int clrIdx, Vector3i blockPos)

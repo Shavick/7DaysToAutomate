@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 public class CrafterSnapshot : IHLRSnapshot
 {
-    // ─────────────────────────
+    // -------------------------
     // IHLRSnapshot identity
-    // ─────────────────────────
+    // -------------------------
     public string SnapshotKind => "Crafter";
-    public int SnapshotVersion => 1;
+    public int SnapshotVersion => 2;
     public Guid MachineId { get; set; }
     public Vector3i Position { get; set; }
     public ulong LastHLRSimTime;
@@ -15,11 +15,9 @@ public class CrafterSnapshot : IHLRSnapshot
     public bool IsPhantom;
     public float CraftProgressSeconds;
 
-
-    // ─────────────────────────
+    // -------------------------
     // Crafter-specific state
-    // ─────────────────────────
-
+    // -------------------------
     public string RecipeName;
     public bool IsCrafting;
     public bool DisabledByPlayer;
@@ -27,7 +25,12 @@ public class CrafterSnapshot : IHLRSnapshot
     public float BaseRecipeDuration;
     public float CraftSpeed;
 
+    // Pipe graph context for HLR pull/push planning.
+    public Vector3i SelectedInputChestPos;
+    public Guid SelectedInputPipeGraphId;
+    public Vector3i SelectedOutputChestPos;
+    public Guid SelectedOutputPipeGraphId;
+
     public Dictionary<string, int> IngredientCount;
-    public Dictionary<string, int> UsedIngredients;
     public Dictionary<string, int> OwedResources;
 }
