@@ -128,16 +128,30 @@ public class TileEntityUniversalCrafter : TileEntityMachine
     private float GetInternalStorageMultiplier()
     {
         var block = blockValue.Block;
-        if (block?.Properties?.Values != null)
+        if (block?.Properties == null)
+            return 1f;
+
+        // Prefer standard property access so XML-defined custom properties are read consistently.
+        string raw = block.Properties.GetString("InternalStorageMultiplier");
+        if (string.IsNullOrEmpty(raw))
+            raw = block.Properties.GetString("internalstoragemultiplier");
+
+        // Fallback to raw dictionary in case upstream normalizes keys differently.
+        if (string.IsNullOrEmpty(raw) && block.Properties.Values != null)
         {
-            string raw;
-            if (block.Properties.Values.TryGetValue("InternalStorageMultiplier", out raw) ||
-                block.Properties.Values.TryGetValue("internalstoragemultiplier", out raw))
-            {
-                if (float.TryParse(raw, out float parsed) && parsed > 0f)
-                    return parsed;
-            }
+            block.Properties.Values.TryGetValue("InternalStorageMultiplier", out raw);
+            if (string.IsNullOrEmpty(raw))
+                block.Properties.Values.TryGetValue("internalstoragemultiplier", out raw);
         }
+
+        if (string.IsNullOrEmpty(raw))
+            return 1f;
+
+        if (float.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float parsed) && parsed > 0f)
+            return parsed;
+
+        if (float.TryParse(raw, out parsed) && parsed > 0f)
+            return parsed;
 
         return 1f;
     }
@@ -189,6 +203,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         int remaining = capacity - GetBufferedItemCount(itemName);
         return remaining > 0 ? remaining : 0;
+    }
+
+    public override int GetBufferedInputRemainingCapacity(string itemName)
+    {
+        return GetInputBufferRemainingCapacity(itemName);
     }
 
     public override int ReceiveBufferedInput(string itemName, int count)
@@ -1160,7 +1179,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (selectedInputContainer == null && SelectedInputChestPos != Vector3i.zero)
         {
             if (IsDevLogging)
-                Log.Out($"[Crafter][UPDATE] Retrying container resolve for {SelectedInputChestPos}");
+                DevLog($"[Crafter][UPDATE] Retrying container resolve for {SelectedInputChestPos}");
 
             ResolveSelectedInputContainer();
         }
@@ -1168,7 +1187,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (selectedOutputContainer == null && SelectedOutputChestPos != Vector3i.zero)
         {
             if (IsDevLogging)
-                Log.Out($"[Crafter][UPDATE] Retrying output container resolve for {SelectedOutputChestPos}");
+                DevLog($"[Crafter][UPDATE] Retrying output container resolve for {SelectedOutputChestPos}");
 
             ResolveSelectedOutputContainer();
         }
@@ -1490,7 +1509,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         }
 
         Vector3i center = this.ToWorldPos();
-        Log.Out($"[Crafter][TE] FindNearbyContainers: center={center} range={range}");
+        DevLog($"[Crafter][TE] FindNearbyContainers: center={center} range={range}");
 
         int checks = 0;
         int found = 0;
@@ -1509,13 +1528,13 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                     {
                         nearbyContainers.Add(comp);
                         found++;
-                        Log.Out($"[Crafter][TE]   Found composite at {pos} block={comp.blockValue.Block.GetBlockName()}");
+                        DevLog($"[Crafter][TE]   Found composite at {pos} block={comp.blockValue.Block.GetBlockName()}");
                     }
                 }
             }
         }
 
-        Log.Out($"[Crafter][TE] Scan complete. Checked={checks} Found={found} Stored={nearbyContainers.Count}");
+        DevLog($"[Crafter][TE] Scan complete. Checked={checks} Found={found} Stored={nearbyContainers.Count}");
         return nearbyContainers;
     }
 
@@ -1590,12 +1609,12 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if (IsDevLogging)
         {
-            Log.Out($"[Crafter] Found {nearbyContainers.Count} containers near {ToWorldPos()}");
+            DevLog($"Found {nearbyContainers.Count} containers near {ToWorldPos()}");
             foreach (var comp in nearbyContainers)
             {
                 if (comp == null) continue;
                 Vector3i pos = comp.ToWorldPos();
-                Log.Out($"[Crafter] Container at {pos.x}, {pos.y}, {pos.z}");
+                DevLog($"Container at {pos.x}, {pos.y}, {pos.z}");
             }
         }
     }
@@ -1610,24 +1629,24 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
             if (storage != null && storage.items != null && storage.items.Length > 0)
             {
-                Log.Out($"[Crafter] Found items in storage at {checkPos}:");
+                DevLog($"Found items in storage at {checkPos}:");
                 foreach (var item in storage.items)
                 {
                     if (!item.IsEmpty())
                     {
                         string localizedItemName = item.itemValue.ItemClass.GetLocalizedItemName();
-                        Log.Out($"[Crafter] - {localizedItemName} (Quantity: {item.count})");
+                        DevLog($"- {localizedItemName} (Quantity: {item.count})");
                     }
                 }
             }
             else
             {
-                Log.Out($"[Crafter] No items found in storage at {checkPos}");
+                DevLog($"No items found in storage at {checkPos}");
             }
         }
         else
         {
-            Log.Out($"[Crafter] Invalid or unsupported TileEntity at {checkPos}");
+            DevLog($"Invalid or unsupported TileEntity at {checkPos}");
         }
     }
 
@@ -1653,7 +1672,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (IsDevLogging)
         {
             if (selectedInputContainer != null)
-                Log.Out($"[Crafter] Resolved input container at {SelectedInputChestPos}");
+                DevLog($"Resolved input container at {SelectedInputChestPos}");
             else
                 Log.Warning($"[Crafter] Could not resolve input container at {SelectedInputChestPos}");
         }
@@ -1680,7 +1699,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (IsDevLogging)
         {
             if (selectedOutputContainer != null)
-                Log.Out($"[Crafter] Resolved output container at {SelectedOutputChestPos}");
+                DevLog($"Resolved output container at {SelectedOutputChestPos}");
             else
                 Log.Warning($"[Crafter] Could not resolve output container at {SelectedOutputChestPos}");
         }
@@ -1726,7 +1745,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             return false;
         }
 
-        Log.Out("[Crafter][Craft] Buffered ingredients consumed successfully.");
+        DevLog("[Crafter][Craft] Buffered ingredients consumed successfully.");
         return true;
     }
 
@@ -2565,3 +2584,4 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         inputBuffer = new Dictionary<string, int>();
     }
 }
+

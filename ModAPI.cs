@@ -69,17 +69,13 @@ namespace _7DaysToAutomate
         private void GameStartDone(ref ModEvents.SGameStartDoneData _data)
         {
             World world = GameManager.Instance?.World;
-
-            Log.Out("[PipeGraphManager][Lifecycle] GameStartDone fired");
-
             if (world == null)
-            {
-                Log.Out("[PipeGraphManager][Lifecycle] GameStartDone — world is null");
                 return;
-            }
+
+            if (PipeGraphManager.IsDevLoggingEnabled(world))
+                Log.Out("[PipeGraphManager][Lifecycle] GameStartDone fired");
 
             PipeGraphManager.RebuildAllGraphs(world);
-
         }
 
         private void OnGameUpdate(ref ModEvents.SGameUpdateData _data)

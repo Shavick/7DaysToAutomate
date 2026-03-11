@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 public static class PipeTransportManager
 {
-    private const int MaxActiveJobsPerGraph = 5;
+    private const int MaxActiveJobsPerGraph = 10;
 
     private static readonly Dictionary<Guid, PipeTransportJob> activeJobs = new Dictionary<Guid, PipeTransportJob>();
     private const int DefaultPipeThroughput = 1;
@@ -21,6 +21,23 @@ public static class PipeTransportManager
     }
 
     private static readonly Dictionary<Guid, GraphDispatchState> graphDispatchStates = new Dictionary<Guid, GraphDispatchState>();
+    private static bool IsDevLoggingEnabledForJob(WorldBase world, PipeTransportJob job)
+    {
+        if (world == null || job == null || job.RoutePipePositions == null)
+            return false;
+
+        for (int i = 0; i < job.RoutePipePositions.Count; i++)
+        {
+            Vector3i pipePos = job.RoutePipePositions[i];
+            if (!SafeWorldRead.TryGetTileEntity(world, 0, pipePos, out TileEntity tileEntity))
+                continue;
+
+            if (tileEntity is TileEntityItemPipe pipe)
+                return pipe.IsDevLogging;
+        }
+
+        return false;
+    }
 
     public static void ClearAll()
     {
@@ -187,7 +204,8 @@ public static class PipeTransportManager
         if (world == null || machinePos == Vector3i.zero)
             return TileEntityMachine.DefaultPipePriority;
 
-        TileEntity machineTe = world.GetTileEntity(clrIdx, machinePos);
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, machinePos, out TileEntity machineTe))
+            return TileEntityMachine.DefaultPipePriority;
         if (!(machineTe is TileEntityMachine machine))
             return TileEntityMachine.DefaultPipePriority;
 
@@ -248,7 +266,10 @@ public static class PipeTransportManager
             return false;
         }
 
-        TileEntity te = world.GetTileEntity(clrIdx, sourceStoragePos);
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, sourceStoragePos, out TileEntity te))
+        {
+            return false;
+        }
         if (!(te is TileEntityComposite comp))
         {
             return false;
@@ -273,6 +294,16 @@ public static class PipeTransportManager
 
         int routeThroughput = GetRouteThroughput(world, clrIdx, route);
         if (routeThroughput <= 0)
+        {
+            return false;
+        }
+
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, targetMachinePos, out TileEntity targetTe))
+        {
+            return false;
+        }
+
+        if (!(targetTe is TileEntityMachine targetMachine))
         {
             return false;
         }
@@ -346,7 +377,14 @@ public static class PipeTransportManager
                 continue;
             }
 
-            int acceptedAmount = Math.Min(availableToQueue, routeThroughput);
+            int machineRemainingCapacity = targetMachine.GetBufferedInputRemainingCapacity(itemName);
+            int machineQueueRoom = machineRemainingCapacity - alreadyQueuedForThisItem;
+            if (machineQueueRoom <= 0)
+            {
+                continue;
+            }
+
+            int acceptedAmount = Math.Min(Math.Min(availableToQueue, routeThroughput), machineQueueRoom);
             if (acceptedAmount <= 0)
             {
                 continue;
@@ -588,7 +626,8 @@ public static class PipeTransportManager
         if (world == null || job == null)
             return false;
 
-        TileEntity te = world.GetTileEntity(job.SourcePos);
+        if (!SafeWorldRead.TryGetTileEntity(world, job.SourcePos, out TileEntity te))
+            return false;
         if (!(te is TileEntityComposite comp))
         {
             return false;
@@ -669,7 +708,8 @@ public static class PipeTransportManager
 
         if (job.IsMachineToStorage())
         {
-            TileEntity te = world.GetTileEntity(job.TargetPos);
+            if (!SafeWorldRead.TryGetTileEntity(world, job.TargetPos, out TileEntity te))
+                return false;
             if (!(te is TileEntityComposite comp))
                 return false;
 
@@ -690,7 +730,8 @@ public static class PipeTransportManager
 
         if (job.IsStorageToMachine())
         {
-            TileEntity te = world.GetTileEntity(job.TargetPos);
+            if (!SafeWorldRead.TryGetTileEntity(world, job.TargetPos, out TileEntity te))
+                return false;
             if (!(te is TileEntityMachine machine))
             {
                 return false;
@@ -704,7 +745,8 @@ public static class PipeTransportManager
                 return true;
 
             job.ItemCount -= accepted;
-            Log.Out($"[PipeTransportManager] Input job partial delivery {job.JobId} accepted={accepted} remaining={job.ItemCount}");
+            if (IsDevLoggingEnabledForJob(world, job))
+                Log.Out($"[PipeTransportManager] Input job partial delivery {job.JobId} accepted={accepted} remaining={job.ItemCount}");
             return false;
         }
 
@@ -769,9 +811,10 @@ public static class PipeTransportManager
         for (int i = 0; i < routePipePositions.Count; i++)
         {
             Vector3i pipePos = routePipePositions[i];
-            BlockValue blockValue = world.GetBlock(clrIdx, pipePos);
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, pipePos, out BlockValue blockValue))
+                continue;
 
-            if (!(world.GetTileEntity(clrIdx, pipePos) is TileEntityItemPipe))
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity routePipeEntity) || !(routePipeEntity is TileEntityItemPipe))
                 continue;
 
             int throughput = GetPipeThroughput(blockValue);
@@ -839,9 +882,10 @@ public static class PipeTransportManager
         for (int i = 0; i < routePipePositions.Count; i++)
         {
             Vector3i pipePos = routePipePositions[i];
-            BlockValue blockValue = world.GetBlock(clrIdx, pipePos);
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, pipePos, out BlockValue blockValue))
+                continue;
 
-            if (!(world.GetTileEntity(clrIdx, pipePos) is TileEntityItemPipe))
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity routePipeEntity) || !(routePipeEntity is TileEntityItemPipe))
                 continue;
 
             int speed = GetPipeSpeed(blockValue);
@@ -865,9 +909,10 @@ public static class PipeTransportManager
         for (int i = 0; i < routePipePositions.Count; i++)
         {
             Vector3i pipePos = routePipePositions[i];
-            BlockValue blockValue = world.GetBlock(clrIdx, pipePos);
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, pipePos, out BlockValue blockValue))
+                continue;
 
-            if (!(world.GetTileEntity(clrIdx, pipePos) is TileEntityItemPipe))
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity routePipeEntity) || !(routePipeEntity is TileEntityItemPipe))
                 continue;
 
             int latency = GetPipeLatency(blockValue);
@@ -926,6 +971,9 @@ public static class PipeTransportManager
         return latency;
     }
 }
+
+
+
 
 
 

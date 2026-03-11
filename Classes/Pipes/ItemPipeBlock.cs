@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
@@ -367,7 +367,7 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
 
     public static bool IsPipeBlock(WorldBase world, int clrIdx, Vector3i blockPos)
     {
-        return world.GetTileEntity(clrIdx, blockPos) is TileEntityItemPipe;
+        return SafeWorldRead.TryGetTileEntity(world, clrIdx, blockPos, out TileEntity tileEntity) && tileEntity is TileEntityItemPipe;
     }
 
     public static bool IsConnectedPipeNeighbor(
@@ -377,10 +377,11 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
         BlockValue pipeValue,
         Vector3i neighborPos)
     {
-        if (!(world.GetTileEntity(clrIdx, neighborPos) is TileEntityItemPipe))
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out TileEntity neighborTileEntity) || !(neighborTileEntity is TileEntityItemPipe))
             return false;
 
-        BlockValue neighborValue = world.GetBlock(clrIdx, neighborPos);
+        if (!SafeWorldRead.TryGetBlock(world, clrIdx, neighborPos, out BlockValue neighborValue))
+            return false;
 
         HashSet<Vector3i> myOpenSides = GetOpenSides(pipeValue);
         HashSet<Vector3i> neighborOpenSides = GetOpenSides(neighborValue);
@@ -417,7 +418,8 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
         BlockValue pipeValue,
         Vector3i neighborPos)
     {
-        var controllerTe = world.GetTileEntity(clrIdx, neighborPos) as TileEntityNetworkController;
+        TileEntity controllerEntity;
+        var controllerTe = SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out controllerEntity) ? controllerEntity as TileEntityNetworkController : null;
         if (controllerTe == null || !controllerTe.HasValidNetworkId)
             return false;
 
@@ -443,7 +445,8 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
             if (!IsControllerConnectedNeighbor(world, clrIdx, pipePos, pipeValue, neighborPos))
                 continue;
 
-            var controllerTe = world.GetTileEntity(clrIdx, neighborPos) as TileEntityNetworkController;
+            TileEntity controllerEntity;
+        var controllerTe = SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out controllerEntity) ? controllerEntity as TileEntityNetworkController : null;
             if (controllerTe == null || !controllerTe.HasValidNetworkId)
                 continue;
 
@@ -456,7 +459,8 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
 
     private static void MarkPipeDirtyAt(WorldBase world, int clrIdx, Vector3i pos)
     {
-        var pipeTe = world.GetTileEntity(clrIdx, pos) as TileEntityItemPipe;
+        TileEntity pipeEntity;
+        var pipeTe = SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out pipeEntity) ? pipeEntity as TileEntityItemPipe : null;
         if (pipeTe == null)
             return;
 
@@ -466,7 +470,8 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
 
         PipeGraphManager.MarkPipeDirty(pos);
 
-        BlockValue blockValue = world.GetBlock(clrIdx, pos);
+        if (!SafeWorldRead.TryGetBlock(world, clrIdx, pos, out BlockValue blockValue))
+            return;
         DevLog(blockValue, pos, "Marked pipe dirty");
     }
 
@@ -564,7 +569,8 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
         BlockValue blockValue,
         EntityPlayerLocal player)
     {
-        var te = world.GetTileEntity(clrIdx, blockPos) as TileEntityItemPipe;
+        TileEntity pipeEntity;
+        var te = SafeWorldRead.TryGetTileEntity(world, clrIdx, blockPos, out pipeEntity) ? pipeEntity as TileEntityItemPipe : null;
 
         if (te == null)
         {

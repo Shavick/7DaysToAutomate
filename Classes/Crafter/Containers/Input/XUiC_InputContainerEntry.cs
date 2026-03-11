@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 
 public class XUiC_InputContainerEntry : XUiController
@@ -15,18 +15,28 @@ public class XUiC_InputContainerEntry : XUiController
 
     public XUiC_InputContainerList InputList;
 
+    private bool IsDevLoggingEnabled()
+    {
+        return InputList != null && InputList.te != null && InputList.te.IsDevLogging;
+    }
+
+    private void DevLog(string message)
+    {
+        if (IsDevLoggingEnabled())
+            Log.Out(message);
+    }
     public override void Init()
     {
         base.Init();
-        Log.Out("[Crafter][InputEntry] ViewComponent type = " + ViewComponent?.GetType()?.Name);
-        Log.Out("[Crafter][InputEntry] Init: starting child scan");
+        DevLog("[Crafter][InputEntry] ViewComponent type = " + ViewComponent?.GetType()?.Name);
+        DevLog("[Crafter][InputEntry] Init: starting child scan");
 
         for (int i = 0; i < children.Count; i++)
         {
             XUiView v = children[i].ViewComponent;
             if (v == null) continue;
 
-            Log.Out($"[Crafter][InputEntry]   Child[{i}] id={v.ID} type={v.GetType().Name}");
+            DevLog($"[Crafter][InputEntry]   Child[{i}] id={v.ID} type={v.GetType().Name}");
 
             if (v.ID.EqualsCaseInsensitive("name"))
                 lblName = v as XUiV_Label;
@@ -36,7 +46,7 @@ public class XUiC_InputContainerEntry : XUiController
                 iconSprite = v as XUiV_Sprite;
         }
 
-        Log.Out($"[Crafter][InputEntry] Init done: lblName={(lblName != null)} background={(background != null)} icon={(iconSprite != null)}");
+        DevLog($"[Crafter][InputEntry] Init done: lblName={(lblName != null)} background={(background != null)} icon={(iconSprite != null)}");
         IsDirty = true;
     }
 
@@ -63,7 +73,7 @@ public class XUiC_InputContainerEntry : XUiController
         {
             if (lblName != null) lblName.Text = "";
             if (background != null) background.Color = new Color32(64, 64, 64, 255);
-            Log.Out($"[Crafter][InputEntry] SetContainer: NULL container pos={ContainerPos} graph={PipeGraphId}");
+            DevLog($"[Crafter][InputEntry] SetContainer: NULL container pos={ContainerPos} graph={PipeGraphId}");
             return;
         }
 
@@ -73,7 +83,7 @@ public class XUiC_InputContainerEntry : XUiController
         if (lblName != null) lblName.Text = name;
         if (background != null) background.Color = new Color32(64, 64, 64, 255);
 
-        Log.Out($"[Crafter][InputEntry] SetContainer: name='{name}' icon='{icon}' worldPos={ContainerPos} graph={PipeGraphId}");
+        DevLog($"[Crafter][InputEntry] SetContainer: name='{name}' icon='{icon}' worldPos={ContainerPos} graph={PipeGraphId}");
     }
 
     public void ClearContainer()
@@ -88,7 +98,7 @@ public class XUiC_InputContainerEntry : XUiController
         if (lblName != null) lblName.Text = "";
         if (background != null) background.Color = new Color32(64, 64, 64, 255);
 
-        Log.Out("[Crafter][InputEntry] ClearContainer");
+        DevLog("[Crafter][InputEntry] ClearContainer");
     }
 
     private string GetDisplayName(TileEntityComposite te)
@@ -131,7 +141,7 @@ public class XUiC_InputContainerEntry : XUiController
     {
         base.OnPressed(mouseButton);
 
-        Log.Out($"[Crafter][InputEntry] OnPressed: button={mouseButton} pos={ContainerPos} graph={PipeGraphId} te={(ContainerTE != null ? "OK" : "NULL")}");
+        DevLog($"[Crafter][InputEntry] OnPressed: button={mouseButton} pos={ContainerPos} graph={PipeGraphId} te={(ContainerTE != null ? "OK" : "NULL")}");
 
         InputList?.OnEntryPressed(this, mouseButton);
 

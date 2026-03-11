@@ -8,6 +8,16 @@ public class XUiC_OutputContainerList : XUiController
     public XUiC_OutputContainerEntry[] entries;
     public XUiC_OutputContainerEntry SelectedEntry;
 
+    private bool IsDevLoggingEnabled()
+    {
+        return te != null && te.IsDevLogging;
+    }
+
+    private void DevLog(string message)
+    {
+        if (IsDevLoggingEnabled())
+            Log.Out(message);
+    }
     public void SetContext(TileEntityUniversalCrafter te, Vector3i pos)
     {
         this.te = te;
@@ -129,7 +139,7 @@ public class XUiC_OutputContainerList : XUiController
 
         OutputTargetInfo target = entry.OutputTarget;
 
-        Log.Out($"[Crafter][UI] Request output select: pos={target.BlockPos} mode={target.TransportMode} pipeGraphId={target.PipeGraphId}");
+        DevLog($"[Crafter][UI] Request output select: pos={target.BlockPos} mode={target.TransportMode} pipeGraphId={target.PipeGraphId}");
 
         Helper.RequestCrafterSelectOutput(
             blockPos,

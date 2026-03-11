@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
@@ -78,7 +78,7 @@ public class XUiC_UniversalCrafter : XUiController
 
     private void ResetButton_OnPress()
     {
-        Log.Out("[Crafter] Resetting...");
+        DevLog("[Crafter] Resetting...");
         // Leave empty for now unless you add a reset request package/action
     }
     private void HandlePriorityChanged(XUiController sender, string text, bool fromCode = false)
@@ -249,29 +249,45 @@ public class XUiC_UniversalCrafter : XUiController
         return world.GetTileEntity(blockPos) as TileEntityUniversalCrafter;
     }
 
+    private bool IsDevLoggingEnabled()
+    {
+        TileEntityUniversalCrafter current = te ?? GetCrafter();
+        return current != null && current.IsDevLogging;
+    }
+
+    private void DevLog(string message, bool warning = false)
+    {
+        if (!IsDevLoggingEnabled())
+            return;
+
+        if (warning)
+            Log.Warning(message);
+        else
+            Log.Out(message);
+    }
     // -------------------------------
     // Craft Button
     // -------------------------------
     private void CraftButton_OnPress()
     {
-        Log.Out($"[Crafter][UI] CraftButton_OnPress blockPos={blockPos}");
+        DevLog($"[Crafter][UI] CraftButton_OnPress blockPos={blockPos}");
 
         var te = GetCrafter();
-        Log.Out($"[Crafter][UI] CraftButton_OnPress teNull={te == null}");
+        DevLog($"[Crafter][UI] CraftButton_OnPress teNull={te == null}");
 
         if (te == null)
             return;
 
-        Log.Out($"[Crafter][UI] CraftButton_OnPress isCrafting={te.isCrafting} disabledByPlayer={te.disabledByPlayer} isWaitingForIngredients={te.isWaitingForIngredients}");
+        DevLog($"[Crafter][UI] CraftButton_OnPress isCrafting={te.isCrafting} disabledByPlayer={te.disabledByPlayer} isWaitingForIngredients={te.isWaitingForIngredients}");
 
         if (te.isCrafting || !te.disabledByPlayer)
         {
-            Log.Out("[Crafter][UI] Request disable craft");
+            DevLog("[Crafter][UI] Request disable craft");
             Helper.RequestCrafterSetEnabled(blockPos, false);
             return;
         }
 
-        Log.Out("[Crafter][UI] Request enable craft");
+        DevLog("[Crafter][UI] Request enable craft");
         Helper.RequestCrafterSetEnabled(blockPos, true);
     }
 
@@ -283,7 +299,7 @@ public class XUiC_UniversalCrafter : XUiController
         base.OnOpen();
 
         te = GetCrafter();
-        Log.Warning($"[Crafter] OnOpen blockPos = {blockPos} teNull = {te == null}");
+        DevLog($"[Crafter] OnOpen blockPos = {blockPos} teNull = {te == null}", warning: true);
 
         if (te == null)
         {

@@ -51,6 +51,17 @@ public class XUiC_CrafterRecipeList : XUiController
         return crafterUI?.GetCrafter();
     }
 
+    private bool IsDevLoggingEnabled()
+    {
+        TileEntityUniversalCrafter crafter = GetCrafter();
+        return crafter != null && crafter.IsDevLogging;
+    }
+
+    private void DevLog(string message)
+    {
+        if (IsDevLoggingEnabled())
+            Log.Out(message);
+    }
     public override void Init()
     {
         base.Init();
@@ -195,8 +206,7 @@ public class XUiC_CrafterRecipeList : XUiController
 
             LogRecipeIngredients(CurrentRecipe);
 
-            if (te.IsDevLogging)
-                Log.Out($"[Crafter][RecipeList] Selected recipe in UI: {recipeName} (sendRequest={sendRequest})");
+            DevLog($"[Crafter][RecipeList] Selected recipe in UI: {recipeName} (sendRequest={sendRequest})");
 
             if (sendRequest)
             {
@@ -244,25 +254,29 @@ public class XUiC_CrafterRecipeList : XUiController
 
     public void LogRecipeIngredients(Recipe recipe)
     {
+        TileEntityUniversalCrafter crafter = GetCrafter();
+        if (crafter == null || !crafter.IsDevLogging)
+            return;
+
         if (recipe == null)
         {
-            Log.Out("[Crafter] No recipe selected");
+            DevLog("[Crafter] No recipe selected");
             return;
         }
 
-        Log.Out($"[Crafter] Ingredients for {recipe.GetName()}");
+        DevLog($"[Crafter] Ingredients for {recipe.GetName()}");
 
         foreach (var ing in recipe.ingredients)
         {
             string itemName = ing.itemValue.ItemClass.GetItemName();
             int qty = ing.count;
-            Log.Out($"[Crafter]  • {itemName} x{qty}");
+            DevLog($"[Crafter]  • {itemName} x{qty}");
         }
     }
 
     private void OnPressRecipe(XUiController _sender, int _mouseButton)
     {
-        Log.Out("[Crafter][UI] OnPressRecipe fired");
+        DevLog("[Crafter][UI] OnPressRecipe fired");
 
         var entry = _sender as XUiC_CrafterRecipeEntry;
         if (entry == null || entry.Recipe == null)
@@ -277,7 +291,7 @@ public class XUiC_CrafterRecipeList : XUiController
         if (ingredientsList != null)
             ingredientsList.ShowIngredients(CurrentRecipe);
 
-        Log.Out($"[Crafter][UI] Requesting recipe select: {CurrentRecipe.GetName()}");
+        DevLog($"[Crafter][UI] Requesting recipe select: {CurrentRecipe.GetName()}");
         Helper.RequestCrafterSelectRecipe(blockPos, CurrentRecipe.GetName());
     }
 }

@@ -33,6 +33,11 @@ public abstract class TileEntityMachine : TileEntity
         return 0;
     }
 
+    public virtual int GetBufferedInputRemainingCapacity(string itemName)
+    {
+        return int.MaxValue;
+    }
+
     public void SetPowerState(bool state)
     {
         Log.Out($"[Machine][{ToWorldPos()}] SetPowerState({state}) ENTER. IsOn(before)={IsOn} IsRemote={GameManager.Instance.World.IsRemote()}");
@@ -233,4 +238,5 @@ public abstract class TileEntityMachine : TileEntity
         //Log.Out($"[Machine][{ToWorldPos()}] READ END");
     }
 }
+
 

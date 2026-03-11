@@ -1,4 +1,4 @@
-<configs>
+﻿<configs>
     <append xpath="/blocks">
         <!-- Universal Extractor - Iron T1 -->
         <block name="universalIronExtractort1">
@@ -178,8 +178,8 @@
             <property name="DescriptionKey" value="universalCrafterDesc"/>
             <property name="UnlockedBy" value="craftingWorkstations"/>
             <!-- Placeholder properties - fill later -->
-            <property name="CraftingSpeed" value="2.5"/>
-            <property name="InternalStorageMultiplier" value="1"/>
+            <property name="CraftingSpeed" value="1"/>
+            <property name="InternalStorageMultiplier" value="5"/>
             <property name="DevLogs" value="false"/>
         </block>
 
@@ -212,8 +212,8 @@
             <property name="EconomicValue" value="25"/>
             <property name="DescriptionKey" value="itemPipeDesc"/>
             <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="DevLogs" value="false"/>
-            <property name="PipeThroughput" value="5"/>
+            <property name="DevLogs" value="true"/>
+            <property name="PipeThroughput" value="3"/>
             <property name="PipeSpeed" value="1"/>
             <property name="PipeLatency" value="1"/>
         </block>
@@ -232,7 +232,7 @@
             <property name="EconomicValue" value="25"/>
             <property name="DescriptionKey" value="itemPipeElbowDesc"/>
             <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="DevLogs" value="false"/>
+            <property name="DevLogs" value="true"/>
             <property name="PipeThroughput" value="5"/>
             <property name="PipeSpeed" value="1"/>
             <property name="PipeLatency" value="1"/>
@@ -252,7 +252,7 @@
             <property name="EconomicValue" value="25"/>
             <property name="DescriptionKey" value="itemPipeTJunctionDesc"/>
             <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="DevLogs" value="false"/>
+            <property name="DevLogs" value="true"/>
             <property name="PipeThroughput" value="5"/>
             <property name="PipeSpeed" value="1"/>
             <property name="PipeLatency" value="1"/>
@@ -269,6 +269,7 @@
             <property name="PipeThroughput" value="9"/>
             <property name="PipeSpeed" value="2"/>
             <property name="PipeLatency" value="2"/>
+            <property name="DevLogs" value="true"/>
         </block>
 
         <block name="itemPipeElbowT2">
@@ -281,6 +282,7 @@
             <property name="PipeThroughput" value="9"/>
             <property name="PipeSpeed" value="2"/>
             <property name="PipeLatency" value="2"/>
+            <property name="DevLogs" value="true"/>
         </block>
 
         <block name="itemPipeSmallJointT2">
@@ -293,6 +295,7 @@
             <property name="PipeThroughput" value="9"/>
             <property name="PipeSpeed" value="2"/>
             <property name="PipeLatency" value="2"/>
+            <property name="DevLogs" value="true"/>
         </block>
 
         <block name="itemPipeT3">
@@ -303,8 +306,9 @@
             <property name="DescriptionKey" value="itemPipeT3Desc"/>
             <property name="UnlockedBy" value="craftingElectrician"/>
             <property name="PipeThroughput" value="13"/>
-            <property name="PipeSpeed" value="3"/>
-            <property name="PipeLatency" value="3"/>
+            <property name="PipeSpeed" value="10"/>
+            <property name="PipeLatency" value="100"/>
+            <property name="DevLogs" value="true"/>
         </block>
 
         <block name="itemPipeElbowT3">
@@ -315,8 +319,9 @@
             <property name="DescriptionKey" value="itemPipeElbowT3Desc"/>
             <property name="UnlockedBy" value="craftingElectrician"/>
             <property name="PipeThroughput" value="13"/>
-            <property name="PipeSpeed" value="3"/>
-            <property name="PipeLatency" value="3"/>
+            <property name="PipeSpeed" value="10"/>
+            <property name="PipeLatency" value="100"/>
+            <property name="DevLogs" value="true"/>
         </block>
 
         <block name="itemPipeSmallJointT3">
@@ -327,8 +332,9 @@
             <property name="DescriptionKey" value="itemPipeSmallJointT3Desc"/>
             <property name="UnlockedBy" value="craftingElectrician"/>
             <property name="PipeThroughput" value="13"/>
-            <property name="PipeSpeed" value="3"/>
-            <property name="PipeLatency" value="3"/>
+            <property name="PipeSpeed" value="10"/>
+            <property name="PipeLatency" value="100"/>
+            <property name="DevLogs" value="true"/>
         </block>
         <block name="universalWasher">
             <property name="Class" value="UniversalWasherBlock, 7DaysToAutomate"/>
@@ -353,7 +359,7 @@
 </configs>
 
 <!-- ===================================================================== -->
-<!-- Universal Crafter Ã¢â‚¬â€ Configurable Properties -->
+<!-- Universal Crafter Configurable Properties -->
 <!-- ===================================================================== -->
 
 <!-- CraftingSpeed
@@ -398,7 +404,7 @@
 -->
 
 <!-- ===================================================================== -->
-<!-- Universal Extractor Ã¢â‚¬â€ Configurable Properties              -->
+<!-- Universal Extractor Configurable Properties              -->
 <!-- ===================================================================== -->
 
 <!-- ResourceGenerated
@@ -449,7 +455,7 @@
 
 
 <!-- ===================================================================== -->
-<!-- HOW IT WORKS (Extractor Ã¢â‚¬â€ Actual)                                     -->
+<!-- HOW IT WORKS (Extractor Actual)                                     -->
 <!-- ===================================================================== -->
 <!--
  - On first update, the extractor reads its XML properties and builds timers.

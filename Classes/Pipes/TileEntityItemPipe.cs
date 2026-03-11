@@ -92,7 +92,8 @@ public class TileEntityItemPipe : TileEntityMachine
 
         int clrIdx = 0;
         Vector3i myPos = ToWorldPos();
-        BlockValue myValue = world.GetBlock(clrIdx, myPos);
+        if (!SafeWorldRead.TryGetBlock(world, clrIdx, myPos, out BlockValue myValue))
+            return;
 
         DevLog($"RecalculateNetworkId BEGIN Dirty={IsNetworkDirty} CurrentNetworkId={NetworkId}");
 

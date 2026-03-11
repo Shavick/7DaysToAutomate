@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 public class XUiC_InputContainerList : XUiController
@@ -11,6 +11,16 @@ public class XUiC_InputContainerList : XUiController
     public int length;
     public bool selected = false;
 
+    private bool IsDevLoggingEnabled()
+    {
+        return te != null && te.IsDevLogging;
+    }
+
+    private void DevLog(string message)
+    {
+        if (IsDevLoggingEnabled())
+            Log.Out(message);
+    }
     public void SetContext(TileEntityUniversalCrafter te, Vector3i pos)
     {
         this.te = te;
@@ -22,7 +32,7 @@ public class XUiC_InputContainerList : XUiController
         if (te == null)
             Log.Error($"[Crafter][InputList] SetContext: TE is NULL at {pos}");
         else
-            Log.Out($"[Crafter][InputList] SetContext: TE set at {pos}");
+            DevLog($"[Crafter][InputList] SetContext: TE set at {pos}");
 
         IsDirty = true;
     }
@@ -35,7 +45,7 @@ public class XUiC_InputContainerList : XUiController
         var grid = ViewComponent as XUiV_Grid;
         length = (grid != null) ? grid.Rows * grid.Columns : (entries?.Length ?? 0);
 
-        Log.Out($"[Crafter][InputList] Init: entries={entries?.Length ?? -1} length={length}");
+        DevLog($"[Crafter][InputList] Init: entries={entries?.Length ?? -1} length={length}");
 
         if (entries != null)
         {
@@ -44,7 +54,7 @@ public class XUiC_InputContainerList : XUiController
                 var entry = entries[i];
                 entry.InputList = this;
                 entry.OnPress += OnEntryPressed;
-                Log.Out($"[Crafter][InputList] Init: wired entry index={i}");
+                DevLog($"[Crafter][InputList] Init: wired entry index={i}");
             }
         }
 
@@ -54,7 +64,7 @@ public class XUiC_InputContainerList : XUiController
     public override void OnOpen()
     {
         base.OnOpen();
-        Log.Out("[Crafter][InputList] OnOpen");
+        DevLog("[Crafter][InputList] OnOpen");
         IsDirty = true;
     }
 
@@ -143,7 +153,7 @@ public class XUiC_InputContainerList : XUiController
 
     public void OnEntryPressed(XUiController sender, int mouseButton)
     {
-        Log.Out("[Crafter][UI] Input OnEntryPressed fired");
+        DevLog("[Crafter][UI] Input OnEntryPressed fired");
 
         var entry = sender as XUiC_InputContainerEntry;
         if (entry == null)
@@ -161,7 +171,7 @@ public class XUiC_InputContainerList : XUiController
         Vector3i targetPos = entry.ContainerPos;
         string pipeGraphId = entry.PipeGraphId.ToString();
 
-        Log.Out($"[Crafter][UI] Request input select: pos={targetPos} graph={pipeGraphId}");
+        DevLog($"[Crafter][UI] Request input select: pos={targetPos} graph={pipeGraphId}");
 
         Helper.RequestCrafterSelectInput(blockPos, targetPos, pipeGraphId);
         IsDirty = true;

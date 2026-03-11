@@ -1,4 +1,4 @@
-using _7DaysToAutomate.Classes.Net_Packages;
+﻿using _7DaysToAutomate.Classes.Net_Packages;
 
 public static class Helper
 {
@@ -22,7 +22,8 @@ public static class Helper
             var localPlayer = world.GetPrimaryPlayer() as EntityPlayerLocal;
             if (localPlayer != null && localPlayer.entityId == entityPlayerId)
             {
-                Log.Out($"[NetPkg][MachineUI][SERVER] Local host detected -> opening UI locally for {localPlayer.entityName}");
+                if (te is TileEntityMachine machine && machine.IsDevLogging)
+                    Log.Out($"[NetPkg][MachineUI][SERVER] Local host detected -> opening UI locally for {localPlayer.entityName}");
 
                 if (customUi == "CrafterInfo")
                 {

@@ -1,16 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 public static class PipeGraphManager
 {
+    private const int TileEntitySnapshotMaxAttempts = 4;
     private static readonly Dictionary<Guid, PipeGraphData> graphsById = new Dictionary<Guid, PipeGraphData>();
     private static readonly HashSet<Vector3i> dirtyPipePositions = new HashSet<Vector3i>();
 
-    public static void ClearAll()
+    public static void ClearAll(bool devLoggingEnabled = false)
     {
         graphsById.Clear();
         dirtyPipePositions.Clear();
-        Log.Out("[PipeGraphManager] ClearAll()");
+
+        if (devLoggingEnabled)
+            Log.Out("[PipeGraphManager] ClearAll()");
     }
 
     public static void MarkPipeDirty(Vector3i pipePos)
@@ -62,7 +66,7 @@ public static class PipeGraphManager
             if (!graph.PipePositions.Contains(neighborPos))
                 continue;
 
-            if (!(world.GetTileEntity(clrIdx, neighborPos) is TileEntityItemPipe))
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out TileEntity neighborTe) || !(neighborTe is TileEntityItemPipe))
                 continue;
 
             results.Add(neighborPos);
@@ -109,7 +113,8 @@ public static class PipeGraphManager
                 break;
             }
 
-            BlockValue currentValue = world.GetBlock(clrIdx, current);
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, current, out BlockValue currentValue))
+                continue;
             List<Vector3i> neighbors = ItemPipeBlock.GetConnectedPipeNeighbors(world, clrIdx, current, currentValue);
 
             for (int i = 0; i < neighbors.Count; i++)
@@ -148,23 +153,23 @@ public static class PipeGraphManager
     public static void RebuildAllGraphs(WorldBase world)
     {
         if (world == null)
-        {
-            Log.Out("[PipeGraphManager] RebuildAllGraphs ABORT — world is null");
             return;
-        }
 
-        Log.Out("[PipeGraphManager] RebuildAllGraphs BEGIN");
+        bool devLoggingEnabled = IsDevLoggingEnabled(world);
 
-        ClearAll();
+        if (devLoggingEnabled)
+            Log.Out("[PipeGraphManager] RebuildAllGraphs BEGIN");
+
+        ClearAll(devLoggingEnabled);
 
         List<Vector3i> pipePositions = new List<Vector3i>();
 
-        foreach (Chunk chunk in world.ChunkClusters[0].GetChunkArray())
+        foreach (Chunk chunk in SafeWorldRead.GetChunkArraySnapshot(world))
         {
             if (chunk == null)
                 continue;
 
-            List<TileEntity> snapshot = new List<TileEntity>(chunk.GetTileEntities().list);
+            List<TileEntity> snapshot = SnapshotTileEntities(chunk);
 
             for (int i = 0; i < snapshot.Count; i++)
             {
@@ -173,13 +178,14 @@ public static class PipeGraphManager
             }
         }
 
-        Log.Out($"[PipeGraphManager] RebuildAllGraphs — found {pipePositions.Count} pipes");
+        if (devLoggingEnabled)
+            Log.Out($"[PipeGraphManager] RebuildAllGraphs — found {pipePositions.Count} pipes");
 
         for (int i = 0; i < pipePositions.Count; i++)
         {
             Vector3i pipePos = pipePositions[i];
 
-            if (world.GetTileEntity(0, pipePos) is TileEntityItemPipe pipe)
+            if (SafeWorldRead.TryGetTileEntity(world, 0, pipePos, out TileEntity rebuildTe) && rebuildTe is TileEntityItemPipe pipe)
             {
                 pipe.MarkNetworkDirty();
                 MarkPipeDirty(pipePos);
@@ -189,9 +195,71 @@ public static class PipeGraphManager
         while (HasDirtyPipes())
             ProcessDirtyGraphs(world, int.MaxValue);
 
-        Log.Out($"[PipeGraphManager] RebuildAllGraphs END — graphs={GetGraphCount()} dirty={GetDirtyPipeCount()}");
+        if (devLoggingEnabled)
+            Log.Out($"[PipeGraphManager] RebuildAllGraphs END — graphs={GetGraphCount()} dirty={GetDirtyPipeCount()}");
     }
 
+
+    private static List<TileEntity> SnapshotTileEntities(Chunk chunk)
+    {
+        for (int attempt = 1; attempt <= TileEntitySnapshotMaxAttempts; attempt++)
+        {
+            try
+            {
+                return new List<TileEntity>(chunk.GetTileEntities().list);
+            }
+            catch (InvalidOperationException)
+            {
+                if (attempt == TileEntitySnapshotMaxAttempts)
+                {
+                    Log.Warning($"[PipeGraphManager] Failed to snapshot tile entities for chunk after {attempt} attempts; skipping chunk this rebuild.");
+                    break;
+                }
+
+                Thread.Yield();
+            }
+        }
+
+        return new List<TileEntity>();
+    }
+
+    public static bool IsDevLoggingEnabled(WorldBase world)
+    {
+        if (world == null)
+            return false;
+
+        foreach (Chunk chunk in SafeWorldRead.GetChunkArraySnapshot(world))
+        {
+            if (chunk == null)
+                continue;
+
+            List<TileEntity> snapshot = SnapshotTileEntities(chunk);
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                if (snapshot[i] is TileEntityItemPipe pipe && pipe.IsDevLogging)
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsDevLoggingEnabled(WorldBase world, int clrIdx, PipeGraphData graph)
+    {
+        if (world == null || graph == null || graph.PipePositions == null)
+            return false;
+
+        foreach (Vector3i pipePos in graph.PipePositions)
+        {
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity tileEntity))
+                continue;
+
+            if (tileEntity is TileEntityItemPipe pipe && pipe.IsDevLogging)
+                return true;
+        }
+
+        return false;
+    }
     public static bool TryGetStorageEndpoints(Guid pipeGraphId, out List<Vector3i> storageEndpoints)
     {
         storageEndpoints = null;
@@ -213,7 +281,8 @@ public static class PipeGraphManager
     {
         storageEndpoints = null;
 
-        var pipeTe = world.GetTileEntity(clrIdx, pipePos) as TileEntityItemPipe;
+        TileEntity pipeEntity;
+        var pipeTe = SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out pipeEntity) ? pipeEntity as TileEntityItemPipe : null;
         if (pipeTe == null || pipeTe.PipeGraphId == Guid.Empty)
             return false;
 
@@ -302,13 +371,17 @@ public static class PipeGraphManager
 
     private static void RebuildGraphFromSeed(WorldBase world, int clrIdx, Vector3i seedPos)
     {
-        if (!(world.GetTileEntity(clrIdx, seedPos) is TileEntityItemPipe))
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, seedPos, out TileEntity seedTileEntity) || !(seedTileEntity is TileEntityItemPipe))
         {
             dirtyPipePositions.Remove(seedPos);
             return;
         }
 
-        BlockValue seedValue = world.GetBlock(clrIdx, seedPos);
+        if (!SafeWorldRead.TryGetBlock(world, clrIdx, seedPos, out BlockValue seedValue))
+        {
+            dirtyPipePositions.Remove(seedPos);
+            return;
+        }
         if (!(seedValue.Block is ItemPipeBlock))
         {
             dirtyPipePositions.Remove(seedPos);
@@ -326,7 +399,7 @@ public static class PipeGraphManager
 
         foreach (Vector3i pipePos in connectedPipes)
         {
-            if (!(world.GetTileEntity(clrIdx, pipePos) is TileEntityItemPipe pipeTe))
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity oldGraphPipeEntity) || !(oldGraphPipeEntity is TileEntityItemPipe pipeTe))
                 continue;
 
             if (pipeTe.PipeGraphId != Guid.Empty)
@@ -342,7 +415,7 @@ public static class PipeGraphManager
         {
             newGraph.AddPipe(pipePos);
 
-            if (world.GetTileEntity(clrIdx, pipePos) is TileEntityItemPipe pipeTe)
+            if (SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity newGraphPipeEntity) && newGraphPipeEntity is TileEntityItemPipe pipeTe)
             {
                 pipeTe.SetPipeGraphId(newGraph.PipeGraphId);
                 pipeTe.setModified();
@@ -351,11 +424,13 @@ public static class PipeGraphManager
             dirtyPipePositions.Remove(pipePos);
         }
 
-        CollectStorageEndpoints(world, clrIdx, newGraph);
+        bool graphDevLoggingEnabled = IsDevLoggingEnabled(world, clrIdx, newGraph);
+        CollectStorageEndpoints(world, clrIdx, newGraph, graphDevLoggingEnabled);
 
         graphsById[newGraph.PipeGraphId] = newGraph;
 
-        Log.Out($"[PipeGraphManager] Rebuilt graph {newGraph.PipeGraphId} Pipes={newGraph.PipePositions.Count} StorageEndpoints={newGraph.StorageEndpoints.Count}");
+        if (graphDevLoggingEnabled)
+            Log.Out($"[PipeGraphManager] Rebuilt graph {newGraph.PipeGraphId} Pipes={newGraph.PipePositions.Count} StorageEndpoints={newGraph.StorageEndpoints.Count}");
     }
 
     private static HashSet<Vector3i> CollectConnectedPipeRegion(WorldBase world, int clrIdx, Vector3i seedPos)
@@ -370,7 +445,8 @@ public static class PipeGraphManager
         while (index < open.Count)
         {
             Vector3i current = open[index++];
-            BlockValue currentValue = world.GetBlock(clrIdx, current);
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, current, out BlockValue currentValue))
+                continue;
 
             List<Vector3i> neighbors = ItemPipeBlock.GetConnectedPipeNeighbors(world, clrIdx, current, currentValue);
             for (int i = 0; i < neighbors.Count; i++)
@@ -384,22 +460,25 @@ public static class PipeGraphManager
         return visited;
     }
 
-    private static void CollectStorageEndpoints(WorldBase world, int clrIdx, PipeGraphData graph)
+    private static void CollectStorageEndpoints(WorldBase world, int clrIdx, PipeGraphData graph, bool devLoggingEnabled)
     {
         foreach (Vector3i pipePos in graph.PipePositions)
         {
-            BlockValue pipeValue = world.GetBlock(clrIdx, pipePos);
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, pipePos, out BlockValue pipeValue))
+                continue;
 
             foreach (Vector3i neighborPos in GetNeighborPositions(pipePos))
             {
-                if (!IsStorageConnectedNeighbor(world, clrIdx, pipePos, pipeValue, neighborPos))
+                if (!IsStorageConnectedNeighbor(world, clrIdx, pipePos, pipeValue, neighborPos, devLoggingEnabled))
                     continue;
 
                 graph.AddStorageEndpoint(neighborPos);
-                Log.Out($"[PipeGraph] Added storage endpoint {neighborPos} to graph {graph.PipeGraphId} count={graph.StorageEndpoints.Count}");
+                if (devLoggingEnabled)
+                    Log.Out($"[PipeGraph] Added storage endpoint {neighborPos} to graph {graph.PipeGraphId} count={graph.StorageEndpoints.Count}");
             }
         }
-        Log.Out($"[PipeGraph] Graph {graph.PipeGraphId} final storage endpoint count={graph.StorageEndpoints.Count}");
+        if (devLoggingEnabled)
+            Log.Out($"[PipeGraph] Graph {graph.PipeGraphId} final storage endpoint count={graph.StorageEndpoints.Count}");
     }
 
     private static bool IsStorageConnectedNeighbor(
@@ -407,10 +486,17 @@ public static class PipeGraphManager
         int clrIdx,
         Vector3i pipePos,
         BlockValue pipeValue,
-        Vector3i neighborPos)
+        Vector3i neighborPos,
+        bool devLoggingEnabled)
     {
-        TileEntity te = world.GetTileEntity(clrIdx, neighborPos);
-        Log.Out($"[PipeGraph] Storage check at {neighborPos} block={world.GetBlock(neighborPos).Block.GetBlockName()} te={(te == null ? "null" : te.GetType().Name)}");
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out TileEntity te))
+            return false;
+        string blockName = "unknown";
+        if (SafeWorldRead.TryGetBlock(world, neighborPos, out BlockValue neighborBlockValue))
+            blockName = neighborBlockValue.Block?.GetBlockName() ?? "null";
+
+        if (devLoggingEnabled)
+            Log.Out($"[PipeGraph] Storage check at {neighborPos} block={blockName} te={(te == null ? "null" : te.GetType().Name)}");
 
         if (te is TileEntityItemPipe)
             return false;
@@ -422,7 +508,8 @@ public static class PipeGraphManager
             return false;
 
         TEFeatureStorage storage = composite.GetFeature<TEFeatureStorage>();
-        Log.Out($"[PipeGraph] Composite storage feature={(storage == null ? "null" : "found")}");
+        if (devLoggingEnabled)
+            Log.Out($"[PipeGraph] Composite storage feature={(storage == null ? "null" : "found")}");
 
         if (storage == null || storage.items == null)
             return false;
