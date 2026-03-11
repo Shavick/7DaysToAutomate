@@ -159,7 +159,6 @@
             <property name="OutputCount" value="5"/>
         </block>
 
-
         <block name="universalCrafter">
             <property name="Class" value="UniversalCrafterBlock, 7DaysToAutomate"/>
             <property name="Material" value="Mmetal_hard"/>
@@ -208,6 +207,8 @@
             <property name="DescriptionKey" value="itemPipeDesc"/>
             <property name="DevLogs" value="false"/>
             <property name="PipeThroughput" value="5"/>
+            <property name="PipeSpeed" value="1"/>
+            <property name="PipeLatency" value="1"/>
         </block>
 
         <block name="itemPipeElbow">
@@ -225,6 +226,8 @@
             <property name="DescriptionKey" value="itemPipeElbowDesc"/>
             <property name="DevLogs" value="false"/>
             <property name="PipeThroughput" value="5"/>
+            <property name="PipeSpeed" value="1"/>
+            <property name="PipeLatency" value="1"/>
         </block>
 
         <block name="itemPipeSmallJoint">
@@ -242,6 +245,8 @@
             <property name="DescriptionKey" value="itemPipeTJunctionDesc"/>
             <property name="DevLogs" value="false"/>
             <property name="PipeThroughput" value="5"/>
+            <property name="PipeSpeed" value="1"/>
+            <property name="PipeLatency" value="1"/>
         </block>
 
         <block name="universalWasher">
@@ -311,7 +316,6 @@
  - If ingredients or containers are missing, crafting pauses safely.
 -->
 
-
 <!-- ===================================================================== -->
 <!-- Universal Extractor — Configurable Properties              -->
 <!-- ===================================================================== -->
@@ -362,6 +366,7 @@
      <property name="DevLogs" value="true" />
 -->
 
+
 <!-- ===================================================================== -->
 <!-- HOW IT WORKS (Extractor — Actual)                                     -->
 <!-- ===================================================================== -->
@@ -377,3 +382,31 @@
 -->
 
 
+<!-- ===================================================================== -->
+<!-- PIPES                                                                   -->
+<!-- ===================================================================== -->
+<!-- PipeThroughput
+     OPTIONAL
+     Max items moved per transport job.
+     Integer >= 1. Higher = more items per job.
+-->
+<!-- PipeSpeed
+     OPTIONAL
+     Travel-speed multiplier used for A->B travel time.
+     Integer >= 1. Higher = faster travel (fewer ticks per segment).
+-->
+<!-- PipeLatency
+     OPTIONAL
+     Dispatch-rate multiplier used for time between job attempts.
+     Integer >= 1. Higher = shorter delay between attempts.
+-->
+<!-- Route behavior:
+     - Throughput/Speed/Latency all use bottleneck logic across the route.
+     - Lowest pipe value on the route wins.
+     - Missing/invalid values fall back to 1 in code.
+-->
+<!-- Example:
+     <property name="PipeThroughput" value="5" />
+     <property name="PipeSpeed" value="2" />
+     <property name="PipeLatency" value="3" />
+-->

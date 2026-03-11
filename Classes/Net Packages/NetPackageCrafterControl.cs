@@ -1,4 +1,4 @@
-﻿namespace _7DaysToAutomate.Classes.Net_Packages
+namespace _7DaysToAutomate.Classes.Net_Packages
 {
     public class NetPackageCrafterControl : NetPackage
     {
@@ -7,7 +7,8 @@
             RequestSelectRecipe = 0,
             RequestSelectInput = 1,
             RequestSelectOutput = 2,
-            RequestSetEnabled = 3
+            RequestSetEnabled = 3,
+            RequestSetPriority = 4
         }
 
         private Vector3i _blockPos;
@@ -19,6 +20,7 @@
 
         private int _outputMode;
         private string _pipeGraphId;
+        private int _priority;
 
         public NetPackageCrafterControl SetupSelectRecipe(Vector3i blockPos, string recipeName)
         {
@@ -29,6 +31,7 @@
             _enabled = false;
             _outputMode = 0;
             _pipeGraphId = string.Empty;
+            _priority = TileEntityMachine.DefaultPipePriority;
             return this;
         }
 
@@ -41,6 +44,7 @@
             _enabled = false;
             _outputMode = 0;
             _pipeGraphId = pipeGraphId ?? string.Empty;
+            _priority = TileEntityMachine.DefaultPipePriority;
             return this;
         }
 
@@ -53,6 +57,7 @@
             _enabled = false;
             _outputMode = mode;
             _pipeGraphId = pipeGraphId ?? string.Empty;
+            _priority = TileEntityMachine.DefaultPipePriority;
             return this;
         }
 
@@ -65,6 +70,20 @@
             _enabled = enabled;
             _outputMode = 0;
             _pipeGraphId = string.Empty;
+            _priority = TileEntityMachine.DefaultPipePriority;
+            return this;
+        }
+
+        public NetPackageCrafterControl SetupSetPriority(Vector3i blockPos, int priority)
+        {
+            _blockPos = blockPos;
+            _messageType = MessageType.RequestSetPriority;
+            _recipeName = string.Empty;
+            _targetChestPos = Vector3i.zero;
+            _enabled = false;
+            _outputMode = 0;
+            _pipeGraphId = string.Empty;
+            _priority = priority;
             return this;
         }
 
@@ -93,6 +112,7 @@
 
             _outputMode = _br.ReadInt32();
             _pipeGraphId = _br.ReadString();
+            _priority = _br.ReadInt32();
         }
 
         public override void write(PooledBinaryWriter _bw)
@@ -115,6 +135,7 @@
 
             _bw.Write(_outputMode);
             _bw.Write(_pipeGraphId ?? string.Empty);
+            _bw.Write(_priority);
         }
 
         public override void ProcessPackage(World world, GameManager callbacks)
@@ -131,7 +152,7 @@
                 return;
             }
 
-            Log.Out($"[CrafterControl] ProcessPackage type={_messageType} blockPos={_blockPos} recipe='{_recipeName}' targetChest={_targetChestPos} enabled={_enabled} outputMode={_outputMode} pipeGraphId='{_pipeGraphId}'");
+            Log.Out($"[CrafterControl] ProcessPackage type={_messageType} blockPos={_blockPos} recipe='{_recipeName}' targetChest={_targetChestPos} enabled={_enabled} outputMode={_outputMode} pipeGraphId='{_pipeGraphId}' priority={_priority}");
 
             TileEntity te = world.GetTileEntity(_blockPos);
             if (!(te is TileEntityUniversalCrafter crafter))
@@ -160,6 +181,11 @@
                 case MessageType.RequestSetEnabled:
                     Log.Out($"[CrafterControl] ServerSetEnabled {_enabled} at {_blockPos}");
                     crafter.ServerSetEnabled(_enabled);
+                    break;
+
+                case MessageType.RequestSetPriority:
+                    Log.Out($"[CrafterControl] ServerSetPriority {_priority} at {_blockPos}");
+                    crafter.ServerSetPipePriority(_priority);
                     break;
 
                 default:

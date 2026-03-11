@@ -35,6 +35,14 @@
                         <button depth="3" name="powerbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="130" height="30"/>
                     </rect>
 
+                    <!-- PIPE PRIORITY -->
+                    <rect pos="225,-425">
+                        <label depth="4" pos="-45,0" width="90" height="30" text="Priority" font_size="26" justify="center" color="[limeGreen]" effect="outline"/>
+                        <button depth="4" name="prioritydownbutton" pos="-56,-24" width="20" height="30" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Decrease pipe priority (0-9). Higher number = higher priority."/>
+                        <textfield name="extractorPriorityInput" pos="-30,-25" width="60" height="28" text="{pipepriority}" tooltip="Set pipe priority from 0 to 9. Higher number = higher priority." />
+                        <button depth="4" name="priorityupbutton" pos="36,-24" width="20" height="30" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Increase pipe priority (0-9). Higher number = higher priority."/>
+                    </rect>
+
                     <!-- CLOSE BUTTON -->
                     <button depth="10" name="closeButton" pos="415,-25" width="35" height="35" pivot="center" sprite="ui_game_symbol_x" defaultcolor="[white]" hovercolor="[red]" type="sliced" sound="[paging_click]" on_press="true"/>
 
@@ -104,6 +112,18 @@
                     <sprite depth="9" pos="3,-1" width="294" height="18" color="[black]" sprite="menu_empty3px" globalopacity="false" type="sliced" fillcenter="false" />
                 </rect>
 
+
+                <!-- PIPE PRIORITY -->
+                <rect pos="225,-425">
+                    <label depth="4" pos="-45,0" width="90" height="30" text="Priority" font_size="26" justify="center" color="[limeGreen]" effect="outline" />
+
+                    <button depth="4" name="prioritydownbutton" pos="-56,-24" width="20" height="30" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Decrease pipe priority (0-9). Higher number = higher priority."/>
+
+                    <textfield name="priorityInput" pos="-30,-25" width="60" height="28" text="{pipepriority}" tooltip="Set pipe priority from 0 to 9. Higher number = higher priority." />
+
+
+                    <button depth="4" name="priorityupbutton" pos="36,-24" width="20" height="30" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Increase pipe priority (0-9). Higher number = higher priority."/>
+                </rect>
                 <!-- CRAFT BUTTON -->
                 <rect pos="225,-500">
                     <label depth="4" pos="5,0" pivot="center" width="100" height="30" text="{craft}" font_size="32" color="[limeGreen]" effect="outline" />
@@ -189,6 +209,18 @@
     </append>
 
 </configs>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

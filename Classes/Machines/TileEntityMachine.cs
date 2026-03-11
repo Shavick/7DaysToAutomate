@@ -1,12 +1,19 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.IO;
 
 public abstract class TileEntityMachine : TileEntity
 {
+    public const int MinPipePriority = 0;
+    public const int MaxPipePriority = 9;
+    public const int DefaultPipePriority = 0;
+
     protected Guid machineGuid = Guid.Empty;
     protected Dictionary<string, int> pendingOutput = new Dictionary<string, int>();
+    protected int pipePriority = DefaultPipePriority;
 
     public Guid MachineGuid => machineGuid;
+    public int PipePriority => pipePriority;
 
     public bool IsDevLogging => blockValue.Block?.Properties?.GetBool("DevLogs") == true;
     protected bool simulatedByHLR = false;
@@ -126,6 +133,26 @@ public abstract class TileEntityMachine : TileEntity
         return simulatedByHLR;
     }
 
+    public bool ServerSetPipePriority(int requestedPriority)
+    {
+        int clampedPriority = requestedPriority;
+        if (clampedPriority < MinPipePriority)
+            clampedPriority = MinPipePriority;
+        else if (clampedPriority > MaxPipePriority)
+            clampedPriority = MaxPipePriority;
+
+        if (pipePriority == clampedPriority)
+            return false;
+
+        pipePriority = clampedPriority;
+        NeedsUiRefresh = true;
+
+        if (!GameManager.Instance.World.IsRemote())
+            setModified();
+
+        return true;
+    }
+
     public override void setModified()
     {
         base.setModified();
@@ -150,6 +177,8 @@ public abstract class TileEntityMachine : TileEntity
             bw.Write(kvp.Key);
             bw.Write(kvp.Value);
         }
+
+        bw.Write(pipePriority);
 
         //Log.Out($"[Machine][{ToWorldPos()}] WRITE END");
     }
@@ -185,9 +214,23 @@ public abstract class TileEntityMachine : TileEntity
             pendingOutput[item] = count;
         }
 
+        try
+        {
+            int savedPriority = br.ReadInt32();
+            if (savedPriority < MinPipePriority)
+                pipePriority = MinPipePriority;
+            else if (savedPriority > MaxPipePriority)
+                pipePriority = MaxPipePriority;
+            else
+                pipePriority = savedPriority;
+        }
+        catch (EndOfStreamException)
+        {
+            // Backward compatibility with saves created before pipePriority existed.
+            pipePriority = DefaultPipePriority;
+        }
+
         //Log.Out($"[Machine][{ToWorldPos()}] READ END");
     }
-
-
 }
 

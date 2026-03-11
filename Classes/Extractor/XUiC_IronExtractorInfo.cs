@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 public class XUiC_IronExtractorInfo : XUiController
 {
@@ -7,6 +8,11 @@ public class XUiC_IronExtractorInfo : XUiController
     Vector3i blockPosition;
     private bool hasStorage = false;
     private XUiC_ExtractorOutputContainerList outputList;
+    private XUiC_TextInput priorityInput;
+    private bool suppressPriorityInputEvents;
+    private int? localPipePriorityOverride;
+    private int lastPriorityRequest = int.MinValue;
+    private int lastPipePriority = int.MinValue;
     public override void Init()
     {
         base.Init();
@@ -21,6 +27,22 @@ public class XUiC_IronExtractorInfo : XUiController
         var powerBtn = GetChildById("powerbutton")?.ViewComponent as XUiV_Button;
         if (powerBtn != null)
             powerBtn.Controller.OnPress += (c, b) => PowerButton_OnPress();
+
+        var priorityDownBtn = GetChildById("prioritydownbutton")?.ViewComponent as XUiV_Button;
+        if (priorityDownBtn != null)
+            priorityDownBtn.Controller.OnPress += (c, b) => AdjustPriority(-1);
+
+        var priorityUpBtn = GetChildById("priorityupbutton")?.ViewComponent as XUiV_Button;
+        if (priorityUpBtn != null)
+            priorityUpBtn.Controller.OnPress += (c, b) => AdjustPriority(1);
+
+
+        priorityInput = windowGroup.Controller.GetChildById("extractorPriorityInput") as XUiC_TextInput;
+        if (priorityInput != null)
+        {
+            priorityInput.OnChangeHandler += HandlePriorityChanged;
+            priorityInput.OnSubmitHandler += HandlePrioritySubmit;
+        }
 
         outputList = GetChildByType<XUiC_ExtractorOutputContainerList>();
         if (outputList != null && te != null)
@@ -40,8 +62,158 @@ public class XUiC_IronExtractorInfo : XUiController
         Helper.RequestMachinePowerToggle(clrIdx, blockPosition, !te.IsOn);
         RefreshBindings();
     }
+    private void HandlePriorityChanged(XUiController sender, string text, bool fromCode = false)
+    {
+        if (suppressPriorityInputEvents)
+            return;
 
-    private void UpdateHasStorage()
+        ApplyPriority(text);
+    }
+
+    private void HandlePrioritySubmit(XUiController sender, string text)
+    {
+        if (suppressPriorityInputEvents)
+            return;
+
+        ApplyPriority(text);
+    }
+
+    private void ApplyPriority(string text)
+    {
+        if (!int.TryParse(text, out int requested))
+            return;
+
+        RequestPriorityChange(requested);
+    }
+
+    private void AdjustPriority(int delta)
+    {
+        int basePriority;
+        if (!TryReadPriorityInputValue(out basePriority))
+            basePriority = localPipePriorityOverride ?? (GetExtractor()?.PipePriority ?? TileEntityMachine.DefaultPipePriority);
+
+        RequestPriorityChange(basePriority + delta);
+    }
+
+    private void RequestPriorityChange(int requested)
+    {
+        if (requested < TileEntityMachine.MinPipePriority)
+            requested = TileEntityMachine.MinPipePriority;
+        else if (requested > TileEntityMachine.MaxPipePriority)
+            requested = TileEntityMachine.MaxPipePriority;
+
+        UpdatePriorityInputDisplay(requested);
+
+        if (lastPriorityRequest == requested && localPipePriorityOverride.HasValue && localPipePriorityOverride.Value == requested)
+        {
+            RefreshBindings(true);
+            return;
+        }
+
+        lastPriorityRequest = requested;
+        localPipePriorityOverride = requested;
+        RefreshBindings(true);
+
+        Helper.RequestExtractorSetPriority(blockPosition, requested);
+    }
+
+    private bool TryReadPriorityInputValue(out int value)
+    {
+        value = TileEntityMachine.MinPipePriority;
+
+        if (priorityInput == null)
+            return false;
+
+        if (TryReadTextMember(priorityInput, out string text) && int.TryParse(text, out value))
+            return true;
+
+        object viewComponent = priorityInput.ViewComponent;
+        if (viewComponent != null && TryReadTextMember(viewComponent, out text) && int.TryParse(text, out value))
+            return true;
+
+        return false;
+    }
+
+    private void UpdatePriorityInputDisplay(int value)
+    {
+        if (priorityInput == null)
+            return;
+
+        string text = value.ToString();
+        suppressPriorityInputEvents = true;
+
+        try
+        {
+            if (TryWriteTextMember(priorityInput, text))
+                return;
+
+            object viewComponent = priorityInput.ViewComponent;
+            if (viewComponent != null && TryWriteTextMember(viewComponent, text))
+                return;
+        }
+        finally
+        {
+            suppressPriorityInputEvents = false;
+        }
+    }
+
+    private static bool TryReadTextMember(object target, out string text)
+    {
+        text = null;
+        if (target == null)
+            return false;
+
+        Type type = target.GetType();
+        PropertyInfo textProperty = type.GetProperty("Text", BindingFlags.Public | BindingFlags.Instance);
+        if (textProperty != null && textProperty.CanRead && textProperty.PropertyType == typeof(string))
+        {
+            text = textProperty.GetValue(target, null) as string;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryWriteTextMember(object target, string text)
+    {
+        if (target == null)
+            return false;
+
+        Type type = target.GetType();
+
+        MethodInfo setTextStringBool = type.GetMethod(
+            "SetText",
+            BindingFlags.Public | BindingFlags.Instance,
+            null,
+            new[] { typeof(string), typeof(bool) },
+            null);
+        if (setTextStringBool != null)
+        {
+            setTextStringBool.Invoke(target, new object[] { text, true });
+            return true;
+        }
+
+        MethodInfo setTextString = type.GetMethod(
+            "SetText",
+            BindingFlags.Public | BindingFlags.Instance,
+            null,
+            new[] { typeof(string) },
+            null);
+        if (setTextString != null)
+        {
+            setTextString.Invoke(target, new object[] { text });
+            return true;
+        }
+
+        PropertyInfo textProperty = type.GetProperty("Text", BindingFlags.Public | BindingFlags.Instance);
+        if (textProperty != null && textProperty.CanWrite && textProperty.PropertyType == typeof(string))
+        {
+            textProperty.SetValue(target, text, null);
+            return true;
+        }
+
+        return false;
+    }private void UpdateHasStorage()
     {
 
         te = GetExtractor();
@@ -93,7 +265,10 @@ public class XUiC_IronExtractorInfo : XUiController
 
         te = GetExtractor();
         if (te == null)
+        {
+            UpdatePriorityInputDisplay(TileEntityMachine.MinPipePriority);
             return;
+        }
 
         if (outputList == null)
             outputList = GetChildByType<XUiC_ExtractorOutputContainerList>();
@@ -102,6 +277,7 @@ public class XUiC_IronExtractorInfo : XUiController
             outputList.SetContext(te, blockPosition);
 
         UpdateHasStorage();
+        UpdatePriorityInputDisplay(te.PipePriority);
         RefreshBindings(true);
     }
 
@@ -111,9 +287,26 @@ public class XUiC_IronExtractorInfo : XUiController
 
         if (te == null)
             te = GetExtractor();
-
         if (te == null)
+        {
+            UpdatePriorityInputDisplay(TileEntityMachine.MinPipePriority);
             return;
+        }
+
+
+        if (te.PipePriority != lastPipePriority)
+        {
+            lastPipePriority = te.PipePriority;
+            UpdatePriorityInputDisplay(te.PipePriority);
+            RefreshBindings(true);
+        }
+
+        if (localPipePriorityOverride.HasValue && te.PipePriority == localPipePriorityOverride.Value)
+        {
+            localPipePriorityOverride = null;
+            UpdatePriorityInputDisplay(te.PipePriority);
+            RefreshBindings(true);
+        }
 
         if (!te.NeedsUiRefresh)
             return;
@@ -181,6 +374,16 @@ public class XUiC_IronExtractorInfo : XUiController
             lines.Add($"{item}: {count} every {speed}s");
         }
 
+
+        if (string.Equals(_bindingName?.Trim(), "pipepriority", StringComparison.OrdinalIgnoreCase))
+        {
+            if (localPipePriorityOverride.HasValue)
+                value = localPipePriorityOverride.Value.ToString();
+            else
+                value = extractor.PipePriority.ToString();
+            return true;
+        }
+
         switch (_bindingName)
         {
             case "extractorname":
@@ -226,4 +429,9 @@ public class XUiC_IronExtractorInfo : XUiController
         return false;
     }
 }
+
+
+
+
+
 

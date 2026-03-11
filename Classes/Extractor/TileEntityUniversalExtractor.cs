@@ -559,7 +559,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         ulong now = world.GetWorldTime();
 
         if (SelectedOutputMode == OutputTransportMode.Pipe &&
-            !PipeTransportManager.CanDispatch(LastPipeDispatchWorldTime, now))
+            !PipeTransportManager.CanDispatch(LastPipeDispatchWorldTime, now, world, 0, SelectedPipeGraphId, ToWorldPos(), SelectedOutputChestPos))
         {
             DevLog("FLUSH WAIT — pipe dispatch interval not ready yet");
             return;
@@ -1144,4 +1144,3 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
     }
 }
-

@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 public class XUiC_UniversalCrafter : XUiController
@@ -9,6 +11,11 @@ public class XUiC_UniversalCrafter : XUiController
     public XUiC_CrafterRecipeList recipeList;
     public XUiC_CrafterIngredientsList ingredientList;
     public float smoothProgress;
+    private XUiC_TextInput priorityInput;
+    private bool suppressPriorityInputEvents;
+    private int? localPipePriorityOverride;
+    private int lastPriorityRequest = int.MinValue;
+    private int lastPipePriority = int.MinValue;
     private Vector3i lastInputChestPos = Vector3i.zero;
     private Vector3i lastOutputChestPos = Vector3i.zero;
     private string lastRecipeName = string.Empty;
@@ -39,6 +46,21 @@ public class XUiC_UniversalCrafter : XUiController
         if (resetBtn != null)
             resetBtn.Controller.OnPress += (c, b) => ResetButton_OnPress();
 
+        var priorityDownBtn = GetChildById("prioritydownbutton")?.ViewComponent as XUiV_Button;
+        if (priorityDownBtn != null)
+            priorityDownBtn.Controller.OnPress += (c, b) => AdjustPriority(-1);
+
+        var priorityUpBtn = GetChildById("priorityupbutton")?.ViewComponent as XUiV_Button;
+        if (priorityUpBtn != null)
+            priorityUpBtn.Controller.OnPress += (c, b) => AdjustPriority(1);
+
+        priorityInput = windowGroup.Controller.GetChildById("priorityInput") as XUiC_TextInput;
+        if (priorityInput != null)
+        {
+            priorityInput.OnChangeHandler += HandlePriorityChanged;
+            priorityInput.OnSubmitHandler += HandlePrioritySubmit;
+        }
+
         recipeList = GetChildByType<XUiC_CrafterRecipeList>();
         ingredientList = GetChildByType<XUiC_CrafterIngredientsList>();
 
@@ -58,6 +80,158 @@ public class XUiC_UniversalCrafter : XUiController
     {
         Log.Out("[Crafter] Resetting...");
         // Leave empty for now unless you add a reset request package/action
+    }
+    private void HandlePriorityChanged(XUiController sender, string text, bool fromCode = false)
+    {
+        if (suppressPriorityInputEvents)
+            return;
+
+        ApplyPriority(text);
+    }
+
+    private void HandlePrioritySubmit(XUiController sender, string text)
+    {
+        if (suppressPriorityInputEvents)
+            return;
+
+        ApplyPriority(text);
+    }
+
+    private void ApplyPriority(string text)
+    {
+        if (!int.TryParse(text, out int requested))
+            return;
+
+        RequestPriorityChange(requested);
+    }
+
+    private void AdjustPriority(int delta)
+    {
+        int basePriority;
+        if (!TryReadPriorityInputValue(out basePriority))
+            basePriority = localPipePriorityOverride ?? (GetCrafter()?.PipePriority ?? TileEntityMachine.DefaultPipePriority);
+
+        RequestPriorityChange(basePriority + delta);
+    }
+
+    private void RequestPriorityChange(int requested)
+    {
+        if (requested < TileEntityMachine.MinPipePriority)
+            requested = TileEntityMachine.MinPipePriority;
+        else if (requested > TileEntityMachine.MaxPipePriority)
+            requested = TileEntityMachine.MaxPipePriority;
+
+        UpdatePriorityInputDisplay(requested);
+
+        if (lastPriorityRequest == requested && localPipePriorityOverride.HasValue && localPipePriorityOverride.Value == requested)
+        {
+            RefreshBindings(true);
+            return;
+        }
+
+        lastPriorityRequest = requested;
+        localPipePriorityOverride = requested;
+        RefreshBindings(true);
+
+        Helper.RequestCrafterSetPriority(blockPos, requested);
+    }
+
+    private bool TryReadPriorityInputValue(out int value)
+    {
+        value = TileEntityMachine.MinPipePriority;
+
+        if (priorityInput == null)
+            return false;
+
+        if (TryReadTextMember(priorityInput, out string text) && int.TryParse(text, out value))
+            return true;
+
+        object viewComponent = priorityInput.ViewComponent;
+        if (viewComponent != null && TryReadTextMember(viewComponent, out text) && int.TryParse(text, out value))
+            return true;
+
+        return false;
+    }
+
+    private void UpdatePriorityInputDisplay(int value)
+    {
+        if (priorityInput == null)
+            return;
+
+        string text = value.ToString();
+        suppressPriorityInputEvents = true;
+
+        try
+        {
+            if (TryWriteTextMember(priorityInput, text))
+                return;
+
+            object viewComponent = priorityInput.ViewComponent;
+            if (viewComponent != null && TryWriteTextMember(viewComponent, text))
+                return;
+        }
+        finally
+        {
+            suppressPriorityInputEvents = false;
+        }
+    }
+
+    private static bool TryReadTextMember(object target, out string text)
+    {
+        text = null;
+        if (target == null)
+            return false;
+
+        Type type = target.GetType();
+        PropertyInfo textProperty = type.GetProperty("Text", BindingFlags.Public | BindingFlags.Instance);
+        if (textProperty != null && textProperty.CanRead && textProperty.PropertyType == typeof(string))
+        {
+            text = textProperty.GetValue(target, null) as string;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool TryWriteTextMember(object target, string text)
+    {
+        if (target == null)
+            return false;
+
+        Type type = target.GetType();
+
+        MethodInfo setTextStringBool = type.GetMethod(
+            "SetText",
+            BindingFlags.Public | BindingFlags.Instance,
+            null,
+            new[] { typeof(string), typeof(bool) },
+            null);
+        if (setTextStringBool != null)
+        {
+            setTextStringBool.Invoke(target, new object[] { text, true });
+            return true;
+        }
+
+        MethodInfo setTextString = type.GetMethod(
+            "SetText",
+            BindingFlags.Public | BindingFlags.Instance,
+            null,
+            new[] { typeof(string) },
+            null);
+        if (setTextString != null)
+        {
+            setTextString.Invoke(target, new object[] { text });
+            return true;
+        }
+
+        PropertyInfo textProperty = type.GetProperty("Text", BindingFlags.Public | BindingFlags.Instance);
+        if (textProperty != null && textProperty.CanWrite && textProperty.PropertyType == typeof(string))
+        {
+            textProperty.SetValue(target, text, null);
+            return true;
+        }
+
+        return false;
     }
 
     // -------------------------------
@@ -113,6 +287,7 @@ public class XUiC_UniversalCrafter : XUiController
 
         if (te == null)
         {
+            UpdatePriorityInputDisplay(TileEntityMachine.MinPipePriority);
             RefreshBindings(true);
             return;
         }
@@ -152,6 +327,7 @@ public class XUiC_UniversalCrafter : XUiController
             inputBufferList.IsDirty = true;
         }
 
+        UpdatePriorityInputDisplay(te.PipePriority);
         RefreshBindings(true);
     }
 
@@ -336,6 +512,18 @@ public class XUiC_UniversalCrafter : XUiController
                 stateChanged = true;
             }
 
+            if (te.PipePriority != lastPipePriority)
+            {
+                lastPipePriority = te.PipePriority;
+                stateChanged = true;
+            }
+
+            if (localPipePriorityOverride.HasValue && te.PipePriority == localPipePriorityOverride.Value)
+            {
+                localPipePriorityOverride = null;
+                stateChanged = true;
+            }
+
             int inputTargetsSignature = BuildInputTargetsSignature(te);
             if (inputTargetsSignature != lastInputTargetsSignature)
             {
@@ -380,6 +568,8 @@ public class XUiC_UniversalCrafter : XUiController
 
             if (selectionChanged || stateChanged)
             {
+                int displayPriority = localPipePriorityOverride ?? te.PipePriority;
+                UpdatePriorityInputDisplay(displayPriority);
                 RefreshBindings(true);
             }
 
@@ -580,9 +770,34 @@ if (bindingName == "recipename")
             return true;
         }
 
+
+        if (bindingName == "pipepriority")
+        {
+            if (localPipePriorityOverride.HasValue)
+                value = localPipePriorityOverride.Value.ToString();
+            else
+                value = te != null ? te.PipePriority.ToString() : TileEntityMachine.DefaultPipePriority.ToString();
+            return true;
+        }
         return false;
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

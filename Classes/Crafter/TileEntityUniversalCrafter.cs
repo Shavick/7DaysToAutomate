@@ -834,7 +834,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         ulong now = world.GetWorldTime();
 
         if (SelectedOutputMode == OutputTransportMode.Pipe &&
-            !PipeTransportManager.CanDispatch(LastPipeDispatchWorldTime, now))
+            !PipeTransportManager.CanDispatch(LastPipeDispatchWorldTime, now, world, 0, SelectedPipeGraphId, ToWorldPos(), SelectedOutputChestPos))
         {
             DevLog("FLUSH WAIT -> pipe dispatch interval not ready yet");
             DevLog("========== FLUSH END ==========");
@@ -2565,7 +2565,3 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         inputBuffer = new Dictionary<string, int>();
     }
 }
-
-
-
-

@@ -7,12 +7,25 @@ public static class PipeTransportManager
 
     private static readonly Dictionary<Guid, PipeTransportJob> activeJobs = new Dictionary<Guid, PipeTransportJob>();
     private const int DefaultPipeThroughput = 1;
-    private const ulong DispatchIntervalTicks = 20UL;     // 1 second at 20 ticks/sec
-    private const ulong PerPipeTravelTicks = 5UL;         // 0.25 sec per pipe
+    private const int DefaultPipeSpeed = 1;
+    private const int DefaultPipeLatency = 1;
+    private const ulong BaseDispatchIntervalTicks = 20UL; // 1 second at 20 ticks/sec
+    private const ulong BasePerPipeTravelTicks = 5UL;     // 0.25 sec per pipe
+    private const ulong MachineRequestTimeoutTicks = 200UL;
+
+    private sealed class GraphDispatchState
+    {
+        public readonly Dictionary<Vector3i, int> MachinePriority = new Dictionary<Vector3i, int>();
+        public readonly Dictionary<Vector3i, ulong> LastRequestWorldTime = new Dictionary<Vector3i, ulong>();
+        public int RoundRobinCursor = 0;
+    }
+
+    private static readonly Dictionary<Guid, GraphDispatchState> graphDispatchStates = new Dictionary<Guid, GraphDispatchState>();
 
     public static void ClearAll()
     {
         activeJobs.Clear();
+        graphDispatchStates.Clear();
         Log.Out("[PipeTransportManager] ClearAll()");
     }
 
@@ -20,6 +33,167 @@ public static class PipeTransportManager
     {
         return activeJobs.Count;
     }
+
+    private static GraphDispatchState GetOrCreateDispatchState(Guid pipeGraphId)
+    {
+        if (!graphDispatchStates.TryGetValue(pipeGraphId, out GraphDispatchState state) || state == null)
+        {
+            state = new GraphDispatchState();
+            graphDispatchStates[pipeGraphId] = state;
+        }
+
+        return state;
+    }
+
+    private static int NormalizePriority(int requestedPriority)
+    {
+        if (requestedPriority < TileEntityMachine.MinPipePriority)
+            return TileEntityMachine.MinPipePriority;
+
+        if (requestedPriority > TileEntityMachine.MaxPipePriority)
+            return TileEntityMachine.MaxPipePriority;
+
+        return requestedPriority;
+    }
+
+    private static int CompareMachinePos(Vector3i a, Vector3i b)
+    {
+        int cmp = a.x.CompareTo(b.x);
+        if (cmp != 0)
+            return cmp;
+
+        cmp = a.y.CompareTo(b.y);
+        if (cmp != 0)
+            return cmp;
+
+        return a.z.CompareTo(b.z);
+    }
+
+    private static void PruneInactiveMachines(GraphDispatchState state, ulong now)
+    {
+        if (state == null || state.LastRequestWorldTime.Count == 0)
+            return;
+
+        List<Vector3i> staleMachines = null;
+
+        foreach (var kvp in state.LastRequestWorldTime)
+        {
+            if (now <= kvp.Value + MachineRequestTimeoutTicks)
+                continue;
+
+            if (staleMachines == null)
+                staleMachines = new List<Vector3i>();
+
+            staleMachines.Add(kvp.Key);
+        }
+
+        if (staleMachines == null)
+            return;
+
+        for (int i = 0; i < staleMachines.Count; i++)
+        {
+            Vector3i machinePos = staleMachines[i];
+            state.LastRequestWorldTime.Remove(machinePos);
+            state.MachinePriority.Remove(machinePos);
+        }
+
+        if (state.RoundRobinCursor < 0)
+            state.RoundRobinCursor = 0;
+    }
+
+    private static List<Vector3i> BuildHighestPriorityContenders(GraphDispatchState state)
+    {
+        List<Vector3i> contenders = new List<Vector3i>();
+        if (state == null || state.LastRequestWorldTime.Count == 0)
+            return contenders;
+
+        int highestPriority = int.MinValue;
+
+        foreach (var kvp in state.LastRequestWorldTime)
+        {
+            Vector3i machinePos = kvp.Key;
+            if (!state.MachinePriority.TryGetValue(machinePos, out int priority))
+                priority = TileEntityMachine.DefaultPipePriority;
+
+            priority = NormalizePriority(priority);
+
+            if (priority > highestPriority)
+            {
+                highestPriority = priority;
+                contenders.Clear();
+                contenders.Add(machinePos);
+                continue;
+            }
+
+            if (priority == highestPriority)
+                contenders.Add(machinePos);
+        }
+
+        contenders.Sort(CompareMachinePos);
+        return contenders;
+    }
+
+    private static bool TryReserveMachineTurn(Guid pipeGraphId, Vector3i machinePos, int machinePriority, ulong now)
+    {
+        if (pipeGraphId == Guid.Empty || machinePos == Vector3i.zero)
+            return true;
+
+        GraphDispatchState state = GetOrCreateDispatchState(pipeGraphId);
+        state.MachinePriority[machinePos] = NormalizePriority(machinePriority);
+        state.LastRequestWorldTime[machinePos] = now;
+
+        PruneInactiveMachines(state, now);
+
+        List<Vector3i> contenders = BuildHighestPriorityContenders(state);
+        if (contenders.Count == 0)
+            return true;
+
+        int cursor = state.RoundRobinCursor % contenders.Count;
+        if (cursor < 0)
+            cursor = 0;
+
+        return contenders[cursor] == machinePos;
+    }
+
+    private static void AdvanceMachineTurn(Guid pipeGraphId, Vector3i machinePos, ulong now)
+    {
+        if (pipeGraphId == Guid.Empty || machinePos == Vector3i.zero)
+            return;
+
+        if (!graphDispatchStates.TryGetValue(pipeGraphId, out GraphDispatchState state) || state == null)
+            return;
+
+        PruneInactiveMachines(state, now);
+
+        List<Vector3i> contenders = BuildHighestPriorityContenders(state);
+        if (contenders.Count == 0)
+        {
+            state.RoundRobinCursor = 0;
+            return;
+        }
+
+        int currentIndex = contenders.IndexOf(machinePos);
+        if (currentIndex < 0)
+        {
+            state.RoundRobinCursor = (state.RoundRobinCursor + 1) % contenders.Count;
+            return;
+        }
+
+        state.RoundRobinCursor = (currentIndex + 1) % contenders.Count;
+    }
+
+    private static int GetMachinePriority(WorldBase world, int clrIdx, Vector3i machinePos)
+    {
+        if (world == null || machinePos == Vector3i.zero)
+            return TileEntityMachine.DefaultPipePriority;
+
+        TileEntity machineTe = world.GetTileEntity(clrIdx, machinePos);
+        if (!(machineTe is TileEntityMachine machine))
+            return TileEntityMachine.DefaultPipePriority;
+
+        return NormalizePriority(machine.PipePriority);
+    }
+
 
     public static bool TryRequestCrafterInputs(
     WorldBase world,
@@ -104,7 +278,7 @@ public static class PipeTransportManager
         }
 
         ulong now = world.GetWorldTime();
-        ulong travelTicks = (ulong)route.Count * PerPipeTravelTicks;
+        ulong travelTicks = GetRouteTravelTicks(world, clrIdx, route);
         bool createdAnyJobs = false;
 
 
@@ -178,6 +352,12 @@ public static class PipeTransportManager
                 continue;
             }
 
+            int machinePriority = GetMachinePriority(world, clrIdx, targetMachinePos);
+            if (!TryReserveMachineTurn(pipeGraphId, targetMachinePos, machinePriority, now))
+            {
+                break;
+            }
+
             ulong arrival = now + travelTicks;
 
 
@@ -202,6 +382,7 @@ public static class PipeTransportManager
 
             remainingCapacity--;
             createdAnyJobs = true;
+            AdvanceMachineTurn(pipeGraphId, targetMachinePos, now);
 
         }
 
@@ -269,7 +450,12 @@ public static class PipeTransportManager
         }
 
         ulong now = world.GetWorldTime();
-        ulong travelTicks = (ulong)route.Count * PerPipeTravelTicks;
+
+        int machinePriority = GetMachinePriority(world, clrIdx, sourceMachinePos);
+        if (!TryReserveMachineTurn(pipeGraphId, sourceMachinePos, machinePriority, now))
+            return false;
+
+        ulong travelTicks = GetRouteTravelTicks(world, clrIdx, route);
         ulong arrival = now + travelTicks;
 
         job = new PipeTransportJob(
@@ -289,15 +475,27 @@ public static class PipeTransportManager
         job.HasPickedUpItems = true;
         job.TransitStartWorldTime = now;
 
-        return RegisterJob(job);
+        bool registered = RegisterJob(job);
+        if (registered)
+            AdvanceMachineTurn(pipeGraphId, sourceMachinePos, now);
+
+        return registered;
     }
 
-    public static bool CanDispatch(ulong lastDispatchWorldTime, ulong currentWorldTime)
+    public static bool CanDispatch(
+    ulong lastDispatchWorldTime,
+    ulong currentWorldTime,
+    WorldBase world,
+    int clrIdx,
+    Guid pipeGraphId,
+    Vector3i sourcePos,
+    Vector3i targetPos)
     {
         if (lastDispatchWorldTime == 0UL)
             return true;
 
-        return currentWorldTime >= lastDispatchWorldTime + DispatchIntervalTicks;
+        ulong dispatchIntervalTicks = GetRouteDispatchIntervalTicks(world, clrIdx, pipeGraphId, sourcePos, targetPos);
+        return currentWorldTime >= lastDispatchWorldTime + dispatchIntervalTicks;
     }
 
     public static bool RegisterJob(PipeTransportJob job)
@@ -587,6 +785,102 @@ public static class PipeTransportManager
         return lowestThroughput;
     }
 
+    private static ulong GetRouteTravelTicks(WorldBase world, int clrIdx, List<Vector3i> routePipePositions)
+    {
+        if (routePipePositions == null || routePipePositions.Count == 0)
+            return BasePerPipeTravelTicks;
+
+        int speedMultiplier = GetRouteSpeed(world, clrIdx, routePipePositions);
+        if (speedMultiplier <= 0)
+            speedMultiplier = DefaultPipeSpeed;
+
+        ulong perPipeTicks = (ulong)Math.Ceiling(BasePerPipeTravelTicks / (double)speedMultiplier);
+        if (perPipeTicks < 1UL)
+            perPipeTicks = 1UL;
+
+        ulong totalTicks = (ulong)routePipePositions.Count * perPipeTicks;
+        return totalTicks > 0UL ? totalTicks : 1UL;
+    }
+
+    private static ulong GetRouteDispatchIntervalTicks(
+    WorldBase world,
+    int clrIdx,
+    Guid pipeGraphId,
+    Vector3i sourcePos,
+    Vector3i targetPos)
+    {
+        if (world == null || world.IsRemote())
+            return BaseDispatchIntervalTicks;
+
+        if (pipeGraphId == Guid.Empty || sourcePos == Vector3i.zero || targetPos == Vector3i.zero)
+            return BaseDispatchIntervalTicks;
+
+        if (!PipeGraphManager.TryFindRoute(world, clrIdx, pipeGraphId, sourcePos, targetPos, out List<Vector3i> route))
+            return BaseDispatchIntervalTicks;
+
+        if (route == null || route.Count == 0)
+            return BaseDispatchIntervalTicks;
+
+        int latencyMultiplier = GetRouteLatency(world, clrIdx, route);
+        if (latencyMultiplier <= 0)
+            latencyMultiplier = DefaultPipeLatency;
+
+        ulong interval = (ulong)Math.Ceiling(BaseDispatchIntervalTicks / (double)latencyMultiplier);
+        return interval > 0UL ? interval : 1UL;
+    }
+
+    private static int GetRouteSpeed(WorldBase world, int clrIdx, List<Vector3i> routePipePositions)
+    {
+        if (world == null || routePipePositions == null || routePipePositions.Count == 0)
+            return DefaultPipeSpeed;
+
+        int lowestSpeed = int.MaxValue;
+
+        for (int i = 0; i < routePipePositions.Count; i++)
+        {
+            Vector3i pipePos = routePipePositions[i];
+            BlockValue blockValue = world.GetBlock(clrIdx, pipePos);
+
+            if (!(world.GetTileEntity(clrIdx, pipePos) is TileEntityItemPipe))
+                continue;
+
+            int speed = GetPipeSpeed(blockValue);
+            if (speed < lowestSpeed)
+                lowestSpeed = speed;
+        }
+
+        if (lowestSpeed == int.MaxValue || lowestSpeed <= 0)
+            return DefaultPipeSpeed;
+
+        return lowestSpeed;
+    }
+
+    private static int GetRouteLatency(WorldBase world, int clrIdx, List<Vector3i> routePipePositions)
+    {
+        if (world == null || routePipePositions == null || routePipePositions.Count == 0)
+            return DefaultPipeLatency;
+
+        int lowestLatency = int.MaxValue;
+
+        for (int i = 0; i < routePipePositions.Count; i++)
+        {
+            Vector3i pipePos = routePipePositions[i];
+            BlockValue blockValue = world.GetBlock(clrIdx, pipePos);
+
+            if (!(world.GetTileEntity(clrIdx, pipePos) is TileEntityItemPipe))
+                continue;
+
+            int latency = GetPipeLatency(blockValue);
+            if (latency < lowestLatency)
+                lowestLatency = latency;
+        }
+
+        if (lowestLatency == int.MaxValue || lowestLatency <= 0)
+            return DefaultPipeLatency;
+
+        return lowestLatency;
+    }
+
     private static int GetPipeThroughput(BlockValue blockValue)
     {
         if (blockValue.Block?.Properties == null)
@@ -601,5 +895,39 @@ public static class PipeTransportManager
 
         return throughput;
     }
+
+    private static int GetPipeSpeed(BlockValue blockValue)
+    {
+        if (blockValue.Block?.Properties == null)
+            return DefaultPipeSpeed;
+
+        string raw = blockValue.Block.Properties.GetString("PipeSpeed");
+        if (string.IsNullOrEmpty(raw))
+            return DefaultPipeSpeed;
+
+        if (!int.TryParse(raw, out int speed) || speed <= 0)
+            return DefaultPipeSpeed;
+
+        return speed;
+    }
+
+    private static int GetPipeLatency(BlockValue blockValue)
+    {
+        if (blockValue.Block?.Properties == null)
+            return DefaultPipeLatency;
+
+        string raw = blockValue.Block.Properties.GetString("PipeLatency");
+        if (string.IsNullOrEmpty(raw))
+            return DefaultPipeLatency;
+
+        if (!int.TryParse(raw, out int latency) || latency <= 0)
+            return DefaultPipeLatency;
+
+        return latency;
+    }
 }
+
+
+
+
 

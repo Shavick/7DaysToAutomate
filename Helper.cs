@@ -1,4 +1,4 @@
-﻿using _7DaysToAutomate.Classes.Net_Packages;
+using _7DaysToAutomate.Classes.Net_Packages;
 
 public static class Helper
 {
@@ -261,5 +261,63 @@ public static class Helper
         }
 
         te.ServerSelectOutputContainer(targetPos, (OutputTransportMode)mode, pipeGraphId);
+    }
+
+    public static void RequestCrafterSetPriority(Vector3i blockPos, int priority)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[Crafter][Helper] RequestCrafterSetPriority world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageCrafterControl>()
+                    .SetupSetPriority(blockPos, priority),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityUniversalCrafter;
+        if (te == null)
+        {
+            Log.Error($"[Crafter][Helper] No crafter at pos={blockPos}");
+            return;
+        }
+
+        te.ServerSetPipePriority(priority);
+    }
+
+    public static void RequestExtractorSetPriority(Vector3i blockPos, int priority)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[Extractor][Helper] RequestExtractorSetPriority world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageExtractorControl>()
+                    .SetupSetPriority(blockPos, priority),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityUniversalExtractor;
+        if (te == null)
+        {
+            Log.Error($"[Extractor][Helper] No extractor at pos={blockPos}");
+            return;
+        }
+
+        te.ServerSetPipePriority(priority);
     }
 }
