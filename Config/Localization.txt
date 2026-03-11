@@ -12,5 +12,47 @@ universalLeadExtractor,"Lead Extractor"
 universalOilShaleExtractor,"Oil Shale Extractor"
 
 universalCrafter,"Universal Crafter"
+universalCrafterDesc,"Automates crafting recipes using configured input and output containers."
+
+networkController,"Network Controller"
+networkControllerDesc,"Manages machine networks and links connected pipe systems."
+
+universalIronExtractorDesc,"Automates iron extraction from iron ore sources. Higher tiers increase output and speed."
+universalCoalExtractorDesc,"Automates coal extraction from coal ore sources."
+universalNitrateExtractorDesc,"Automates nitrate extraction from nitrate ore sources."
+universalLeadExtractorDesc,"Automates lead extraction from lead ore sources."
+universalOilShaleExtractorDesc,"Automates oil shale extraction from oil shale sources."
 
 universalWasher,"Universal Washer"
+universalWasherDesc,"Washes selected materials using water as a processing fluid."
+
+itemPipe,"Item Pipe (T1)"
+itemPipeElbow,"Item Pipe Elbow (T1)"
+itemPipeSmallJoint,"Item Pipe Junction (T1)"
+
+itemPipeDesc,"Basic item pipe for short-distance transfer."
+itemPipeElbowDesc,"Basic elbow pipe for turning item routes."
+itemPipeTJunctionDesc,"Basic junction pipe for splitting item routes."
+
+itemPipeT2,"Item Pipe (T2)"
+itemPipeElbowT2,"Item Pipe Elbow (T2)"
+itemPipeSmallJointT2,"Item Pipe Junction (T2)"
+itemPipeT3,"Item Pipe (T3)"
+itemPipeElbowT3,"Item Pipe Elbow (T3)"
+itemPipeSmallJointT3,"Item Pipe Junction (T3)"
+
+itemPipeT2Desc,"Improved item pipe with higher throughput and faster transfer cadence."
+itemPipeElbowT2Desc,"Improved elbow pipe with higher throughput and faster transfer cadence."
+itemPipeSmallJointT2Desc,"Improved junction pipe with higher throughput and faster transfer cadence."
+itemPipeT3Desc,"Advanced item pipe with high throughput and strong transfer speed."
+itemPipeElbowT3Desc,"Advanced elbow pipe with high throughput and strong transfer speed."
+itemPipeSmallJointT3Desc,"Advanced junction pipe with high throughput and strong transfer speed."
+
+ucElectricianT1,"Item Pipes (Basic)"
+ucElectricianT2,"Item Pipes (Improved)"
+ucElectricianT3,"Item Pipes (Advanced)"
+ucWorkstationsT1,"Universal Extractors (Basic)"
+ucWorkstationsT2,"Iron Extractor Upgrade (T2)"
+ucWorkstationsT3,"Iron Extractor Upgrade (T3) + Universal Crafter"
+ucWorkstationsT4,"Iron Extractor Upgrade (T4)"
+ucWorkstationsT5,"Iron Extractor Upgrade (T5)"

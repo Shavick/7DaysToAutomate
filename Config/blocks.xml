@@ -16,6 +16,7 @@
             <property name="HeatMapFrequency" value="25"/>
             <property name="EconomicValue" value="500"/>
             <property name="DescriptionKey" value="universalIronExtractorDesc"/>
+            <property name="UnlockedBy" value="craftingWorkstations"/>
             <!-- Custom Properties-->
             <property name="BlockSource" value="terrOreIron"/>
             <property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall"/>
@@ -81,6 +82,7 @@
             <property name="HeatMapFrequency" value="25"/>
             <property name="EconomicValue" value="500"/>
             <property name="DescriptionKey" value="universalCoalExtractorDesc"/>
+            <property name="UnlockedBy" value="craftingWorkstations"/>
             <!-- Custom Properties-->
             <property name="BlockSource" value="terrOreCoal"/>
             <property name="ResourceGenerated" value="resourceCoal"/>
@@ -105,6 +107,7 @@
             <property name="HeatMapFrequency" value="25"/>
             <property name="EconomicValue" value="500"/>
             <property name="DescriptionKey" value="universalNitrateExtractorDesc"/>
+            <property name="UnlockedBy" value="craftingWorkstations"/>
             <!-- Custom Properties-->
             <property name="BlockSource" value="terrOrePotassiumNitrate"/>
             <property name="ResourceGenerated" value="resourcePotassiumNitratePowder"/>
@@ -129,6 +132,7 @@
             <property name="HeatMapFrequency" value="25"/>
             <property name="EconomicValue" value="500"/>
             <property name="DescriptionKey" value="universalLeadExtractorDesc"/>
+            <property name="UnlockedBy" value="craftingWorkstations"/>
             <!-- Custom Properties-->
             <property name="BlockSource" value="terrOreLead"/>
             <property name="ResourceGenerated" value="resourceScrapLead"/>
@@ -152,6 +156,7 @@
             <property name="HeatMapFrequency" value="25"/>
             <property name="EconomicValue" value="500"/>
             <property name="DescriptionKey" value="universalOilShaleExtractorDesc"/>
+            <property name="UnlockedBy" value="craftingWorkstations"/>
             <!-- Custom Properties-->
             <property name="BlockSource" value="terrOreOilDeposit"/>
             <property name="ResourceGenerated" value="resourceOilShale"/>
@@ -171,6 +176,7 @@
             <property name="Stacknumber" value="1"/>
             <property name="EconomicValue" value="1000"/>
             <property name="DescriptionKey" value="universalCrafterDesc"/>
+            <property name="UnlockedBy" value="craftingWorkstations"/>
             <!-- Placeholder properties - fill later -->
             <property name="CraftingSpeed" value="2.5"/>
             <property name="InternalStorageMultiplier" value="1"/>
@@ -205,6 +211,7 @@
             <property name="Stacknumber" value="100"/>
             <property name="EconomicValue" value="25"/>
             <property name="DescriptionKey" value="itemPipeDesc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
             <property name="DevLogs" value="false"/>
             <property name="PipeThroughput" value="5"/>
             <property name="PipeSpeed" value="1"/>
@@ -224,6 +231,7 @@
             <property name="Stacknumber" value="100"/>
             <property name="EconomicValue" value="25"/>
             <property name="DescriptionKey" value="itemPipeElbowDesc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
             <property name="DevLogs" value="false"/>
             <property name="PipeThroughput" value="5"/>
             <property name="PipeSpeed" value="1"/>
@@ -243,12 +251,85 @@
             <property name="Stacknumber" value="100"/>
             <property name="EconomicValue" value="25"/>
             <property name="DescriptionKey" value="itemPipeTJunctionDesc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
             <property name="DevLogs" value="false"/>
             <property name="PipeThroughput" value="5"/>
             <property name="PipeSpeed" value="1"/>
             <property name="PipeLatency" value="1"/>
         </block>
 
+
+        <block name="itemPipeT2">
+            <property name="Extends" value="itemPipe"/>
+            <property name="CustomIconTint" value="0F5FA8"/>
+            <property name="MaxDamage" value="650"/>
+            <property name="EconomicValue" value="40"/>
+            <property name="DescriptionKey" value="itemPipeT2Desc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="PipeThroughput" value="9"/>
+            <property name="PipeSpeed" value="2"/>
+            <property name="PipeLatency" value="2"/>
+        </block>
+
+        <block name="itemPipeElbowT2">
+            <property name="Extends" value="itemPipeElbow"/>
+            <property name="CustomIconTint" value="0F5FA8"/>
+            <property name="MaxDamage" value="650"/>
+            <property name="EconomicValue" value="40"/>
+            <property name="DescriptionKey" value="itemPipeElbowT2Desc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="PipeThroughput" value="9"/>
+            <property name="PipeSpeed" value="2"/>
+            <property name="PipeLatency" value="2"/>
+        </block>
+
+        <block name="itemPipeSmallJointT2">
+            <property name="Extends" value="itemPipeSmallJoint"/>
+            <property name="CustomIconTint" value="0F5FA8"/>
+            <property name="MaxDamage" value="650"/>
+            <property name="EconomicValue" value="40"/>
+            <property name="DescriptionKey" value="itemPipeSmallJointT2Desc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="PipeThroughput" value="9"/>
+            <property name="PipeSpeed" value="2"/>
+            <property name="PipeLatency" value="2"/>
+        </block>
+
+        <block name="itemPipeT3">
+            <property name="Extends" value="itemPipeT2"/>
+            <property name="CustomIconTint" value="2EA85C"/>
+            <property name="MaxDamage" value="800"/>
+            <property name="EconomicValue" value="60"/>
+            <property name="DescriptionKey" value="itemPipeT3Desc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="PipeThroughput" value="13"/>
+            <property name="PipeSpeed" value="3"/>
+            <property name="PipeLatency" value="3"/>
+        </block>
+
+        <block name="itemPipeElbowT3">
+            <property name="Extends" value="itemPipeElbowT2"/>
+            <property name="CustomIconTint" value="2EA85C"/>
+            <property name="MaxDamage" value="800"/>
+            <property name="EconomicValue" value="60"/>
+            <property name="DescriptionKey" value="itemPipeElbowT3Desc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="PipeThroughput" value="13"/>
+            <property name="PipeSpeed" value="3"/>
+            <property name="PipeLatency" value="3"/>
+        </block>
+
+        <block name="itemPipeSmallJointT3">
+            <property name="Extends" value="itemPipeSmallJointT2"/>
+            <property name="CustomIconTint" value="2EA85C"/>
+            <property name="MaxDamage" value="800"/>
+            <property name="EconomicValue" value="60"/>
+            <property name="DescriptionKey" value="itemPipeSmallJointT3Desc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="PipeThroughput" value="13"/>
+            <property name="PipeSpeed" value="3"/>
+            <property name="PipeLatency" value="3"/>
+        </block>
         <block name="universalWasher">
             <property name="Class" value="UniversalWasherBlock, 7DaysToAutomate"/>
             <property name="Material" value="Mmetal_hard"/>
@@ -272,7 +353,7 @@
 </configs>
 
 <!-- ===================================================================== -->
-<!-- Universal Crafter — Configurable Properties -->
+<!-- Universal Crafter Ã¢â‚¬â€ Configurable Properties -->
 <!-- ===================================================================== -->
 
 <!-- CraftingSpeed
@@ -317,7 +398,7 @@
 -->
 
 <!-- ===================================================================== -->
-<!-- Universal Extractor — Configurable Properties              -->
+<!-- Universal Extractor Ã¢â‚¬â€ Configurable Properties              -->
 <!-- ===================================================================== -->
 
 <!-- ResourceGenerated
@@ -368,7 +449,7 @@
 
 
 <!-- ===================================================================== -->
-<!-- HOW IT WORKS (Extractor — Actual)                                     -->
+<!-- HOW IT WORKS (Extractor Ã¢â‚¬â€ Actual)                                     -->
 <!-- ===================================================================== -->
 <!--
  - On first update, the extractor reads its XML properties and builds timers.

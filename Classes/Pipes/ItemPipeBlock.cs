@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
@@ -68,20 +68,16 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
         if (string.IsNullOrEmpty(blockName))
             return PipeShape.None;
 
-        switch (blockName)
-        {
-            case "itemPipe":
-                return PipeShape.Straight;
+        if (blockName.StartsWith("itemPipeElbow", StringComparison.OrdinalIgnoreCase))
+            return PipeShape.Elbow;
 
-            case "itemPipeElbow":
-                return PipeShape.Elbow;
+        if (blockName.StartsWith("itemPipeSmallJoint", StringComparison.OrdinalIgnoreCase))
+            return PipeShape.TJunction;
 
-            case "itemPipeSmallJoint":
-                return PipeShape.TJunction;
+        if (blockName.StartsWith("itemPipe", StringComparison.OrdinalIgnoreCase))
+            return PipeShape.Straight;
 
-            default:
-                return PipeShape.None;
-        }
+        return PipeShape.None;
     }
 
     // ─────────────────────────────────────────────
