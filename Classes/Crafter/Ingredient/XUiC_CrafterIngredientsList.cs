@@ -1,7 +1,7 @@
-﻿public class XUiC_CrafterIngredientsList : XUiController
+public class XUiC_CrafterIngredientsList : XUiController
 {
     public Recipe CurrentRecipe;
-    public XUiC_UniversalCrafter crafterUI;   // ⭐ Assigned from the parent UI
+    public XUiC_UniversalCrafter crafterUI;   // Assigned from the parent UI
 
     private XUiC_CrafterIngredientEntry[] ingredientControls;
     private XUiV_Grid grid;
@@ -16,9 +16,7 @@
         IsDirty = true;
     }
 
-    // -------------------------------
     // Clear ingredient UI completely
-    // -------------------------------
     public void Clear()
     {
         CurrentRecipe = null;
@@ -28,14 +26,13 @@
             var entry = ingredientControls[i];
             entry.SetIngredient(null);
             entry.ViewComponent.Enabled = false;
+            entry.ViewComponent.IsVisible = false;
         }
 
         IsDirty = true;
     }
 
-    // -------------------------------
     // Show ingredients for this recipe
-    // -------------------------------
     public void ShowIngredients(Recipe recipe)
     {
         CurrentRecipe = recipe;
@@ -59,6 +56,7 @@
             var entry = ingredientControls[index];
             entry.SetIngredient(item);
             entry.ViewComponent.Enabled = true;
+            entry.ViewComponent.IsVisible = true;
 
             index++;
         }
@@ -68,6 +66,7 @@
         {
             ingredientControls[index].SetIngredient(null);
             ingredientControls[index].ViewComponent.Enabled = false;
+            ingredientControls[index].ViewComponent.IsVisible = false;
         }
 
         IsDirty = true;

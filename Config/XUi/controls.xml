@@ -56,6 +56,17 @@
             </rect>
         </crafter_output_container_entry>
 
+        <machine_input_buffer_entry>
+            <rect width="60" height="60" style="press, hover" tooltip="{buffertooltip}" controller="InputBufferEntry, 7DaysToAutomate">
+                <sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false"/>
+                <sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced"/>
+
+                <sprite depth="4" name="icon" foregroundlayer="true" atlas="ItemIconAtlas" sprite="{bufferitemicon}" color="[white]" pos="0,0" size="52,52"/>
+                <label depth="5" name="itemCount" pos="18,-45" width="36" height="24" text="{bufferitemcount}" pivot="center" justify="center" font_size="22" color="[white]" />
+                <label depth="5" name="itemName" pos="0,-2" width="56" height="20" text="{bufferitemname}" font_size="12" color="[white]" justify="center" visible="false"/>
+            </rect>
+        </machine_input_buffer_entry>
+
         <extractor_output_container_entry>
             <rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="ExtractorOutputContainerEntry, 7DaysToAutomate">
 
@@ -75,4 +86,5 @@
     </append>
 
 </xmlpatch>
+
 

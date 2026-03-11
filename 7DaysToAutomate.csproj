@@ -82,6 +82,8 @@
     <Compile Include="InputTargetInfo.cs" />
     <Compile Include="Classes\Crafter\Containers\Input\XUiC_InputContainerEntry.cs" />
     <Compile Include="Classes\Crafter\Containers\Input\XUiC_InputContainerList.cs" />
+    <Compile Include="Classes\Crafter\Buffers\XUiC_InputBufferEntry.cs" />
+    <Compile Include="Classes\Crafter\Buffers\XUiC_InputBufferList.cs" />
     <Compile Include="Classes\Crafter\Containers\Output\XUiC_OutputContainerEntry.cs" />
     <Compile Include="Classes\Crafter\CrafterSnapshot.cs" />
     <Compile Include="Classes\Crafter\TileEntityUniversalCrafter.cs" />

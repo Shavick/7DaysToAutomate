@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class XUiC_UniversalCrafter : XUiController
@@ -16,6 +17,7 @@ public class XUiC_UniversalCrafter : XUiController
     private bool lastIsWaitingForIngredients = false;
     private int lastInputTargetsSignature = int.MinValue;
     private int lastOutputTargetsSignature = int.MinValue;
+    private int lastInputBufferSignature = int.MinValue;
 
     // -------------------------------
     // Init
@@ -143,6 +145,13 @@ public class XUiC_UniversalCrafter : XUiController
             outputList.IsDirty = true;
         }
 
+        var inputBufferList = GetChildByType<XUiC_InputBufferList>();
+        if (inputBufferList != null)
+        {
+            inputBufferList.SetContext(te);
+            inputBufferList.IsDirty = true;
+        }
+
         RefreshBindings(true);
     }
 
@@ -174,6 +183,13 @@ public class XUiC_UniversalCrafter : XUiController
         {
             outputList.SetContext(te, pos);
             outputList.IsDirty = true;
+        }
+
+        var inputBufferList = player.playerUI.xui.GetChildByType<XUiC_InputBufferList>();
+        if (inputBufferList != null)
+        {
+            inputBufferList.SetContext(te);
+            inputBufferList.IsDirty = true;
         }
     }
 
@@ -233,6 +249,37 @@ public class XUiC_UniversalCrafter : XUiController
                     hash = (hash * 31) + (int)target.TransportMode;
                     hash = (hash * 31) + target.PipeGraphId.GetHashCode();
                 }
+            }
+
+            return hash;
+        }
+    }
+    private int BuildInputBufferSignature(TileEntityUniversalCrafter targetTe)
+    {
+        unchecked
+        {
+            int hash = 17;
+            Dictionary<string, int> buffer = targetTe?.inputBuffer;
+            if (buffer == null || buffer.Count == 0)
+                return hash;
+
+            List<KeyValuePair<string, int>> entries = new List<KeyValuePair<string, int>>();
+            foreach (KeyValuePair<string, int> kvp in buffer)
+            {
+                if (string.IsNullOrEmpty(kvp.Key) || kvp.Value <= 0)
+                    continue;
+
+                entries.Add(kvp);
+            }
+
+            entries.Sort((a, b) => string.CompareOrdinal(a.Key, b.Key));
+
+            hash = (hash * 31) + entries.Count;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                KeyValuePair<string, int> kvp = entries[i];
+                hash = (hash * 31) + kvp.Key.GetHashCode();
+                hash = (hash * 31) + kvp.Value;
             }
 
             return hash;
@@ -303,6 +350,13 @@ public class XUiC_UniversalCrafter : XUiController
                 selectionChanged = true;
             }
 
+            int inputBufferSignature = BuildInputBufferSignature(te);
+            if (inputBufferSignature != lastInputBufferSignature)
+            {
+                lastInputBufferSignature = inputBufferSignature;
+                stateChanged = true;
+            }
+
             if (selectionChanged)
             {
                 var inputList = GetChildByType<XUiC_InputContainerList>();
@@ -316,6 +370,12 @@ public class XUiC_UniversalCrafter : XUiController
                 var recipeListCtrl = GetChildByType<XUiC_CrafterRecipeList>();
                 if (recipeListCtrl != null)
                     recipeListCtrl.IsDirty = true;
+            }
+            if (stateChanged)
+            {
+                var inputBufferList = GetChildByType<XUiC_InputBufferList>();
+                if (inputBufferList != null)
+                    inputBufferList.IsDirty = true;
             }
 
             if (selectionChanged || stateChanged)
@@ -338,6 +398,10 @@ public class XUiC_UniversalCrafter : XUiController
                 var recipeListCtrl = GetChildByType<XUiC_CrafterRecipeList>();
                 if (recipeListCtrl != null)
                     recipeListCtrl.IsDirty = true;
+
+                var inputBufferList = GetChildByType<XUiC_InputBufferList>();
+                if (inputBufferList != null)
+                    inputBufferList.IsDirty = true;
 
                 RefreshBindings(true);
             }
@@ -519,3 +583,10 @@ if (bindingName == "recipename")
         return false;
     }
 }
+
+
+
+
+
+
+

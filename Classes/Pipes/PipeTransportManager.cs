@@ -407,7 +407,7 @@ public static class PipeTransportManager
                 Log.Out($"[PipeTransportManager] Job complete {job.JobId}");
                 completedOrFailed.Add(kvp.Key);
             }
-            else
+            else if (!job.IsStorageToMachine())
             {
                 Log.Out($"[PipeTransportManager] Job blocked at delivery {job.JobId}");
             }
@@ -533,7 +533,15 @@ public static class PipeTransportManager
             }
 
             int accepted = machine.ReceiveBufferedInput(job.ItemName, job.ItemCount);
-            return accepted > 0;
+            if (accepted <= 0)
+                return false;
+
+            if (accepted >= job.ItemCount)
+                return true;
+
+            job.ItemCount -= accepted;
+            Log.Out($"[PipeTransportManager] Input job partial delivery {job.JobId} accepted={accepted} remaining={job.ItemCount}");
+            return false;
         }
 
         return false;
@@ -628,4 +636,7 @@ public static class PipeTransportManager
         return throughput;
     }
 }
+
+
+
 

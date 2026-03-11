@@ -101,22 +101,96 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         return inputBuffer != null && inputBuffer.TryGetValue(itemName, out int count) ? count : 0;
     }
 
+    private float GetInternalStorageMultiplier()
+    {
+        var block = blockValue.Block;
+        if (block?.Properties?.Values != null)
+        {
+            string raw;
+            if (block.Properties.Values.TryGetValue("InternalStorageMultiplier", out raw) ||
+                block.Properties.Values.TryGetValue("internalstoragemultiplier", out raw))
+            {
+                if (float.TryParse(raw, out float parsed) && parsed > 0f)
+                    return parsed;
+            }
+        }
+
+        return 1f;
+    }
+
+    private int GetRecipeRequiredCount(string itemName)
+    {
+        if (string.IsNullOrEmpty(itemName))
+            return 0;
+
+        ResolveRecipeIfNeeded();
+        if (_recipe?.ingredients == null || _recipe.ingredients.Count == 0)
+            return 0;
+
+        int required = 0;
+        for (int i = 0; i < _recipe.ingredients.Count; i++)
+        {
+            ItemStack ingredient = _recipe.ingredients[i];
+            if (ingredient.itemValue?.ItemClass == null || ingredient.count <= 0)
+                continue;
+
+            string ingredientName = ingredient.itemValue.ItemClass.GetItemName();
+            if (!string.Equals(ingredientName, itemName, StringComparison.Ordinal))
+                continue;
+
+            if (ingredient.count > required)
+                required = ingredient.count;
+        }
+
+        return required;
+    }
+
+    private int GetInputBufferCapacityForItem(string itemName)
+    {
+        int requiredPerCraft = GetRecipeRequiredCount(itemName);
+        if (requiredPerCraft <= 0)
+            return 0;
+
+        float multiplier = Mathf.Max(1f, GetInternalStorageMultiplier());
+        int capacity = Mathf.CeilToInt(requiredPerCraft * multiplier);
+
+        return capacity < requiredPerCraft ? requiredPerCraft : capacity;
+    }
+
+    private int GetInputBufferRemainingCapacity(string itemName)
+    {
+        int capacity = GetInputBufferCapacityForItem(itemName);
+        if (capacity <= 0)
+            return 0;
+
+        int remaining = capacity - GetBufferedItemCount(itemName);
+        return remaining > 0 ? remaining : 0;
+    }
+
     public override int ReceiveBufferedInput(string itemName, int count)
     {
         if (string.IsNullOrEmpty(itemName) || count <= 0)
+            return 0;
+
+        int remainingCapacity = GetInputBufferRemainingCapacity(itemName);
+        if (remainingCapacity <= 0)
+            return 0;
+
+        int accepted = Math.Min(count, remainingCapacity);
+        if (accepted <= 0)
             return 0;
 
         if (inputBuffer == null)
             inputBuffer = new Dictionary<string, int>();
 
         if (inputBuffer.TryGetValue(itemName, out int existing))
-            inputBuffer[itemName] = existing + count;
+            inputBuffer[itemName] = existing + accepted;
         else
-            inputBuffer[itemName] = count;
+            inputBuffer[itemName] = accepted;
 
-        DevLog($"RECEIVE BUFFERED INPUT -> accepted {count}x {itemName} (total={inputBuffer[itemName]})");
+        DevLog($"RECEIVE BUFFERED INPUT -> accepted {accepted}x {itemName} (total={inputBuffer[itemName]} cap={GetInputBufferCapacityForItem(itemName)})");
         setModified();
-        return count;
+        return accepted;
     }
 
     public override IHLRSnapshot BuildHLRSnapshot(WorldBase world)
@@ -1110,7 +1184,12 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 continue;
 
             int buffered = GetBufferedItemCount(itemName);
-            if (buffered < required)
+            int capacity = GetInputBufferCapacityForItem(itemName);
+
+            if (capacity <= 0)
+                continue;
+
+            if (buffered < capacity)
                 needed.Add(itemName);
         }
 
@@ -1149,9 +1228,10 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             return false;
         }
 
-        if (HasBufferedIngredientsForNextCraft())
+        HashSet<string> neededItemNames = GetNeededInputItemNames();
+        if (neededItemNames.Count == 0)
         {
-            DevLog("CAN REQUEST INPUTS -> FALSE (buffer already satisfies next craft)");
+            DevLog("CAN REQUEST INPUTS -> FALSE (buffer at configured capacity)");
             return false;
         }
 
@@ -2476,6 +2556,11 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         }
     }
 }
+
+
+
+
+
 
 
 

@@ -22,7 +22,7 @@
                     </rect>
 
                     <!-- REQUIREMENTS -->
-                    <rect pos="0,-300">
+                    <rect pos="0,-285">
                         <label depth="5" pos="0,0" width="450" height="50" text="REQUIREMENTS" justify="center" font_size="40" upper_case="true" color="[limeGreen]" effect="outline" effect_distance="2,2" effect_color="[black]"/>
 
                         <label depth="6" pos="30,-70" width="400" height="30" text="Valid Output Target" color="[green]" visible="{hasstorage}"/>
@@ -115,13 +115,23 @@
                     <label depth="4" pos="-27,15" width="100" height="30" text="RESET" font_size="32" color="[red]" effect="outline" />
                     <button depth="3" name="resetbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="100" height="30"/>
                 </rect>
-
-                <rect pos="0,-300">
+                <rect pos="0,-285">
                     <!-- INGREDIENT NAME -->
-                    <label depth="6" pos="0,-50" width="450" height="40" text="{recipename}" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+                    <label depth="6" pos="0,-42" width="450" height="40" text="{recipename}" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
                     <!-- BOTTOM: INGREDIENTS -->
-                    <grid name="ingredients" rows="1" cols="6" pos="45,-100" width="430" height="300" cell_width="60" cell_height="60" controller="CrafterIngredientsList, 7DaysToAutomate" repeat_content="true" arrangement="horizontal">
+                    <grid name="ingredients" rows="2" cols="5" pos="80,-84" width="290" height="116" cell_width="58" cell_height="58" controller="CrafterIngredientsList, 7DaysToAutomate" repeat_content="true" arrangement="horizontal">
                         <crafter_ingredient_entry name="0" />
+                    </grid>
+                </rect>
+                <!-- LEFT: INPUT BUFFER -->
+                <rect pos="-320,0">
+                    <panel name="containerPanel" pos="-2,0" width="300" height="40" depth="1">
+                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+                        <label depth="6" pos="-75,-4" width="450" height="40" text="Input Buffer" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+                    </panel>
+
+                    <grid name="inputBufferItems" rows="4" cols="5" pos="0,-50" width="300" height="240" cell_width="60" cell_height="60" repeat_content="true" arrangement="horizontal" controller="InputBufferList, 7DaysToAutomate">
+                        <machine_input_buffer_entry name="0"/>
                     </grid>
                 </rect>
                 <!-- RIGHT: INPUT CONTAINERS HEADDER-->
@@ -179,3 +189,9 @@
     </append>
 
 </configs>
+
+
+
+
+
+
