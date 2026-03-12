@@ -361,6 +361,11 @@ public class XUiC_IronExtractorInfo : XUiController
 
         if (extractor == null)
         {
+            if (string.Equals(_bindingName?.Trim(), "fluidfuelvisible", StringComparison.OrdinalIgnoreCase))
+            {
+                value = "false";
+                return true;
+            }
             if (string.Equals(_bindingName?.Trim(), "fluidfuelenabled", StringComparison.OrdinalIgnoreCase))
             {
                 value = "false";
@@ -369,7 +374,7 @@ public class XUiC_IronExtractorInfo : XUiController
 
             if (string.Equals(_bindingName?.Trim(), "fluidfueldisabled", StringComparison.OrdinalIgnoreCase))
             {
-                value = "true";
+                value = "false";
                 return true;
             }
 
@@ -381,7 +386,7 @@ public class XUiC_IronExtractorInfo : XUiController
 
             if (string.Equals(_bindingName?.Trim(), "fluidfueltext", StringComparison.OrdinalIgnoreCase))
             {
-                value = "N/A";
+                value = string.Empty;
                 return true;
             }
 
@@ -420,6 +425,12 @@ public class XUiC_IronExtractorInfo : XUiController
             return true;
         }
 
+        if (string.Equals(_bindingName?.Trim(), "fluidfuelvisible", StringComparison.OrdinalIgnoreCase))
+        {
+            value = extractor.IsFluidFuelEnabled ? "true" : "false";
+            return true;
+        }
+
         if (string.Equals(_bindingName?.Trim(), "fluidfueldisabled", StringComparison.OrdinalIgnoreCase))
         {
             value = extractor.IsFluidFuelEnabled ? "false" : "true";
@@ -436,7 +447,7 @@ public class XUiC_IronExtractorInfo : XUiController
         {
             if (!extractor.IsFluidFuelEnabled)
             {
-                value = "N/A";
+                value = string.Empty;
                 return true;
             }
 
@@ -448,6 +459,12 @@ public class XUiC_IronExtractorInfo : XUiController
 
         if (string.Equals(_bindingName?.Trim(), "fluidfuelstatus", StringComparison.OrdinalIgnoreCase))
         {
+            if (!extractor.IsFluidFuelEnabled)
+            {
+                value = string.Empty;
+                return true;
+            }
+
             value = string.IsNullOrEmpty(extractor.LastFluidFuelStatus) ? string.Empty : extractor.LastFluidFuelStatus;
             return true;
         }

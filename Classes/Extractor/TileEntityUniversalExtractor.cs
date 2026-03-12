@@ -421,11 +421,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
     {
         fluidFuelConfigLoaded = true;
 
-        bool needsFluid = GetBlockPropertyBool("NeedsFluidToRun", false);
-        string requestedFluid = GetBlockPropertyString("FluidFuel", string.Empty).Trim().ToLowerInvariant();
-        int bufferGallons = GetBlockPropertyInt("FluidFuelBufferGallons", 0);
-
-        if (!needsFluid || string.IsNullOrEmpty(requestedFluid) || bufferGallons <= 0)
+        if (!TryGetValidFluidFuelConfig(out string requestedFluid, out int bufferGallons, out int usePerSecond, out int pullPerSecond))
         {
             fluidFuelConfigured = false;
             fluidFuelType = string.Empty;
@@ -436,22 +432,13 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             fluidFuelUseRemainder = 0;
             fluidFuelPullRemainder = 0;
             SelectedFluidFuelGraphId = Guid.Empty;
-            LastFluidFuelStatus = "N/A";
+            LastFluidFuelStatus = string.Empty;
             return;
         }
 
         fluidFuelConfigured = true;
         fluidFuelType = requestedFluid;
         fluidFuelBufferCapacityMg = bufferGallons * FluidConstants.MilliGallonsPerGallon;
-
-        int usePerSecond = GetBlockPropertyInt("FluidFuelUsePerSecond", 1);
-        if (usePerSecond < 0)
-            usePerSecond = 0;
-
-        int pullPerSecond = GetBlockPropertyInt("FluidFuelPullPerSecond", 5);
-        if (pullPerSecond < 0)
-            pullPerSecond = 0;
-
         fluidFuelUsePerSecondMg = usePerSecond * FluidConstants.MilliGallonsPerGallon;
         fluidFuelPullPerSecondMg = pullPerSecond * FluidConstants.MilliGallonsPerGallon;
 
@@ -463,6 +450,35 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
         if (string.IsNullOrEmpty(LastFluidFuelStatus) || LastFluidFuelStatus == "N/A")
             LastFluidFuelStatus = "Fuel enabled";
+    }
+
+    private bool TryGetValidFluidFuelConfig(out string requestedFluid, out int bufferGallons, out int usePerSecond, out int pullPerSecond)
+    {
+        requestedFluid = string.Empty;
+        bufferGallons = 0;
+        usePerSecond = 0;
+        pullPerSecond = 0;
+
+        if (!TryGetBlockPropertyBool("NeedsFluidToRun", out bool needsFluid) || !needsFluid)
+            return false;
+
+        if (!TryGetBlockPropertyString("FluidFuel", out string rawFuel))
+            return false;
+
+        requestedFluid = rawFuel.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(requestedFluid))
+            return false;
+
+        if (!TryGetBlockPropertyInt("FluidFuelBufferGallons", out bufferGallons) || bufferGallons <= 0)
+            return false;
+
+        if (!TryGetBlockPropertyInt("FluidFuelUsePerSecond", out usePerSecond) || usePerSecond <= 0)
+            return false;
+
+        if (!TryGetBlockPropertyInt("FluidFuelPullPerSecond", out pullPerSecond) || pullPerSecond <= 0)
+            return false;
+
+        return true;
     }
 
     private bool TryResolveFluidFuelGraph(WorldBase world)
@@ -626,28 +642,30 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         return (mg + (FluidConstants.MilliGallonsPerGallon / 2)) / FluidConstants.MilliGallonsPerGallon;
     }
 
-    private bool GetBlockPropertyBool(string propertyName, bool fallback)
+    private bool TryGetBlockPropertyBool(string propertyName, out bool parsed)
     {
+        parsed = false;
         string raw = blockValue.Block?.Properties?.GetString(propertyName);
-        if (string.IsNullOrEmpty(raw) || !bool.TryParse(raw, out bool parsed))
-            return fallback;
+        if (string.IsNullOrEmpty(raw))
+            return false;
 
-        return parsed;
+        return bool.TryParse(raw, out parsed);
     }
 
-    private int GetBlockPropertyInt(string propertyName, int fallback)
+    private bool TryGetBlockPropertyInt(string propertyName, out int parsed)
     {
+        parsed = 0;
         string raw = blockValue.Block?.Properties?.GetString(propertyName);
-        if (string.IsNullOrEmpty(raw) || !int.TryParse(raw, out int parsed))
-            return fallback;
+        if (string.IsNullOrEmpty(raw))
+            return false;
 
-        return parsed;
+        return int.TryParse(raw, out parsed);
     }
 
-    private string GetBlockPropertyString(string propertyName, string fallback)
+    private bool TryGetBlockPropertyString(string propertyName, out string parsed)
     {
-        string raw = blockValue.Block?.Properties?.GetString(propertyName);
-        return string.IsNullOrEmpty(raw) ? fallback : raw;
+        parsed = blockValue.Block?.Properties?.GetString(propertyName);
+        return !string.IsNullOrEmpty(parsed);
     }
     public override void UpdateTick(World world)
     {
