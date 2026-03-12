@@ -361,6 +361,36 @@ public class XUiC_IronExtractorInfo : XUiController
 
         if (extractor == null)
         {
+            if (string.Equals(_bindingName?.Trim(), "fluidfuelenabled", StringComparison.OrdinalIgnoreCase))
+            {
+                value = "false";
+                return true;
+            }
+
+            if (string.Equals(_bindingName?.Trim(), "fluidfueldisabled", StringComparison.OrdinalIgnoreCase))
+            {
+                value = "true";
+                return true;
+            }
+
+            if (string.Equals(_bindingName?.Trim(), "fluidfuelfill", StringComparison.OrdinalIgnoreCase))
+            {
+                value = "0";
+                return true;
+            }
+
+            if (string.Equals(_bindingName?.Trim(), "fluidfueltext", StringComparison.OrdinalIgnoreCase))
+            {
+                value = "N/A";
+                return true;
+            }
+
+            if (string.Equals(_bindingName?.Trim(), "fluidfuelstatus", StringComparison.OrdinalIgnoreCase))
+            {
+                value = string.Empty;
+                return true;
+            }
+
             value = "";
             return true;
         }
@@ -384,6 +414,43 @@ public class XUiC_IronExtractorInfo : XUiController
             return true;
         }
 
+        if (string.Equals(_bindingName?.Trim(), "fluidfuelenabled", StringComparison.OrdinalIgnoreCase))
+        {
+            value = extractor.IsFluidFuelEnabled ? "true" : "false";
+            return true;
+        }
+
+        if (string.Equals(_bindingName?.Trim(), "fluidfueldisabled", StringComparison.OrdinalIgnoreCase))
+        {
+            value = extractor.IsFluidFuelEnabled ? "false" : "true";
+            return true;
+        }
+
+        if (string.Equals(_bindingName?.Trim(), "fluidfuelfill", StringComparison.OrdinalIgnoreCase))
+        {
+            value = extractor.FluidFuelFillPercent.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            return true;
+        }
+
+        if (string.Equals(_bindingName?.Trim(), "fluidfueltext", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!extractor.IsFluidFuelEnabled)
+            {
+                value = "N/A";
+                return true;
+            }
+
+            int current = (extractor.FluidFuelBufferAmountMg + (FluidConstants.MilliGallonsPerGallon / 2)) / FluidConstants.MilliGallonsPerGallon;
+            int cap = (extractor.FluidFuelBufferCapacityMg + (FluidConstants.MilliGallonsPerGallon / 2)) / FluidConstants.MilliGallonsPerGallon;
+            value = $"{current}/{cap}g";
+            return true;
+        }
+
+        if (string.Equals(_bindingName?.Trim(), "fluidfuelstatus", StringComparison.OrdinalIgnoreCase))
+        {
+            value = string.IsNullOrEmpty(extractor.LastFluidFuelStatus) ? string.Empty : extractor.LastFluidFuelStatus;
+            return true;
+        }
         switch (_bindingName)
         {
             case "extractorname":
@@ -429,6 +496,7 @@ public class XUiC_IronExtractorInfo : XUiController
         return false;
     }
 }
+
 
 
 

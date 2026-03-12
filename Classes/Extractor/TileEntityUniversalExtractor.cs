@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 public static class UCTileEntityIDs
 {
@@ -35,6 +36,25 @@ public class TileEntityUniversalExtractor : TileEntityMachine
     public ulong LastPipeDispatchWorldTime = 0UL;
 
     private int pendingOutputRoundRobinIndex = 0;
+
+    private bool fluidFuelConfigured = false;
+    private bool fluidFuelConfigLoaded = false;
+    private string fluidFuelType = string.Empty;
+    private int fluidFuelBufferCapacityMg = 0;
+    private int fluidFuelUsePerSecondMg = 0;
+    private int fluidFuelPullPerSecondMg = 0;
+    private int fluidFuelBufferMg = 0;
+    private int fluidFuelUseRemainder = 0;
+    private int fluidFuelPullRemainder = 0;
+
+    public Guid SelectedFluidFuelGraphId = Guid.Empty;
+    public string LastFluidFuelStatus = string.Empty;
+
+    public bool IsFluidFuelEnabled => fluidFuelConfigured;
+    public string FluidFuelType => fluidFuelType;
+    public int FluidFuelBufferAmountMg => fluidFuelBufferMg;
+    public int FluidFuelBufferCapacityMg => fluidFuelBufferCapacityMg;
+    public float FluidFuelFillPercent => fluidFuelBufferCapacityMg <= 0 ? 0f : Mathf.Clamp01((float)fluidFuelBufferMg / fluidFuelBufferCapacityMg);
 
     public class ResourceTimer
     {
@@ -164,6 +184,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
 
         RefreshAvailableOutputTargets(world);
+
         List<OutputTargetInfo> outputs = availableOutputTargets;
         if (outputs == null || outputs.Count == 0)
         {
@@ -222,6 +243,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
         if (!world.IsRemote())
             RefreshAvailableOutputTargets(world);
+
 
         if (SelectedOutputChestPos == Vector3i.zero)
             return false;
@@ -361,6 +383,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         SelectedOutputChestPos = snapshot.SelectedOutputChestPos;
         SelectedPipeGraphId = snapshot.SelectedOutputPipeGraphId;
         isEnabledByPlayer = snapshot.IsEnabledByPlayer;
+        LoadFluidFuelConfig();
 
         for (int i = 0; i < timers.Count; i++)
             DevLog($"Applied Timer[{i}] {timers[i]}");
@@ -394,6 +417,238 @@ public class TileEntityUniversalExtractor : TileEntityMachine
     // ---------------------------------------------
     // UPDATE TICK
     // ---------------------------------------------
+    private void LoadFluidFuelConfig()
+    {
+        fluidFuelConfigLoaded = true;
+
+        bool needsFluid = GetBlockPropertyBool("NeedsFluidToRun", false);
+        string requestedFluid = GetBlockPropertyString("FluidFuel", string.Empty).Trim().ToLowerInvariant();
+        int bufferGallons = GetBlockPropertyInt("FluidFuelBufferGallons", 0);
+
+        if (!needsFluid || string.IsNullOrEmpty(requestedFluid) || bufferGallons <= 0)
+        {
+            fluidFuelConfigured = false;
+            fluidFuelType = string.Empty;
+            fluidFuelBufferCapacityMg = 0;
+            fluidFuelUsePerSecondMg = 0;
+            fluidFuelPullPerSecondMg = 0;
+            fluidFuelBufferMg = 0;
+            fluidFuelUseRemainder = 0;
+            fluidFuelPullRemainder = 0;
+            SelectedFluidFuelGraphId = Guid.Empty;
+            LastFluidFuelStatus = "N/A";
+            return;
+        }
+
+        fluidFuelConfigured = true;
+        fluidFuelType = requestedFluid;
+        fluidFuelBufferCapacityMg = bufferGallons * FluidConstants.MilliGallonsPerGallon;
+
+        int usePerSecond = GetBlockPropertyInt("FluidFuelUsePerSecond", 1);
+        if (usePerSecond < 0)
+            usePerSecond = 0;
+
+        int pullPerSecond = GetBlockPropertyInt("FluidFuelPullPerSecond", 5);
+        if (pullPerSecond < 0)
+            pullPerSecond = 0;
+
+        fluidFuelUsePerSecondMg = usePerSecond * FluidConstants.MilliGallonsPerGallon;
+        fluidFuelPullPerSecondMg = pullPerSecond * FluidConstants.MilliGallonsPerGallon;
+
+        if (fluidFuelBufferMg > fluidFuelBufferCapacityMg)
+            fluidFuelBufferMg = fluidFuelBufferCapacityMg;
+
+        if (fluidFuelBufferMg < 0)
+            fluidFuelBufferMg = 0;
+
+        if (string.IsNullOrEmpty(LastFluidFuelStatus) || LastFluidFuelStatus == "N/A")
+            LastFluidFuelStatus = "Fuel enabled";
+    }
+
+    private bool TryResolveFluidFuelGraph(WorldBase world)
+    {
+        SelectedFluidFuelGraphId = Guid.Empty;
+
+        if (!fluidFuelConfigured || world == null)
+            return false;
+
+        Vector3i selfPos = ToWorldPos();
+        List<Guid> candidates = new List<Guid>();
+        Vector3i[] offsets =
+        {
+            Vector3i.forward,
+            Vector3i.back,
+            Vector3i.left,
+            Vector3i.right,
+            Vector3i.up,
+            Vector3i.down
+        };
+
+        for (int i = 0; i < offsets.Length; i++)
+        {
+            Vector3i pipePos = selfPos + offsets[i];
+            if (!SafeWorldRead.TryGetTileEntity(world, 0, pipePos, out TileEntity te) || !(te is TileEntityLiquidPipe pipe))
+                continue;
+
+            Guid graphId = pipe.FluidGraphId;
+            if (graphId == Guid.Empty)
+            {
+                if (!FluidGraphManager.TryEnsureGraphForPipe(world, 0, pipePos, out FluidGraphData rebuiltGraph) || rebuiltGraph == null)
+                    continue;
+
+                graphId = rebuiltGraph.FluidGraphId;
+            }
+
+            if (graphId == Guid.Empty || candidates.Contains(graphId))
+                continue;
+
+            candidates.Add(graphId);
+        }
+
+        if (candidates.Count == 0)
+            return false;
+
+        int bestAvailable = -1;
+        Guid bestGraph = Guid.Empty;
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            Guid candidate = candidates[i];
+            if (!FluidGraphManager.TryGetAvailableFluidAmount(world, 0, candidate, fluidFuelType, out int available))
+                continue;
+
+            if (available > bestAvailable)
+            {
+                bestAvailable = available;
+                bestGraph = candidate;
+            }
+        }
+
+        if (bestGraph == Guid.Empty)
+            return false;
+
+        SelectedFluidFuelGraphId = bestGraph;
+        return true;
+    }
+
+    private int ComputePerTickAmount(int perSecondMg, ref int remainder)
+    {
+        if (perSecondMg <= 0)
+            return 0;
+
+        int amount = perSecondMg / 20;
+        remainder += perSecondMg % 20;
+        if (remainder >= 20)
+        {
+            int extra = remainder / 20;
+            amount += extra;
+            remainder -= extra * 20;
+        }
+
+        return amount;
+    }
+
+    private bool HasFuelToRunThisTick()
+    {
+        if (!fluidFuelConfigured)
+            return true;
+
+        int required = ComputePerTickAmount(fluidFuelUsePerSecondMg, ref fluidFuelUseRemainder);
+        if (required <= 0)
+            return true;
+
+        if (fluidFuelBufferMg < required)
+        {
+            LastFluidFuelStatus = $"Blocked: Need {ToWholeGallons(required)}g {fluidFuelType}";
+            return false;
+        }
+
+        fluidFuelBufferMg -= required;
+        if (fluidFuelBufferMg < 0)
+            fluidFuelBufferMg = 0;
+
+        return true;
+    }
+
+    private void PullFuelIntoBuffer(WorldBase world)
+    {
+        if (!fluidFuelConfigured || world == null)
+            return;
+
+        if (fluidFuelBufferMg >= fluidFuelBufferCapacityMg)
+        {
+            LastFluidFuelStatus = "Fuel buffer full";
+            return;
+        }
+
+        if (SelectedFluidFuelGraphId == Guid.Empty && !TryResolveFluidFuelGraph(world))
+        {
+            LastFluidFuelStatus = "Blocked: No connected fluid graph";
+            return;
+        }
+
+        int freeSpace = fluidFuelBufferCapacityMg - fluidFuelBufferMg;
+        if (freeSpace <= 0)
+        {
+            LastFluidFuelStatus = "Fuel buffer full";
+            return;
+        }
+
+        int requestMg = ComputePerTickAmount(fluidFuelPullPerSecondMg, ref fluidFuelPullRemainder);
+        if (requestMg <= 0)
+            requestMg = freeSpace;
+
+        if (requestMg > freeSpace)
+            requestMg = freeSpace;
+
+        if (!FluidGraphManager.TryConsumeFluid(world, 0, SelectedFluidFuelGraphId, fluidFuelType, requestMg, out int consumedMg))
+        {
+            LastFluidFuelStatus = "Blocked: Fuel graph unavailable";
+            SelectedFluidFuelGraphId = Guid.Empty;
+            return;
+        }
+
+        if (consumedMg <= 0)
+        {
+            LastFluidFuelStatus = $"Blocked: No {fluidFuelType} available";
+            return;
+        }
+
+        fluidFuelBufferMg += consumedMg;
+        if (fluidFuelBufferMg > fluidFuelBufferCapacityMg)
+            fluidFuelBufferMg = fluidFuelBufferCapacityMg;
+
+        LastFluidFuelStatus = $"Fuel {ToWholeGallons(fluidFuelBufferMg)}/{ToWholeGallons(fluidFuelBufferCapacityMg)}g";
+    }
+
+    private static int ToWholeGallons(int mg)
+    {
+        return (mg + (FluidConstants.MilliGallonsPerGallon / 2)) / FluidConstants.MilliGallonsPerGallon;
+    }
+
+    private bool GetBlockPropertyBool(string propertyName, bool fallback)
+    {
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        if (string.IsNullOrEmpty(raw) || !bool.TryParse(raw, out bool parsed))
+            return fallback;
+
+        return parsed;
+    }
+
+    private int GetBlockPropertyInt(string propertyName, int fallback)
+    {
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        if (string.IsNullOrEmpty(raw) || !int.TryParse(raw, out int parsed))
+            return fallback;
+
+        return parsed;
+    }
+
+    private string GetBlockPropertyString(string propertyName, string fallback)
+    {
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        return string.IsNullOrEmpty(raw) ? fallback : raw;
+    }
     public override void UpdateTick(World world)
     {
         DevLog("UpdateTick ENTER");
@@ -417,6 +672,9 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
 
         RefreshAvailableOutputTargets(world);
+
+        if (!fluidFuelConfigLoaded)
+            LoadFluidFuelConfig();
 
         // -----------------------------
         // Ensure timers are loaded
@@ -456,7 +714,6 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             SetModified();
             return;
         }
-
         // -----------------------------
         // Auto-restart (only if allowed)
         // -----------------------------
@@ -465,6 +722,27 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             DevLog("Output storage found — extractor running");
             isExtractorOn = true;
             SetModified();
+        }
+
+        // -----------------------------
+        // Fuel pull and runtime fuel gate
+        // -----------------------------
+        if (fluidFuelConfigured)
+        {
+            PullFuelIntoBuffer(world);
+
+            if (!HasFuelToRunThisTick())
+            {
+                if (isExtractorOn)
+                    DevLog("Fuel unavailable — extractor paused");
+
+                isExtractorOn = false;
+                SetModified();
+                NeedsUiRefresh = true;
+                return;
+            }
+
+            NeedsUiRefresh = true;
         }
 
         // -----------------------------
@@ -760,6 +1038,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         else
         {
             RefreshAvailableOutputTargets(world);
+
             outputs = availableOutputTargets;
         }
 
@@ -917,6 +1196,8 @@ public class TileEntityUniversalExtractor : TileEntityMachine
     {
         DevLog("LoadConfig BEGIN");
 
+        LoadFluidFuelConfig();
+
         Log.Out($"[Extractor][TE][{ToWorldPos()}] LoadConfig() blockValueBlock={(blockValue.Block == null ? "NULL" : blockValue.Block.GetBlockName())} ResourceGenerated='{blockValue.Block?.Properties?.GetString("ResourceGenerated")}'");
 
         string resStr = blockValue.Block.Properties.GetString("ResourceGenerated");
@@ -1008,6 +1289,12 @@ public class TileEntityUniversalExtractor : TileEntityMachine
                 bw.Write(t.Counter);
             }
 
+            bw.Write(fluidFuelConfigured);
+            bw.Write(fluidFuelType ?? string.Empty);
+            bw.Write(fluidFuelBufferCapacityMg);
+            bw.Write(fluidFuelBufferMg);
+            bw.Write(LastFluidFuelStatus ?? string.Empty);
+
             return;
         }
 
@@ -1017,7 +1304,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             return;
         }
 
-        bw.Write(2); // VERSION
+        bw.Write(3); // VERSION
 
         bw.Write(isExtractorOn);
         bw.Write(isEnabledByPlayer);
@@ -1037,6 +1324,9 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             bw.Write(t.Speed);
             bw.Write(t.Counter);
         }
+
+        bw.Write(fluidFuelBufferMg);
+        bw.Write(SelectedFluidFuelGraphId.ToString());
 
         DevLog($"[Extractor][TE][{ToWorldPos()}] WRITE END Persistency");
     }
@@ -1096,6 +1386,13 @@ public class TileEntityUniversalExtractor : TileEntityMachine
                 });
             }
 
+            fluidFuelConfigured = br.ReadBoolean();
+            fluidFuelType = br.ReadString() ?? string.Empty;
+            fluidFuelBufferCapacityMg = br.ReadInt32();
+            fluidFuelBufferMg = br.ReadInt32();
+            LastFluidFuelStatus = br.ReadString() ?? string.Empty;
+            fluidFuelConfigLoaded = true;
+
             NeedsUiRefresh = true;
             return;
         }
@@ -1148,8 +1445,50 @@ public class TileEntityUniversalExtractor : TileEntityMachine
                     Counter = br.ReadInt32()
                 });
             }
+
+            LoadFluidFuelConfig();
+
+            if (version >= 3)
+            {
+                fluidFuelBufferMg = br.ReadInt32();
+
+                string selectedFuelGraphId = br.ReadString();
+                if (!Guid.TryParse(selectedFuelGraphId, out SelectedFluidFuelGraphId))
+                    SelectedFluidFuelGraphId = Guid.Empty;
+
+                if (fluidFuelBufferMg < 0)
+                    fluidFuelBufferMg = 0;
+
+                if (fluidFuelBufferMg > fluidFuelBufferCapacityMg)
+                    fluidFuelBufferMg = fluidFuelBufferCapacityMg;
+            }
+            else
+            {
+                fluidFuelBufferMg = 0;
+                SelectedFluidFuelGraphId = Guid.Empty;
+            }
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

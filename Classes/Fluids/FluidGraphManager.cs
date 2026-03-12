@@ -3,6 +3,14 @@ using System.Collections.Generic;
 
 public static class FluidGraphManager
 {
+    private sealed class StorageNode
+    {
+        public Vector3i Pos;
+        public TileEntityFluidStorage Storage;
+        public int AvailableMg;
+        public int DrainMg;
+    }
+
     private static readonly Dictionary<Guid, FluidGraphData> graphsById = new Dictionary<Guid, FluidGraphData>();
     private static readonly HashSet<Vector3i> dirtyPipePositions = new HashSet<Vector3i>();
 
@@ -26,6 +34,166 @@ public static class FluidGraphManager
     public static bool TryGetGraph(Guid fluidGraphId, out FluidGraphData graph)
     {
         return graphsById.TryGetValue(fluidGraphId, out graph);
+    }
+
+    public static bool TryGetGraphFromAdjacentPipe(WorldBase world, int clrIdx, Vector3i machinePos, out Guid fluidGraphId, out FluidGraphData graph)
+    {
+        fluidGraphId = Guid.Empty;
+        graph = null;
+
+        if (world == null)
+            return false;
+
+        for (int i = 0; i < NeighborOffsets.Length; i++)
+        {
+            Vector3i pipePos = machinePos + NeighborOffsets[i];
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity te) || !(te is TileEntityLiquidPipe pipe))
+                continue;
+
+            if (pipe.FluidGraphId == Guid.Empty)
+            {
+                if (!TryEnsureGraphForPipe(world, clrIdx, pipePos, out FluidGraphData rebuiltGraph) || rebuiltGraph == null)
+                    continue;
+
+                fluidGraphId = rebuiltGraph.FluidGraphId;
+                graph = rebuiltGraph;
+                return true;
+            }
+
+            if (!graphsById.TryGetValue(pipe.FluidGraphId, out FluidGraphData existingGraph) || existingGraph == null)
+            {
+                if (!TryEnsureGraphForPipe(world, clrIdx, pipePos, out FluidGraphData rebuiltGraph) || rebuiltGraph == null)
+                    continue;
+
+                fluidGraphId = rebuiltGraph.FluidGraphId;
+                graph = rebuiltGraph;
+                return true;
+            }
+
+            fluidGraphId = existingGraph.FluidGraphId;
+            graph = existingGraph;
+            return true;
+        }
+
+        return false;
+    }
+
+    public static bool TryGetAvailableFluidAmount(WorldBase world, int clrIdx, Guid fluidGraphId, string fluidType, out int availableMg)
+    {
+        availableMg = 0;
+
+        if (world == null || fluidGraphId == Guid.Empty || string.IsNullOrEmpty(fluidType))
+            return false;
+
+        if (!graphsById.TryGetValue(fluidGraphId, out FluidGraphData graph) || graph == null)
+            return false;
+
+        string normalized = fluidType.Trim().ToLowerInvariant();
+
+        foreach (Vector3i pos in graph.StorageEndpoints)
+        {
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out TileEntity te) || !(te is TileEntityFluidStorage storage))
+                continue;
+
+            if (storage.FluidAmountMg <= 0 || string.IsNullOrEmpty(storage.FluidType))
+                continue;
+
+            string storageType = storage.FluidType.Trim().ToLowerInvariant();
+            if (!string.Equals(storageType, normalized, StringComparison.Ordinal))
+                continue;
+
+            availableMg += storage.FluidAmountMg;
+        }
+
+        return true;
+    }
+
+    public static bool TryConsumeFluid(WorldBase world, int clrIdx, Guid fluidGraphId, string fluidType, int requestedMg, out int consumedMg)
+    {
+        consumedMg = 0;
+
+        if (world == null || fluidGraphId == Guid.Empty || string.IsNullOrEmpty(fluidType) || requestedMg <= 0)
+            return false;
+
+        if (!graphsById.TryGetValue(fluidGraphId, out FluidGraphData graph) || graph == null)
+            return false;
+
+        string normalized = fluidType.Trim().ToLowerInvariant();
+        List<StorageNode> sources = new List<StorageNode>();
+
+        foreach (Vector3i pos in graph.StorageEndpoints)
+        {
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out TileEntity te) || !(te is TileEntityFluidStorage storage))
+                continue;
+
+            if (storage.FluidAmountMg <= 0 || string.IsNullOrEmpty(storage.FluidType))
+                continue;
+
+            string storageType = storage.FluidType.Trim().ToLowerInvariant();
+            if (!string.Equals(storageType, normalized, StringComparison.Ordinal))
+                continue;
+
+            int available = storage.GetAvailableOutputMg();
+            if (available <= 0)
+                continue;
+
+            sources.Add(new StorageNode
+            {
+                Pos = pos,
+                Storage = storage,
+                AvailableMg = available
+            });
+        }
+
+        if (sources.Count == 0)
+            return true;
+
+        sources.Sort((a, b) => ComparePos(a.Pos, b.Pos));
+
+        int totalAvailable = 0;
+        for (int i = 0; i < sources.Count; i++)
+            totalAvailable += sources[i].AvailableMg;
+
+        if (totalAvailable <= 0)
+            return true;
+
+        int targetDrain = Math.Min(requestedMg, totalAvailable);
+        int assigned = 0;
+
+        for (int i = 0; i < sources.Count; i++)
+        {
+            StorageNode node = sources[i];
+            int share = (int)((long)targetDrain * node.AvailableMg / totalAvailable);
+            if (share > node.AvailableMg)
+                share = node.AvailableMg;
+
+            node.DrainMg = share;
+            assigned += share;
+        }
+
+        int remaining = targetDrain - assigned;
+        for (int i = 0; i < sources.Count && remaining > 0; i++)
+        {
+            StorageNode node = sources[i];
+            int room = node.AvailableMg - node.DrainMg;
+            if (room <= 0)
+                continue;
+
+            int add = Math.Min(room, remaining);
+            node.DrainMg += add;
+            remaining -= add;
+        }
+
+        for (int i = 0; i < sources.Count; i++)
+        {
+            StorageNode node = sources[i];
+            if (node.DrainMg <= 0)
+                continue;
+
+            consumedMg += node.Storage.RemoveFluid(node.DrainMg);
+        }
+
+        return true;
     }
 
     public static bool TryEnsureGraphForPipe(WorldBase world, int clrIdx, Vector3i pipePos, out FluidGraphData graph)
@@ -219,5 +387,18 @@ public static class FluidGraphManager
 
         string value = blockValue.Block?.Properties?.GetString("IsFluidIntake");
         return bool.TryParse(value, out bool isIntake) && isIntake;
+    }
+
+    private static int ComparePos(Vector3i a, Vector3i b)
+    {
+        int cmp = a.x.CompareTo(b.x);
+        if (cmp != 0)
+            return cmp;
+
+        cmp = a.y.CompareTo(b.y);
+        if (cmp != 0)
+            return cmp;
+
+        return a.z.CompareTo(b.z);
     }
 }
