@@ -2,6 +2,15 @@ using _7DaysToAutomate.Classes.Net_Packages;
 
 public static class Helper
 {
+    private static int GetLocalRequesterEntityId(World world)
+    {
+        if (world == null)
+            return -1;
+
+        EntityPlayerLocal localPlayer = world.GetPrimaryPlayer() as EntityPlayerLocal;
+        return localPlayer?.entityId ?? -1;
+    }
+
     public static void RequestMachineUIOpen(int clrIdx, Vector3i blockPos, int entityPlayerId, string customUi)
     {
         World world = GameManager.Instance.World;
@@ -37,6 +46,12 @@ public static class Helper
                     return;
                 }
 
+
+                if (customUi == "FuelConverterInfo")
+                {
+                    XUiC_FuelConverterInfo.Open(localPlayer, blockPos);
+                    return;
+                }
                 Log.Error($"[NetPkg][MachineUI][SERVER] Unknown local-host UI key '{customUi}'");
                 return;
             }
@@ -93,7 +108,7 @@ public static class Helper
             Log.Out($"[PowerToggle][CLIENT] Request clrIdx={clrIdx} pos={blockPos} powerState={powerState}");
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageToggleMachinePower>()
-                    .Setup(clrIdx, blockPos, NetPackageToggleMachinePower.MessageType.RequestToggle, powerState),
+                    .Setup(clrIdx, blockPos, GetLocalRequesterEntityId(world), NetPackageToggleMachinePower.MessageType.RequestToggle, powerState),
                 false
             );
             return;
@@ -125,7 +140,7 @@ public static class Helper
 
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageCrafterControl>()
-                    .SetupSelectRecipe(blockPos, recipeName),
+                    .SetupSelectRecipe(blockPos, GetLocalRequesterEntityId(world), recipeName),
                 false
             );
             return;
@@ -156,7 +171,7 @@ public static class Helper
 
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageCrafterControl>()
-                    .SetupSelectInput(blockPos, chestPos, pipeGraphId),
+                    .SetupSelectInput(blockPos, GetLocalRequesterEntityId(world), chestPos, pipeGraphId),
                 false
             );
             return;
@@ -186,7 +201,7 @@ public static class Helper
             Log.Out("[Crafter][Helper] Sending RequestCrafterSelectOutput to server");
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageCrafterControl>()
-                    .SetupSelectOutput(blockPos, targetPos, mode, pipeGraphId),
+                    .SetupSelectOutput(blockPos, GetLocalRequesterEntityId(world), targetPos, mode, pipeGraphId),
                 false
             );
             return;
@@ -217,7 +232,7 @@ public static class Helper
 
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageCrafterControl>()
-                    .SetupSetEnabled(blockPos, enabled),
+                    .SetupSetEnabled(blockPos, GetLocalRequesterEntityId(world), enabled),
                 false
             );
             return;
@@ -247,7 +262,7 @@ public static class Helper
             Log.Out("[Extractor][Helper] Sending RequestExtractorSelectOutput to server");
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageExtractorControl>()
-                    .SetupSelectOutput(blockPos, targetPos, mode, pipeGraphId),
+                    .SetupSelectOutput(blockPos, GetLocalRequesterEntityId(world), targetPos, mode, pipeGraphId),
                 false
             );
             return;
@@ -276,7 +291,7 @@ public static class Helper
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageCrafterControl>()
-                    .SetupSetPriority(blockPos, priority),
+                    .SetupSetPriority(blockPos, GetLocalRequesterEntityId(world), priority),
                 false
             );
             return;
@@ -305,7 +320,7 @@ public static class Helper
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageExtractorControl>()
-                    .SetupSetPriority(blockPos, priority),
+                    .SetupSetPriority(blockPos, GetLocalRequesterEntityId(world), priority),
                 false
             );
             return;
@@ -320,6 +335,95 @@ public static class Helper
 
         te.ServerSetPipePriority(priority);
     }
+    public static void RequestFuelConverterSetEnabled(Vector3i blockPos, bool enabled)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[FuelConverter][Helper] RequestFuelConverterSetEnabled world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageFuelConverterControl>()
+                    .SetupSetEnabled(blockPos, GetLocalRequesterEntityId(world), enabled),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityFuelConverter;
+        if (te == null)
+        {
+            Log.Error($"[FuelConverter][Helper] No converter at pos={blockPos}");
+            return;
+        }
+
+        te.ServerSetEnabled(enabled);
+    }
+
+    public static void RequestFuelConverterLoadHeld(Vector3i blockPos)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[FuelConverter][Helper] RequestFuelConverterLoadHeld world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageFuelConverterControl>()
+                    .SetupLoadHeld(blockPos, GetLocalRequesterEntityId(world)),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityFuelConverter;
+        if (te == null)
+        {
+            Log.Error($"[FuelConverter][Helper] No converter at pos={blockPos}");
+            return;
+        }
+
+        EntityPlayer requester = world.GetPrimaryPlayer();
+        te.ServerLoadFromHeldItem(requester);
+    }
+
+    public static void RequestFuelConverterEject(Vector3i blockPos)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[FuelConverter][Helper] RequestFuelConverterEject world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageFuelConverterControl>()
+                    .SetupEject(blockPos, GetLocalRequesterEntityId(world)),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityFuelConverter;
+        if (te == null)
+        {
+            Log.Error($"[FuelConverter][Helper] No converter at pos={blockPos}");
+            return;
+        }
+
+        EntityPlayer requester = world.GetPrimaryPlayer();
+        te.ServerEjectToPlayer(requester);
+    }
+
     public static void RequestPipeProbeSnapshot(int clrIdx, Vector3i blockPos, int entityPlayerId)
     {
         var world = GameManager.Instance?.World;
@@ -351,4 +455,3 @@ public static class Helper
         );
     }
 }
-

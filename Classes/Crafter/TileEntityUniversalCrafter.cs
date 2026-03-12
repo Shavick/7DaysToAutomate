@@ -881,6 +881,9 @@ public class TileEntityUniversalCrafter : TileEntityMachine
     {
         base.UpdateTick(world);
 
+        if (world == null || world.IsRemote())
+            return;
+
         if (simulatedByHLR)
             return;
 
@@ -2452,7 +2455,3 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         inputBuffer = new Dictionary<string, int>();
     }
 }
-
-
-
-

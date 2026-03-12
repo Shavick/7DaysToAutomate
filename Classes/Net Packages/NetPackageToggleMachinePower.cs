@@ -1,4 +1,4 @@
-﻿public class NetPackageToggleMachinePower : NetPackage
+public class NetPackageToggleMachinePower : NetPackage
 {
     public enum MessageType : byte
     {
@@ -13,17 +13,19 @@
     private int ClrIdx;
     private MessageType Type;
     private bool IsOn;
+    private int RequesterEntityId;
 
-    public NetPackageToggleMachinePower Setup(int clrIdx, Vector3i blockPos, NetPackageToggleMachinePower.MessageType type, bool isOn = false)
+    public NetPackageToggleMachinePower Setup(int clrIdx, Vector3i blockPos, int requesterEntityId, NetPackageToggleMachinePower.MessageType type, bool isOn = false)
     {
         ClrIdx = clrIdx;
         BlockPos = blockPos;
         BlockPosx = blockPos.x;
         BlockPosy = blockPos.y;
         BlockPosz = blockPos.z;
+        RequesterEntityId = requesterEntityId;
         Type = type;
         IsOn = isOn;
-        Log.Out($"[Setup]BlockPosition = {BlockPos}");
+        Log.Out($"[Setup]BlockPosition = {BlockPos} requester={RequesterEntityId}");
         return this;
     }
 
@@ -35,6 +37,7 @@
         _writer.Write(BlockPosx);
         _writer.Write(BlockPosy);
         _writer.Write(BlockPosz);
+        _writer.Write(RequesterEntityId);
         _writer.Write((byte)Type);
         _writer.Write(IsOn);
         Log.Out("[NetPackage][ToggleMachinePower][Write] Finish");
@@ -48,12 +51,17 @@
         BlockPosy = _reader.ReadInt32();
         BlockPosz = _reader.ReadInt32();
         BlockPos = new Vector3i(BlockPosx, BlockPosy, BlockPosz);
+        RequesterEntityId = _reader.ReadInt32();
         Type = (NetPackageToggleMachinePower.MessageType)_reader.ReadByte();
         IsOn = _reader.ReadBoolean();
         Log.Out("[NetPackage][ToggleMachinePower][Read] Finish");
     }
+
     public override void ProcessPackage(World _world, GameManager _callbacks)
     {
+        if (_world == null)
+            return;
+
         // Only the server should act on this package.
         if (!ConnectionManager.Instance.IsServer)
             return;
@@ -62,10 +70,12 @@
         if (Type != MessageType.RequestToggle)
             return;
 
-        // IMPORTANT: ensure BlockPos is valid in case you’re using x/y/z fields in write/read.
-        // If you fixed your netpackage to always rebuild BlockPos in read(), this line is redundant but harmless.
+        // Ensure BlockPos is valid in case x/y/z fields are used in write/read.
         if (BlockPos == Vector3i.zero && (BlockPosx != 0 || BlockPosy != 0 || BlockPosz != 0))
             BlockPos = new Vector3i(BlockPosx, BlockPosy, BlockPosz);
+
+        if (!NetPackageMachineAuthority.TryValidateRequester(_world, this, RequesterEntityId, BlockPos, "PowerToggle", out EntityPlayer requester))
+            return;
 
         TileEntity te = _world.GetTileEntity(ClrIdx, BlockPos);
         if (te == null)
@@ -80,16 +90,17 @@
             return;
         }
 
-        Log.Out($"[NetPkg][Power][SERVER] Toggling power at {BlockPos} IsOn(before)={machine.IsOn}");
-        machine.TogglePower(); // MUST cause setModified() and ToClient serialization for clients to update
+        Log.Out($"[NetPkg][Power][SERVER] Requester={requester.entityId} Toggling power at {BlockPos} IsOn(before)={machine.IsOn}");
+        machine.TogglePower();
         Log.Out($"[NetPkg][Power][SERVER] Toggled power at {BlockPos} IsOn(after)={machine.IsOn}");
 
         // NO ToggleClient response here.
-        // The server’s setModified() will trigger NetPackageTileEntity updates to clients.
+        // The server's setModified() will trigger NetPackageTileEntity updates to clients.
     }
+
     public override int GetLength()
     {
-        return 18;
+        return 22;
     }
 }
 

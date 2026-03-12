@@ -1,14 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 public static class FluidGraphManager
 {
-    private sealed class StorageNode
+    private const int TileEntitySnapshotMaxAttempts = 3;
+
+        private sealed class StorageNode
     {
         public Vector3i Pos;
         public TileEntityFluidStorage Storage;
         public int AvailableMg;
         public int DrainMg;
+        public int RemainingInputMg;
+        public int RemainingFreeSpaceMg;
+        public int IntakeMg;
     }
 
     private static readonly Dictionary<Guid, FluidGraphData> graphsById = new Dictionary<Guid, FluidGraphData>();
@@ -196,6 +202,227 @@ public static class FluidGraphManager
         return true;
     }
 
+    public static bool TryInjectFluid(WorldBase world, int clrIdx, Guid fluidGraphId, string fluidType, int requestedMg, out string blockedReason)
+    {
+        blockedReason = "Unknown";
+
+        if (world == null || fluidGraphId == Guid.Empty || string.IsNullOrEmpty(fluidType) || requestedMg <= 0)
+        {
+            blockedReason = "Invalid request";
+            return false;
+        }
+
+        if (!graphsById.TryGetValue(fluidGraphId, out FluidGraphData graph) || graph == null)
+        {
+            blockedReason = "Fluid graph unavailable";
+            return false;
+        }
+
+        if (graph.PipePositions == null || graph.PipePositions.Count == 0)
+        {
+            blockedReason = "No connected pipes";
+            graph.RecordBlocked("NoPipe");
+            return false;
+        }
+
+        List<TileEntityFluidPump> activePumps = new List<TileEntityFluidPump>();
+        foreach (Vector3i pumpPos in graph.PumpEndpoints)
+        {
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pumpPos, out TileEntity pumpTe) || !(pumpTe is TileEntityFluidPump pump))
+                continue;
+
+            if (!pump.IsActivePump())
+                continue;
+
+            activePumps.Add(pump);
+        }
+
+        if (activePumps.Count == 0)
+        {
+            blockedReason = "No active pump";
+            graph.RecordBlocked("NoActivePump");
+            return false;
+        }
+
+        List<StorageNode> sinks = new List<StorageNode>();
+        foreach (Vector3i storagePos in graph.StorageEndpoints)
+        {
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, storagePos, out TileEntity storageTe) || !(storageTe is TileEntityFluidStorage storage))
+                continue;
+
+            sinks.Add(new StorageNode
+            {
+                Pos = storagePos,
+                Storage = storage
+            });
+        }
+
+        if (sinks.Count == 0)
+        {
+            blockedReason = "No storage endpoint";
+            graph.RecordBlocked("NoStorage");
+            return false;
+        }
+
+        string normalizedFluid = fluidType.Trim().ToLowerInvariant();
+
+        string graphFluidType = graph.FluidType;
+        if (string.IsNullOrEmpty(graphFluidType))
+        {
+            for (int i = 0; i < sinks.Count; i++)
+            {
+                StorageNode sink = sinks[i];
+                string sinkType = sink.Storage.FluidType;
+                if (string.IsNullOrEmpty(sinkType) || sink.Storage.FluidAmountMg <= 0)
+                    continue;
+
+                if (string.IsNullOrEmpty(graphFluidType))
+                {
+                    graphFluidType = sinkType;
+                    continue;
+                }
+
+                if (!string.Equals(graphFluidType, sinkType, StringComparison.Ordinal))
+                {
+                    blockedReason = "Storage fluid mismatch";
+                    graph.RecordBlocked("TypeMismatch");
+                    return false;
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(graphFluidType) && !string.Equals(graphFluidType, normalizedFluid, StringComparison.Ordinal))
+        {
+            blockedReason = "Graph fluid type mismatch";
+            graph.RecordBlocked("TypeMismatch");
+            return false;
+        }
+
+        int pipeCap = GetGraphPipeCapMgPerTick(world, clrIdx, graph);
+        int pumpCap = 0;
+        for (int i = 0; i < activePumps.Count; i++)
+            pumpCap += activePumps[i].GetOutputCapMgPerTick();
+
+        int flowBudget = Math.Min(pipeCap, pumpCap);
+        if (flowBudget <= 0)
+        {
+            blockedReason = "No graph throughput";
+            graph.RecordBlocked("NoThroughput");
+            return false;
+        }
+
+        if (flowBudget < requestedMg)
+        {
+            blockedReason = "Graph throughput full";
+            graph.RecordBlocked("ThroughputFull");
+            return false;
+        }
+
+        sinks.Sort((a, b) => ComparePos(a.Pos, b.Pos));
+
+        int totalSinkCapacity = 0;
+        List<StorageNode> eligible = new List<StorageNode>();
+
+        for (int i = 0; i < sinks.Count; i++)
+        {
+            StorageNode sink = sinks[i];
+
+            if (!sink.Storage.CanAcceptType(normalizedFluid))
+                continue;
+
+            sink.RemainingInputMg = sink.Storage.GetRemainingInputBudgetMg();
+            sink.RemainingFreeSpaceMg = sink.Storage.GetFreeSpaceMg();
+
+            int sinkCapacity = Math.Min(sink.RemainingInputMg, sink.RemainingFreeSpaceMg);
+            if (sinkCapacity <= 0)
+                continue;
+
+            totalSinkCapacity += sinkCapacity;
+            eligible.Add(sink);
+        }
+
+        if (totalSinkCapacity < requestedMg)
+        {
+            blockedReason = "No storage room";
+            graph.RecordBlocked("StorageFull");
+            return false;
+        }
+
+        int remaining = requestedMg;
+        while (remaining > 0)
+        {
+            int progressed = 0;
+            int active = 0;
+
+            for (int i = 0; i < eligible.Count; i++)
+            {
+                StorageNode sink = eligible[i];
+                if (sink.RemainingInputMg <= 0 || sink.RemainingFreeSpaceMg <= 0)
+                    continue;
+
+                active++;
+            }
+
+            if (active <= 0)
+                break;
+
+            int share = remaining / active;
+            if (share <= 0)
+                share = 1;
+
+            for (int i = 0; i < eligible.Count && remaining > 0; i++)
+            {
+                StorageNode sink = eligible[i];
+                if (sink.RemainingInputMg <= 0 || sink.RemainingFreeSpaceMg <= 0)
+                    continue;
+
+                int move = Math.Min(share, remaining);
+                move = Math.Min(move, sink.RemainingInputMg);
+                move = Math.Min(move, sink.RemainingFreeSpaceMg);
+                if (move <= 0)
+                    continue;
+
+                sink.IntakeMg += move;
+                sink.RemainingInputMg -= move;
+                sink.RemainingFreeSpaceMg -= move;
+                remaining -= move;
+                progressed += move;
+            }
+
+            if (progressed <= 0)
+                break;
+        }
+
+        if (remaining > 0)
+        {
+            blockedReason = "No storage room";
+            graph.RecordBlocked("StorageFull");
+            return false;
+        }
+
+        int injected = 0;
+        for (int i = 0; i < eligible.Count; i++)
+        {
+            StorageNode sink = eligible[i];
+            if (sink.IntakeMg <= 0)
+                continue;
+
+            injected += sink.Storage.AcceptFluid(normalizedFluid, sink.IntakeMg);
+        }
+
+        if (injected < requestedMg)
+        {
+            blockedReason = "Graph throughput full";
+            graph.RecordBlocked("ThroughputFull");
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(graph.FluidType))
+            graph.FluidType = normalizedFluid;
+
+        blockedReason = string.Empty;
+        return true;
+    }
     public static bool TryEnsureGraphForPipe(WorldBase world, int clrIdx, Vector3i pipePos, out FluidGraphData graph)
     {
         graph = null;
@@ -223,6 +450,35 @@ public static class FluidGraphManager
         return graphsById.TryGetValue(refreshed.FluidGraphId, out graph) && graph != null;
     }
 
+
+    public static void RebuildAllGraphs(WorldBase world)
+    {
+        if (world == null || world.IsRemote())
+            return;
+
+        ClearAll();
+
+        List<Vector3i> pipePositions = new List<Vector3i>();
+
+        foreach (Chunk chunk in SafeWorldRead.GetChunkArraySnapshot(world))
+        {
+            if (chunk == null)
+                continue;
+
+            List<TileEntity> snapshot = SnapshotTileEntities(chunk);
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                if (snapshot[i] is TileEntityLiquidPipe pipe)
+                    pipePositions.Add(pipe.ToWorldPos());
+            }
+        }
+
+        for (int i = 0; i < pipePositions.Count; i++)
+            MarkPipeDirty(pipePositions[i]);
+
+        while (dirtyPipePositions.Count > 0)
+            ProcessDirtyGraphs(world, int.MaxValue);
+    }
     public static void ClearAll()
     {
         graphsById.Clear();
@@ -352,6 +608,29 @@ public static class FluidGraphManager
         return visited;
     }
 
+
+    private static List<TileEntity> SnapshotTileEntities(Chunk chunk)
+    {
+        for (int attempt = 1; attempt <= TileEntitySnapshotMaxAttempts; attempt++)
+        {
+            try
+            {
+                return new List<TileEntity>(chunk.GetTileEntities().list);
+            }
+            catch (InvalidOperationException)
+            {
+                if (attempt == TileEntitySnapshotMaxAttempts)
+                {
+                    Log.Warning($"[FluidGraphManager] Failed to snapshot tile entities for chunk after {attempt} attempts; skipping chunk this rebuild.");
+                    break;
+                }
+
+                Thread.Yield();
+            }
+        }
+
+        return new List<TileEntity>();
+    }
     private static void PopulateGraphEndpoints(WorldBase world, int clrIdx, FluidGraphData graph)
     {
         if (graph == null)
@@ -389,6 +668,38 @@ public static class FluidGraphManager
         return bool.TryParse(value, out bool isIntake) && isIntake;
     }
 
+    private static int GetGraphPipeCapMgPerTick(WorldBase world, int clrIdx, FluidGraphData graph)
+    {
+        int lowest = int.MaxValue;
+
+        foreach (Vector3i pipePos in graph.PipePositions)
+        {
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, pipePos, out BlockValue blockValue))
+                continue;
+
+            int capGps = GetPropertyInt(blockValue, "FluidPipeCapacityGps", 250);
+            int capMgPerTick = (capGps * FluidConstants.MilliGallonsPerGallon) / FluidConstants.SimulationTicksPerSecond;
+            if (capMgPerTick <= 0)
+                continue;
+
+            if (capMgPerTick < lowest)
+                lowest = capMgPerTick;
+        }
+
+        if (lowest == int.MaxValue)
+            return 0;
+
+        return lowest;
+    }
+
+    private static int GetPropertyInt(BlockValue blockValue, string propertyName, int fallback)
+    {
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        if (string.IsNullOrEmpty(raw) || !int.TryParse(raw, out int value))
+            return fallback;
+
+        return value;
+    }
     private static int ComparePos(Vector3i a, Vector3i b)
     {
         int cmp = a.x.CompareTo(b.x);
@@ -402,3 +713,8 @@ public static class FluidGraphManager
         return a.z.CompareTo(b.z);
     }
 }
+
+
+
+
+

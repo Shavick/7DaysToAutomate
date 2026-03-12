@@ -11,6 +11,7 @@ namespace _7DaysToAutomate.Classes.Net_Packages
 
         private Vector3i _blockPos;
         private MessageType _messageType;
+        private int _requesterEntityId;
 
         private Vector3i _targetChestPos;
         private int _outputMode;
@@ -18,10 +19,11 @@ namespace _7DaysToAutomate.Classes.Net_Packages
         private bool _enabled;
         private int _priority;
 
-        public NetPackageExtractorControl SetupSelectOutput(Vector3i blockPos, Vector3i chestPos, int outputMode, string pipeGraphId)
+        public NetPackageExtractorControl SetupSelectOutput(Vector3i blockPos, int requesterEntityId, Vector3i chestPos, int outputMode, string pipeGraphId)
         {
             _blockPos = blockPos;
             _messageType = MessageType.RequestSelectOutput;
+            _requesterEntityId = requesterEntityId;
             _targetChestPos = chestPos;
             _outputMode = outputMode;
             _pipeGraphId = pipeGraphId ?? string.Empty;
@@ -30,10 +32,11 @@ namespace _7DaysToAutomate.Classes.Net_Packages
             return this;
         }
 
-        public NetPackageExtractorControl SetupSetEnabled(Vector3i blockPos, bool enabled)
+        public NetPackageExtractorControl SetupSetEnabled(Vector3i blockPos, int requesterEntityId, bool enabled)
         {
             _blockPos = blockPos;
             _messageType = MessageType.RequestSetEnabled;
+            _requesterEntityId = requesterEntityId;
             _targetChestPos = Vector3i.zero;
             _outputMode = 0;
             _pipeGraphId = string.Empty;
@@ -42,10 +45,11 @@ namespace _7DaysToAutomate.Classes.Net_Packages
             return this;
         }
 
-        public NetPackageExtractorControl SetupSetPriority(Vector3i blockPos, int priority)
+        public NetPackageExtractorControl SetupSetPriority(Vector3i blockPos, int requesterEntityId, int priority)
         {
             _blockPos = blockPos;
             _messageType = MessageType.RequestSetPriority;
+            _requesterEntityId = requesterEntityId;
             _targetChestPos = Vector3i.zero;
             _outputMode = 0;
             _pipeGraphId = string.Empty;
@@ -56,7 +60,7 @@ namespace _7DaysToAutomate.Classes.Net_Packages
 
         public override int GetLength()
         {
-            return 128;
+            return 132;
         }
 
         public override void read(PooledBinaryReader _br)
@@ -67,6 +71,7 @@ namespace _7DaysToAutomate.Classes.Net_Packages
             _blockPos = new Vector3i(x, y, z);
 
             _messageType = (MessageType)_br.ReadByte();
+            _requesterEntityId = _br.ReadInt32();
 
             int tx = _br.ReadInt32();
             int ty = _br.ReadInt32();
@@ -88,6 +93,7 @@ namespace _7DaysToAutomate.Classes.Net_Packages
             _bw.Write(_blockPos.z);
 
             _bw.Write((byte)_messageType);
+            _bw.Write(_requesterEntityId);
 
             _bw.Write(_targetChestPos.x);
             _bw.Write(_targetChestPos.y);
@@ -113,7 +119,10 @@ namespace _7DaysToAutomate.Classes.Net_Packages
                 return;
             }
 
-            Log.Out($"[ExtractorControl] ProcessPackage type={_messageType} blockPos={_blockPos} targetChest={_targetChestPos} outputMode={_outputMode} pipeGraphId='{_pipeGraphId}' enabled={_enabled} priority={_priority}");
+            if (!NetPackageMachineAuthority.TryValidateRequester(world, this, _requesterEntityId, _blockPos, "ExtractorControl", out EntityPlayer requester))
+                return;
+
+            Log.Out($"[ExtractorControl] ProcessPackage requester={requester.entityId} type={_messageType} blockPos={_blockPos} targetChest={_targetChestPos} outputMode={_outputMode} pipeGraphId='{_pipeGraphId}' enabled={_enabled} priority={_priority}");
 
             TileEntity te = world.GetTileEntity(_blockPos);
             if (!(te is TileEntityUniversalExtractor extractor))
@@ -146,3 +155,4 @@ namespace _7DaysToAutomate.Classes.Net_Packages
         }
     }
 }
+

@@ -100,6 +100,9 @@
     <Compile Include="Classes\Extractor\UniversalExtractorBlock.cs" />
     <Compile Include="Classes\Extractor\TileEntityUniversalExtractor.cs" />
     <Compile Include="Classes\Extractor\XUiC_IronExtractorInfo.cs" />
+    <Compile Include="Classes\FuelConverter\FuelConverterBlock.cs" />
+    <Compile Include="Classes\FuelConverter\TileEntityFuelConverter.cs" />
+    <Compile Include="Classes\FuelConverter\XUiC_FuelConverterInfo.cs" />
     <Compile Include="Classes\HarmonyPatches\BlockCompositeTileEntity_PipeEndpointDirtyPatch.cs" />
     <Compile Include="Classes\HarmonyPatches\Block_OnBlockActivated_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\ProgressionFromXML_Load_Patches.cs" />
@@ -108,6 +111,7 @@
     <Compile Include="Classes\HLR\HigherLogicRegistry.cs" />
     <Compile Include="Classes\Machines\MachineOutputDiscovery.cs" />
     <Compile Include="Classes\Net Packages\NetPackageCrafterControl.cs" />
+    <Compile Include="Classes\Net Packages\NetPackageMachineAuthority.cs" />
     <Compile Include="Classes\Console Commands\HLRConsoleCommands.cs" />
     <Compile Include="Classes\HLR\IHLRSnapshot.cs" />
     <Compile Include="Classes\HLR\WorldHLR.cs" />
@@ -115,6 +119,7 @@
     <Compile Include="Classes\Machines\TileEntityMachine.cs" />
     <Compile Include="Classes\Net Packages\NetPackageExtractor.cs" />
     <Compile Include="Classes\Net Packages\NetPackageExtractorControl.cs" />
+    <Compile Include="Classes\Net Packages\NetPackageFuelConverterControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageOpenMachineUi.cs" />
     <Compile Include="Classes\\Net Packages\\NetPackageToggleMachinePower.cs" />
     <Compile Include="Classes\Networks\NetworkControllerBlock.cs" />
@@ -159,7 +164,3 @@
     <PostBuildEvent>call build.cmd</PostBuildEvent>
   </PropertyGroup>
 </Project>
-
-
-
-

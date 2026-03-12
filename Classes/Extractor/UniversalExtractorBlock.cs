@@ -62,30 +62,33 @@ public class UniversalExtractorBlock
     {
         base.OnBlockLoaded(world, clrIdx, blockPos, blockValue);
 
+        if (world.IsRemote())
+            return;
+
         var te = world.GetTileEntity(clrIdx, blockPos) as TileEntityUniversalExtractor;
         if (te == null)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD — NO TILE ENTITY");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD - NO TILE ENTITY");
             return;
         }
 
         if (te.IsDevLogging)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD — BEGIN");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD - BEGIN");
         }
 
         var hlr = WorldHLR.GetOrCreate((World)world);
 
         if (te.IsDevLogging)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] TRY CLAIM — TE MachineGuid={te.MachineGuid}");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] TRY CLAIM - TE MachineGuid={te.MachineGuid}");
         }
 
         if (hlr.TryUnregisterMachine(te.MachineGuid, out var snapshot))
         {
             if (te.IsDevLogging)
             {
-                Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD — Snapshot FOUND, applying");
+                Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD - Snapshot FOUND, applying");
             }
 
             te.ApplyHLRSnapshot(snapshot);
@@ -94,7 +97,7 @@ public class UniversalExtractorBlock
         {
             if (te.IsDevLogging)
             {
-                Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD — No snapshot (live machine)");
+                Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD - No snapshot (live machine)");
             }
         }
 
@@ -102,7 +105,7 @@ public class UniversalExtractorBlock
 
         if (te.IsDevLogging)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD — COMPLETE (HLR ? TE)");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] LOAD - COMPLETE (HLR ? TE)");
         }
     }
 
@@ -118,25 +121,28 @@ public class UniversalExtractorBlock
     {
         base.OnBlockUnloaded(world, clrIdx, blockPos, blockValue);
 
+        if (world.IsRemote())
+            return;
+
         var te = world.GetTileEntity(clrIdx, blockPos) as TileEntityUniversalExtractor;
         if (te == null)
         {
             bool devLogs = blockValue.Block?.Properties?.GetBool("DevLogs") == true;
             if (devLogs)
-                Log.Out($"[Extractor][BLOCK][{blockPos}] UNLOAD — NO TILE ENTITY");
+                Log.Out($"[Extractor][BLOCK][{blockPos}] UNLOAD - NO TILE ENTITY");
             return;
         }
 
         if (te.IsDevLogging)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] UNLOAD — BEGIN");
-            Log.Out($"[Extractor][BLOCK][{blockPos}] UNLOAD — Building snapshot");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] UNLOAD - BEGIN");
+            Log.Out($"[Extractor][BLOCK][{blockPos}] UNLOAD - Building snapshot");
         }
 
         var snapshot = te.BuildHLRSnapshot(world);
         if (snapshot == null)
         {
-            Log.Error($"[Extractor][BLOCK][{blockPos}] UNLOAD — Snapshot FAILED");
+            Log.Error($"[Extractor][BLOCK][{blockPos}] UNLOAD - Snapshot FAILED");
             return;
         }
 
@@ -147,7 +153,7 @@ public class UniversalExtractorBlock
 
         if (te.IsDevLogging)
         {
-            Log.Warning($"[Extractor][BLOCK][{blockPos}] UNLOAD — COMPLETE (TE ? HLR)");
+            Log.Warning($"[Extractor][BLOCK][{blockPos}] UNLOAD - COMPLETE (TE ? HLR)");
         }
     }
 
@@ -232,5 +238,3 @@ public class UniversalExtractorBlock
         return $"{key} Open {name}";
     }
 }
-
-
