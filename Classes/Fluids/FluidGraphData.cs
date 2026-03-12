@@ -7,6 +7,7 @@ public class FluidGraphData
     public readonly HashSet<Vector3i> PipePositions = new HashSet<Vector3i>();
     public readonly HashSet<Vector3i> PumpEndpoints = new HashSet<Vector3i>();
     public readonly HashSet<Vector3i> StorageEndpoints = new HashSet<Vector3i>();
+    public readonly HashSet<Vector3i> IntakeEndpoints = new HashSet<Vector3i>();
 
     // Empty string means unassigned fluid type.
     public string FluidType = string.Empty;
@@ -34,6 +35,11 @@ public class FluidGraphData
         StorageEndpoints.Add(pos);
     }
 
+    public void AddIntakeEndpoint(Vector3i pos)
+    {
+        IntakeEndpoints.Add(pos);
+    }
+
     public void RecordBlocked(string reason)
     {
         LastBlockedReason = reason ?? string.Empty;
@@ -48,6 +54,8 @@ public class FluidGraphData
     public override string ToString()
     {
         string fluid = string.IsNullOrEmpty(FluidType) ? "Unassigned" : FluidType;
-        return $"FluidGraphId={FluidGraphId} Fluid={fluid} Pipes={PipePositions.Count} Pumps={PumpEndpoints.Count} Storage={StorageEndpoints.Count}";
+        return $"FluidGraphId={FluidGraphId} Fluid={fluid} Pipes={PipePositions.Count} Pumps={PumpEndpoints.Count} Storage={StorageEndpoints.Count} Intakes={IntakeEndpoints.Count}";
     }
 }
+
+

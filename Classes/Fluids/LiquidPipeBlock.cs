@@ -51,10 +51,43 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
         if (blockName.StartsWith("liquidPipeSmallJoint", StringComparison.OrdinalIgnoreCase))
             return PipeShape.TJunction;
 
+        if (blockName.StartsWith("fluidIntake", StringComparison.OrdinalIgnoreCase))
+            return PipeShape.Elbow;
+
+        if (blockName.StartsWith("fluidValve", StringComparison.OrdinalIgnoreCase))
+            return PipeShape.Straight;
+
         if (blockName.StartsWith("liquidPipe", StringComparison.OrdinalIgnoreCase))
             return PipeShape.Straight;
 
         return PipeShape.None;
+    }
+
+    private static bool GetBoolProperty(BlockValue blockValue, string propertyName, bool fallback)
+    {
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        if (string.IsNullOrEmpty(raw) || !bool.TryParse(raw, out bool value))
+            return fallback;
+
+        return value;
+    }
+
+    private static bool IsFluidValve(BlockValue blockValue)
+    {
+        return GetBoolProperty(blockValue, "IsFluidValve", false);
+    }
+
+    private static bool IsFluidIntake(BlockValue blockValue)
+    {
+        return GetBoolProperty(blockValue, "IsFluidIntake", false);
+    }
+
+    private static bool CanToggleValve(BlockValue blockValue)
+    {
+        if (!IsFluidValve(blockValue))
+            return false;
+
+        return GetBoolProperty(blockValue, "AllowValveToggle", false);
     }
 
     public static PipeAxis GetStraightPipeAxis(BlockValue blockValue)
@@ -207,10 +240,21 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
         BlockValue pipeValue,
         Vector3i neighborPos)
     {
-        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out TileEntity neighborTileEntity) || !(neighborTileEntity is TileEntityLiquidPipe))
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity pipeTileEntity) || !(pipeTileEntity is TileEntityLiquidPipe pipeTe))
+            return false;
+
+        bool sourceIsValve = IsFluidValve(pipeValue);
+        if (sourceIsValve && !pipeTe.IsValveOpen)
+            return false;
+
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out TileEntity neighborTileEntity) || !(neighborTileEntity is TileEntityLiquidPipe neighborTe))
             return false;
 
         if (!SafeWorldRead.TryGetBlock(world, clrIdx, neighborPos, out BlockValue neighborValue))
+            return false;
+
+        bool neighborIsValve = IsFluidValve(neighborValue);
+        if (neighborIsValve && !neighborTe.IsValveOpen)
             return false;
 
         HashSet<Vector3i> myOpenSides = GetOpenSides(pipeValue);
@@ -241,6 +285,29 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
         return results;
     }
 
+    private static bool IsValveOpenAt(WorldBase world, int clrIdx, Vector3i pipePos)
+    {
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity tileEntity) || !(tileEntity is TileEntityLiquidPipe pipeTe))
+            return true;
+
+        return pipeTe.IsValveOpen;
+    }
+
+    private static bool TryToggleValve(WorldBase world, int clrIdx, Vector3i pipePos, out bool isOpen)
+    {
+        isOpen = true;
+
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity tileEntity) || !(tileEntity is TileEntityLiquidPipe pipeTe))
+            return false;
+
+        pipeTe.IsValveOpen = !pipeTe.IsValveOpen;
+        pipeTe.MarkFluidGraphDirty();
+        pipeTe.setModified();
+
+        isOpen = pipeTe.IsValveOpen;
+        return true;
+    }
+
     private static void MarkPipeDirtyAt(WorldBase world, int clrIdx, Vector3i pos)
     {
         if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out TileEntity tileEntity) || !(tileEntity is TileEntityLiquidPipe pipeTe))
@@ -257,6 +324,22 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
 
         for (int i = 0; i < NeighborOffsets.Length; i++)
             MarkPipeDirtyAt(world, clrIdx, centerPos + NeighborOffsets[i]);
+    }
+
+    private static void LogIntakeBlockBelow(WorldBase world, int clrIdx, Vector3i intakePos)
+    {
+        Vector3i belowPos = intakePos + Vector3i.down;
+        if (!SafeWorldRead.TryGetBlock(world, clrIdx, belowPos, out BlockValue belowValue))
+        {
+            Log.Out($"[FluidGraph][Intake] {intakePos} below={belowPos} block=<unreadable>");
+            return;
+        }
+
+        string blockName = belowValue.Block?.GetBlockName();
+        if (string.IsNullOrEmpty(blockName))
+            blockName = "<null>";
+
+        Log.Out($"[FluidGraph][Intake] {intakePos} below={belowPos} block={blockName}");
     }
 
     public override void OnBlockAdded(
@@ -327,6 +410,26 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
         BlockValue blockValue,
         EntityPlayerLocal player)
     {
+        if (world == null)
+            return true;
+
+        if (world.IsRemote())
+            return true;
+
+        if (!CanToggleValve(blockValue))
+        {
+            if (IsFluidIntake(blockValue))
+                LogIntakeBlockBelow(world, clrIdx, blockPos);
+
+            LogGraphFromPipeActivation(world, clrIdx, blockPos);
+            return true;
+        }
+
+        if (!TryToggleValve(world, clrIdx, blockPos, out bool isOpen))
+            return true;
+
+        MarkSelfAndAdjacentPipesDirty(world, clrIdx, blockPos);
+        Log.Out($"[FluidGraph][Valve] {(isOpen ? "OPEN" : "CLOSED")} at {blockPos}");
         LogGraphFromPipeActivation(world, clrIdx, blockPos);
         return true;
     }
@@ -440,16 +543,40 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
         EntityAlive entityFocusing)
     {
         if (!(entityFocusing is EntityPlayerLocal player))
-            return "[E] Probe Liquid Pipe";
+            return "[E] Inspect Liquid Pipe";
 
         string key =
             player.playerInput.Activate.GetBindingXuiMarkupString() +
             player.playerInput.PermanentActions.Activate.GetBindingXuiMarkupString();
 
         string name = blockValue.Block.GetLocalizedBlockName();
-        return $"{key} Probe {name}";
+
+        if (!CanToggleValve(blockValue))
+            return $"{key} Inspect {name}";
+
+        bool isOpen = IsValveOpenAt(world, clrIdx, blockPos);
+        string action = isOpen ? "Close Valve" : "Open Valve";
+        return $"{key} {action}";
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

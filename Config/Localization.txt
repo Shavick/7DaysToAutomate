@@ -68,3 +68,16 @@ fluidStorageTank,"Fluid Storage Tank"
 fluidStorageTankDesc,"Stores large amounts of fluid for connected machines and logistics."
 
 
+
+fluidIntake,"Fluid Intake (T1)"
+fluidIntakeT2,"Fluid Intake (T2)"
+fluidIntakeT3,"Fluid Intake (T3)"
+fluidIntakeDesc,"Pulls water from the block directly below and injects it into connected pipes."
+fluidIntakeT2Desc,"Improved intake with higher water pull throughput."
+fluidIntakeT3Desc,"Advanced intake with high water pull throughput."
+fluidValve,"Fluid Valve (T1)"
+fluidValveT2,"Fluid Valve (T2)"
+fluidValveT3,"Fluid Valve (T3)"
+fluidValveDesc,"Inline shutoff valve for liquid pipes. Toggle open or closed to control flow."
+fluidValveT2Desc,"Improved inline valve with higher throughput."
+fluidValveT3Desc,"Advanced inline valve with high throughput."

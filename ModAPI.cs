@@ -92,12 +92,15 @@ namespace _7DaysToAutomate
 
             FluidGraphManager.ProcessDirtyGraphs(world);
             FluidTransportManager.Process(world);
+            PipeProbeHudManager.UpdateAutoProbe(world);
 
             var hlr = WorldHLR.GetOrCreate(world);
             hlr.Update(world.GetWorldTime());
         }
     }
 }
+
+
 
 
 

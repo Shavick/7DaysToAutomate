@@ -320,6 +320,35 @@ public static class Helper
 
         te.ServerSetPipePriority(priority);
     }
-}
+    public static void RequestPipeProbeSnapshot(int clrIdx, Vector3i blockPos, int entityPlayerId)
+    {
+        var world = GameManager.Instance?.World;
+        if (world == null)
+            return;
 
+        var cm = SingletonMonoBehaviour<ConnectionManager>.Instance;
+
+        if (world.IsRemote())
+        {
+            cm.SendToServer(
+                NetPackageManager.GetPackage<NetPackagePipeProbe>()
+                    .SetupRequest(entityPlayerId, clrIdx, blockPos),
+                false
+            );
+            return;
+        }
+
+        cm.SendPackage(
+            NetPackageManager.GetPackage<NetPackagePipeProbe>()
+                .SetupRequest(entityPlayerId, clrIdx, blockPos),
+            false,
+            entityPlayerId,
+            -1,
+            -1,
+            null,
+            192,
+            false
+        );
+    }
+}
 

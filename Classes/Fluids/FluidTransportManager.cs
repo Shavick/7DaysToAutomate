@@ -9,6 +9,12 @@ public static class FluidTransportManager
     private const string ReasonNoSource = "NoSourceFluid";
     private const string ReasonTypeMismatch = "TypeMismatch";
 
+    private const string FluidWater = "water";
+    private const string IntakePropOutputFluid = "FluidIntakeOutputFluid";
+    private const string IntakePropAllowedBlocks = "FluidIntakeAllowedBlocks";
+    private const string IntakePropAllowWorldWaterVoxel = "FluidIntakeAllowWorldWaterVoxel";
+    private const string IntakePropDisallowNameContains = "FluidIntakeDisallowNameContains";
+
     private static ulong lastProcessWorldTime = 0UL;
 
     private sealed class StorageRuntime
@@ -36,7 +42,7 @@ public static class FluidTransportManager
         if (now % (ulong)FluidConstants.WorldTicksPerSimulationTick != 0UL)
             return;
 
-        if (now <= FluidGraphManager.LastRebuildWorldTime)
+        if (now < FluidGraphManager.LastRebuildWorldTime)
             return;
 
         foreach (var kvp in FluidGraphManager.GetAllGraphs())
@@ -62,7 +68,19 @@ public static class FluidTransportManager
             return;
         }
 
+        int pipeCap = GetGraphPipeCapMgPerTick(world, clrIdx, graph);
+        int pumpCap = GetPumpCapMgPerTick(activePumps);
+        int flowBudget = Math.Min(pipeCap, pumpCap);
+
+        if (flowBudget <= 0)
+            return;
+
         string graphFluidType = ResolveGraphFluidType(graph, storage);
+        string intakeResolvedFluidType = ResolveIntakeSourceMgPerTick(world, clrIdx, graph, graphFluidType, out int sourceAvailableFromIntakes);
+
+        if (string.IsNullOrEmpty(graphFluidType) && !string.IsNullOrEmpty(intakeResolvedFluidType))
+            graphFluidType = intakeResolvedFluidType;
+
         if (string.IsNullOrEmpty(graphFluidType))
             return;
 
@@ -75,15 +93,9 @@ public static class FluidTransportManager
             return;
         }
 
-        int pipeCap = GetGraphPipeCapMgPerTick(world, clrIdx, graph);
-        int pumpCap = GetPumpCapMgPerTick(activePumps);
-        int flowBudget = Math.Min(pipeCap, pumpCap);
+        // Re-evaluate intake allowance after fluid type is finalized.
+        ResolveIntakeSourceMgPerTick(world, clrIdx, graph, graphFluidType, out sourceAvailableFromIntakes);
 
-        if (flowBudget <= 0)
-            return;
-
-        int sourceAvailable = 0;
-        List<StorageRuntime> sourceNodes = new List<StorageRuntime>();
         List<StorageRuntime> sinkNodes = new List<StorageRuntime>();
 
         for (int i = 0; i < storage.Count; i++)
@@ -101,12 +113,6 @@ public static class FluidTransportManager
 
             if (node.RemainingInputMg > 0 && node.RemainingFreeSpaceMg > 0)
                 sinkNodes.Add(node);
-
-            if (node.RemainingOutputMg > 0)
-            {
-                sourceNodes.Add(node);
-                sourceAvailable += node.RemainingOutputMg;
-            }
         }
 
         if (sinkNodes.Count == 0)
@@ -115,9 +121,10 @@ public static class FluidTransportManager
             return;
         }
 
-        if (sourceNodes.Count == 0 || sourceAvailable <= 0)
+        int sourceAvailable = sourceAvailableFromIntakes;
+        if (sourceAvailable <= 0)
         {
-            RecordBlocked(graph, activePumps, now, ReasonNoSource, "No source storage has available fluid");
+            RecordBlocked(graph, activePumps, now, ReasonNoSource, "No intake has available fluid");
             return;
         }
 
@@ -131,18 +138,17 @@ public static class FluidTransportManager
             return;
         }
 
-        int drainedTotal = AllocateAcrossSources(acceptedTotal, sourceNodes);
-        if (drainedTotal <= 0)
+        int providedTotal = Math.Min(sourceAvailableFromIntakes, acceptedTotal);
+        if (providedTotal <= 0)
             return;
 
-        if (drainedTotal < acceptedTotal)
+        if (providedTotal < acceptedTotal)
         {
-            int reduction = acceptedTotal - drainedTotal;
+            int reduction = acceptedTotal - providedTotal;
             RollbackSinkAllocations(sinkNodes, reduction);
-            acceptedTotal = drainedTotal;
+            acceptedTotal = providedTotal;
         }
 
-        ApplySourceDrains(sourceNodes);
         ApplySinkIntake(graphFluidType, sinkNodes);
     }
 
@@ -225,6 +231,132 @@ public static class FluidTransportManager
         }
 
         return false;
+    }
+
+    private static string ResolveIntakeSourceMgPerTick(WorldBase world, int clrIdx, FluidGraphData graph, string graphFluidType, out int totalMgPerTick)
+    {
+        totalMgPerTick = 0;
+
+        if (graph == null || graph.IntakeEndpoints == null || graph.IntakeEndpoints.Count == 0)
+            return string.Empty;
+
+        string desiredFluidType = string.IsNullOrEmpty(graphFluidType)
+            ? string.Empty
+            : graphFluidType.Trim().ToLowerInvariant();
+
+        string resolvedFluidType = string.Empty;
+        List<Vector3i> intakePositions = new List<Vector3i>(graph.IntakeEndpoints);
+        intakePositions.Sort(ComparePos);
+
+        foreach (Vector3i intakePos in intakePositions)
+        {
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, intakePos, out BlockValue intakeBlockValue))
+                continue;
+
+            string outputFluidType = GetIntakeOutputFluidType(intakeBlockValue);
+            if (string.IsNullOrEmpty(outputFluidType))
+                continue;
+
+            if (!string.IsNullOrEmpty(desiredFluidType) && !string.Equals(outputFluidType, desiredFluidType, StringComparison.Ordinal))
+                continue;
+
+            if (!CanIntakeFromBelow(world, clrIdx, intakePos, intakeBlockValue))
+                continue;
+
+            int capGps = GetPropertyInt(intakeBlockValue, "FluidPipeCapacityGps", 250);
+            int capMgPerTick = (capGps * FluidConstants.MilliGallonsPerGallon) / FluidConstants.SimulationTicksPerSecond;
+            if (capMgPerTick <= 0)
+                continue;
+
+            if (string.IsNullOrEmpty(resolvedFluidType))
+                resolvedFluidType = outputFluidType;
+
+            if (!string.Equals(outputFluidType, resolvedFluidType, StringComparison.Ordinal))
+                continue;
+
+            totalMgPerTick += capMgPerTick;
+        }
+
+        return totalMgPerTick > 0 ? resolvedFluidType : string.Empty;
+    }
+
+    private static string GetIntakeOutputFluidType(BlockValue intakeBlockValue)
+    {
+        string raw = intakeBlockValue.Block?.Properties?.GetString(IntakePropOutputFluid);
+        if (string.IsNullOrEmpty(raw))
+            return FluidWater;
+
+        string trimmed = raw.Trim().ToLowerInvariant();
+        return string.IsNullOrEmpty(trimmed) ? FluidWater : trimmed;
+    }
+
+    private static bool CanIntakeFromBelow(WorldBase world, int clrIdx, Vector3i intakePos, BlockValue intakeBlockValue)
+    {
+        Vector3i below = intakePos + Vector3i.down;
+
+        if (!SafeWorldRead.TryGetBlock(world, clrIdx, below, out BlockValue belowValue))
+            return false;
+
+        string belowName = belowValue.Block?.GetBlockName();
+        if (IsDeniedByNameContains(intakeBlockValue, belowName))
+            return false;
+
+        HashSet<string> allowedBlocks = GetCsvSet(intakeBlockValue, IntakePropAllowedBlocks, "water,waterMoving,terrWaterPOI");
+        if (!string.IsNullOrEmpty(belowName) && allowedBlocks.Contains(belowName))
+            return true;
+
+        bool allowWorldWaterVoxel = GetPropertyBool(intakeBlockValue, IntakePropAllowWorldWaterVoxel, false);
+        if (allowWorldWaterVoxel && world.IsWater(below))
+            return true;
+
+        return false;
+    }
+
+    private static bool IsDeniedByNameContains(BlockValue intakeBlockValue, string belowName)
+    {
+        if (string.IsNullOrEmpty(belowName))
+            return false;
+
+        HashSet<string> deniedTokens = GetCsvSet(intakeBlockValue, IntakePropDisallowNameContains, "Bucket");
+        foreach (string token in deniedTokens)
+        {
+            if (string.IsNullOrEmpty(token))
+                continue;
+
+            if (belowName.IndexOf(token, StringComparison.OrdinalIgnoreCase) >= 0)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static bool GetPropertyBool(BlockValue blockValue, string propertyName, bool fallback)
+    {
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        if (string.IsNullOrEmpty(raw) || !bool.TryParse(raw, out bool value))
+            return fallback;
+
+        return value;
+    }
+
+    private static HashSet<string> GetCsvSet(BlockValue blockValue, string propertyName, string fallbackCsv)
+    {
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        if (string.IsNullOrEmpty(raw))
+            raw = fallbackCsv;
+
+        HashSet<string> values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string[] parts = raw.Split(',');
+        for (int i = 0; i < parts.Length; i++)
+        {
+            string value = parts[i].Trim();
+            if (string.IsNullOrEmpty(value))
+                continue;
+
+            values.Add(value);
+        }
+
+        return values;
     }
 
     private static int GetGraphPipeCapMgPerTick(WorldBase world, int clrIdx, FluidGraphData graph)
@@ -427,3 +559,9 @@ public static class FluidTransportManager
         return a.z.CompareTo(b.z);
     }
 }
+
+
+
+
+
+

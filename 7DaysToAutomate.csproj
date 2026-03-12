@@ -126,7 +126,12 @@
     <Compile Include="Classes\Pipes\PipeTransportManager.cs" />
     <Compile Include="Classes\Pipes\SafeWorldRead.cs" />
     <Compile Include="Classes\Pipes\TileEntityItemPipe.cs" />
-    <Compile Include="Classes\Fluids\FluidConstants.cs" />
+    
+    <Compile Include="Classes\Fluids\ItemActionPipeProbe.cs" />
+    <Compile Include="Classes\Fluids\ItemActionPipeProbeNoAction.cs" />
+    <Compile Include="Classes\Fluids\PipeProbeHudManager.cs" />
+    <Compile Include="Classes\Fluids\XUiC_PipeProbeHud.cs" />
+    <Compile Include="Classes\Net Packages\NetPackagePipeProbe.cs" />    <Compile Include="Classes\Fluids\FluidConstants.cs" />
     <Compile Include="Classes\Fluids\FluidGraphData.cs" />
     <Compile Include="Classes\Fluids\FluidGraphManager.cs" />
     <Compile Include="Classes\Fluids\FluidPumpBlock.cs" />
@@ -154,5 +159,7 @@
     <PostBuildEvent>call build.cmd</PostBuildEvent>
   </PropertyGroup>
 </Project>
+
+
 
 

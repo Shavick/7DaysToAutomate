@@ -17,7 +17,16 @@
         <!-- <window_group name="WasherInfo" open_backpack_on_open="false" defaultSelected="bp.content">
             <window name="windowUniversalWasher"/>
         </window_group> -->
+    
+        <window_group name="PipeProbeHud" open_backpack_on_open="false">
+            <window name="windowPipeProbeHud"/>
+        </window_group>
+
+
     </append>
 
 </configs>
+
+
+
 

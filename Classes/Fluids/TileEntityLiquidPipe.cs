@@ -2,10 +2,11 @@ using System;
 
 public class TileEntityLiquidPipe : TileEntityMachine
 {
-    private const int PersistVersion = 1;
+    private const int PersistVersion = 2;
 
     public Guid FluidGraphId = Guid.Empty;
     public bool IsFluidGraphDirty = true;
+    public bool IsValveOpen = true;
 
     public TileEntityLiquidPipe(Chunk chunk) : base(chunk)
     {
@@ -42,19 +43,26 @@ public class TileEntityLiquidPipe : TileEntityMachine
 
         bw.Write(FluidGraphId.ToString());
         bw.Write(IsFluidGraphDirty);
+        bw.Write(IsValveOpen);
     }
 
     public override void read(PooledBinaryReader br, StreamModeRead mode)
     {
         base.read(br, mode);
 
+        int persistVersion = PersistVersion;
         if (mode == StreamModeRead.Persistency)
-            br.ReadInt32();
+            persistVersion = br.ReadInt32();
 
         string graphId = br.ReadString();
         if (!Guid.TryParse(graphId, out FluidGraphId))
             FluidGraphId = Guid.Empty;
 
         IsFluidGraphDirty = br.ReadBoolean();
+
+        if (mode == StreamModeRead.Persistency && persistVersion < 2)
+            IsValveOpen = true;
+        else
+            IsValveOpen = br.ReadBoolean();
     }
 }

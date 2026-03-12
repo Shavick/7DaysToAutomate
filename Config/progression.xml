@@ -12,21 +12,21 @@
 
     <!-- Electrician: map pipes into existing vanilla display tiers (25/45/55) -->
     <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/effect_group">
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="25,100" value="1" tags="itemPipe,itemPipeElbow,itemPipeSmallJoint"/>
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="45,100" value="1" tags="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2"/>
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="55,100" value="1" tags="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3"/>
+        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="25,100" value="1" tags="itemPipe,itemPipeElbow,itemPipeSmallJoint,fluidIntake,fluidValve"/>
+        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="45,100" value="1" tags="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2,fluidIntakeT2,fluidValveT2"/>
+        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="55,100" value="1" tags="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3,fluidIntakeT3,fluidValveT3"/>
     </append>
 
     <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='generatorBankA']">
-        <unlock_entry item="itemPipe,itemPipeElbow,itemPipeSmallJoint" unlock_tier="1"/>
+        <unlock_entry item="itemPipe,itemPipeElbow,itemPipeSmallJoint,fluidIntake,fluidValve" unlock_tier="1"/>
     </append>
 
     <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='motionsensor']">
-        <unlock_entry item="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2" unlock_tier="1"/>
+        <unlock_entry item="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2,fluidIntakeT2,fluidValveT2" unlock_tier="1"/>
     </append>
 
     <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='batterybank']">
-        <unlock_entry item="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3" unlock_tier="1"/>
+        <unlock_entry item="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3,fluidIntakeT3,fluidValveT3" unlock_tier="1"/>
     </append>
 
     <!-- Workstations: map extractors/crafter into existing vanilla display rows -->
@@ -56,3 +56,4 @@
     </append>
 
 </configs>
+

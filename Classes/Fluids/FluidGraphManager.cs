@@ -191,6 +191,9 @@ public static class FluidGraphManager
 
         foreach (Vector3i pipePos in graph.PipePositions)
         {
+            if (IsFluidIntakePipe(world, clrIdx, pipePos))
+                graph.AddIntakeEndpoint(pipePos);
+
             foreach (Vector3i offset in NeighborOffsets)
             {
                 Vector3i neighborPos = pipePos + offset;
@@ -208,5 +211,13 @@ public static class FluidGraphManager
             }
         }
     }
-}
 
+    private static bool IsFluidIntakePipe(WorldBase world, int clrIdx, Vector3i pos)
+    {
+        if (!SafeWorldRead.TryGetBlock(world, clrIdx, pos, out BlockValue blockValue))
+            return false;
+
+        string value = blockValue.Block?.Properties?.GetString("IsFluidIntake");
+        return bool.TryParse(value, out bool isIntake) && isIntake;
+    }
+}

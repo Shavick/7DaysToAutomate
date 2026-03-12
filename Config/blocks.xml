@@ -388,6 +388,84 @@
             <property name="FluidPipeCapacityGps" value="250"/>
         </block>
 
+        <block name="fluidValve">
+            <property name="Class" value="LiquidPipeBlock, 7DaysToAutomate"/>
+            <property name="Material" value="Mmetal_hard"/>
+            <property name="Shape" value="ModelEntity"/>
+            <property name="Model" value="@:Entities/Industrial/pipeSmall_1x1Prefab.prefab"/>
+            <property name="Place" value="TowardsPlacer"/>
+            <property name="OnlySimpleRotations" value="false"/>
+            <property name="MaxDamage" value="600"/>
+            <property name="CustomIcon" value="pipeSmall1x1"/>
+            <property name="CustomIconTint" value="1B6E6C"/>
+            <property name="Stacknumber" value="100"/>
+            <property name="EconomicValue" value="40"/>
+            <property name="DescriptionKey" value="fluidValveDesc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="AllowValveToggle" value="true"/>
+            <property name="IsFluidValve" value="true"/>
+            <property name="FluidPipeCapacityGps" value="250"/>
+        </block>
+
+        <block name="fluidValveT2">
+            <property name="Extends" value="fluidValve"/>
+            <property name="CustomIconTint" value="0F5FA8"/>
+            <property name="MaxDamage" value="700"/>
+            <property name="EconomicValue" value="55"/>
+            <property name="DescriptionKey" value="fluidValveT2Desc"/>
+            <property name="FluidPipeCapacityGps" value="500"/>
+        </block>
+
+        <block name="fluidValveT3">
+            <property name="Extends" value="fluidValveT2"/>
+            <property name="CustomIconTint" value="2EA85C"/>
+            <property name="MaxDamage" value="850"/>
+            <property name="EconomicValue" value="75"/>
+            <property name="DescriptionKey" value="fluidValveT3Desc"/>
+            <property name="FluidPipeCapacityGps" value="1000"/>
+        </block>
+
+        <block name="fluidIntake">
+            <property name="Class" value="LiquidPipeBlock, 7DaysToAutomate"/>
+            <property name="Material" value="Mmetal_hard"/>
+            <property name="Shape" value="ModelEntity"/>
+            <property name="Model" value="@:Entities/Industrial/pipeSmallCornerPrefab.prefab"/>
+            <property name="Place" value="TowardsPlacer"/>
+            <property name="OnlySimpleRotations" value="true"/>
+            <property name="MaxDamage" value="600"/>
+            <property name="CustomIcon" value="pipeSmallCorner"/>
+            <property name="CustomIconTint" value="1D8E89"/>
+            <property name="Stacknumber" value="100"/>
+            <property name="EconomicValue" value="40"/>
+            <property name="DescriptionKey" value="fluidIntakeDesc"/>
+            <property name="UnlockedBy" value="craftingElectrician"/>
+            <property name="AllowValveToggle" value="true"/>
+            <property name="IsFluidIntake" value="true"/>
+            <property name="FluidIntakeOutputFluid" value="water"/>
+            <property name="FluidIntakeAllowedBlocks" value="water,waterMoving,terrWaterPOI"/>
+            <property name="FluidIntakeAllowWorldWaterVoxel" value="true"/>
+            <property name="FluidIntakeDisallowNameContains" value="Bucket"/>
+            <property name="FluidPipeCapacityGps" value="250"/>
+        </block>
+
+        <block name="fluidIntakeT2">
+            <property name="Extends" value="fluidIntake"/>
+            <property name="CustomIconTint" value="0F5FA8"/>
+            <property name="MaxDamage" value="700"/>
+            <property name="EconomicValue" value="55"/>
+            <property name="DescriptionKey" value="fluidIntakeT2Desc"/>
+            <property name="FluidPipeCapacityGps" value="500"/>
+        </block>
+
+        <block name="fluidIntakeT3">
+            <property name="Extends" value="fluidIntakeT2"/>
+            <property name="CustomIconTint" value="2EA85C"/>
+            <property name="MaxDamage" value="850"/>
+            <property name="EconomicValue" value="75"/>
+            <property name="DescriptionKey" value="fluidIntakeT3Desc"/>
+            <property name="FluidPipeCapacityGps" value="1000"/>
+        </block>
+
         <block name="fluidPump">
             <property name="Class" value="FluidPumpBlock, 7DaysToAutomate"/>
             <property name="Material" value="Mmetal_hard"/>
@@ -582,6 +660,12 @@
      <property name="PipeSpeed" value="2" />
      <property name="PipeLatency" value="3" />
 -->
+
+
+
+
+
+
 
 
 

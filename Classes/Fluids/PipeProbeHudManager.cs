@@ -386,7 +386,9 @@ public static class PipeProbeHudManager
         if (string.IsNullOrEmpty(itemName))
             return false;
 
-        return string.Equals(itemName, "pipeWrench", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(itemName, "pipeWrench", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(itemName, "meleeToolWrench", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(itemName, "itemPipeProbe", StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetHeldItemName(EntityPlayerLocal player)
@@ -429,6 +431,8 @@ public static class PipeProbeHudManager
         return heldItem.ItemClass.GetItemName() ?? string.Empty;
     }
 }
+
+
 
 
 

@@ -1,3 +1,5 @@
+using System;
+
 public class FluidStorageBlock : MachineBlock<TileEntityFluidStorage>
 {
     private static readonly Vector3i[] NeighborOffsets =
@@ -73,15 +75,30 @@ public class FluidStorageBlock : MachineBlock<TileEntityFluidStorage>
         Vector3i blockPos,
         EntityAlive entityFocusing)
     {
-        if (!(entityFocusing is EntityPlayerLocal player))
-            return "[E] Probe Fluid Storage";
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, blockPos, out TileEntity te) || !(te is TileEntityFluidStorage storage))
+            return "Unassigned - 0/0 Gallons";
 
-        string key =
-            player.playerInput.Activate.GetBindingXuiMarkupString() +
-            player.playerInput.PermanentActions.Activate.GetBindingXuiMarkupString();
+        string fluidType = FormatFluidName(storage.FluidType);
+        int amountGallons = ToWholeGallons(storage.FluidAmountMg);
+        int capacityGallons = ToWholeGallons(storage.GetCapacityMg());
 
-        string name = blockValue.Block.GetLocalizedBlockName();
-        return $"{key} Probe {name}";
+        return $"{fluidType} - {amountGallons}/{capacityGallons} Gallons";
+    }
+
+    private static string FormatFluidName(string fluidType)
+    {
+        if (string.IsNullOrEmpty(fluidType))
+            return "Unassigned";
+
+        if (fluidType.Length == 1)
+            return fluidType.ToUpperInvariant();
+
+        return char.ToUpperInvariant(fluidType[0]) + fluidType.Substring(1);
+    }
+
+    private static int ToWholeGallons(int mg)
+    {
+        return (mg + (FluidConstants.MilliGallonsPerGallon / 2)) / FluidConstants.MilliGallonsPerGallon;
     }
 
     private static void MarkAdjacentPipesDirty(WorldBase world, int clrIdx, Vector3i centerPos)
@@ -98,7 +115,3 @@ public class FluidStorageBlock : MachineBlock<TileEntityFluidStorage>
         }
     }
 }
-
-
-
-

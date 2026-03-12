@@ -144,6 +144,42 @@
       <ingredient name="resourceScrapIron" count="24" />
       <ingredient name="resourceMechanicalParts" count="1" />
     </recipe>
+    <recipe name="fluidIntake" count="4" craft_area="workbench" craft_time="12" tags="learnable,workbenchCrafting,fluidIntake">
+      <ingredient name="liquidPipeElbow" count="4" />
+      <ingredient name="resourceMechanicalParts" count="2" />
+    </recipe>
+    <recipe name="fluidValve" count="4" craft_area="workbench" craft_time="12" tags="learnable,workbenchCrafting,fluidValve">
+      <ingredient name="liquidPipe" count="4" />
+      <ingredient name="resourceMechanicalParts" count="2" />
+    </recipe>
+
+    <recipe name="fluidValveT2" count="4" craft_area="workbench" craft_time="18" tags="learnable,workbenchCrafting,fluidValveT2">
+      <ingredient name="fluidValve" count="4" />
+      <ingredient name="resourceForgedIron" count="16" />
+      <ingredient name="resourceMechanicalParts" count="2" />
+      <ingredient name="resourceElectricParts" count="1" />
+    </recipe>
+
+    <recipe name="fluidValveT3" count="4" craft_area="workbench" craft_time="22" tags="learnable,workbenchCrafting,fluidValveT3">
+      <ingredient name="fluidValveT2" count="4" />
+      <ingredient name="resourceForgedSteel" count="12" />
+      <ingredient name="resourceMechanicalParts" count="3" />
+      <ingredient name="resourceElectricParts" count="2" />
+    </recipe>
+
+    <recipe name="fluidIntakeT2" count="4" craft_area="workbench" craft_time="18" tags="learnable,workbenchCrafting,fluidIntakeT2">
+      <ingredient name="fluidIntake" count="4" />
+      <ingredient name="resourceForgedIron" count="16" />
+      <ingredient name="resourceMechanicalParts" count="2" />
+      <ingredient name="resourceElectricParts" count="1" />
+    </recipe>
+
+    <recipe name="fluidIntakeT3" count="4" craft_area="workbench" craft_time="22" tags="learnable,workbenchCrafting,fluidIntakeT3">
+      <ingredient name="fluidIntakeT2" count="4" />
+      <ingredient name="resourceForgedSteel" count="12" />
+      <ingredient name="resourceMechanicalParts" count="3" />
+      <ingredient name="resourceElectricParts" count="2" />
+    </recipe>
     <recipe name="fluidPump" count="1" craft_area="workbench" craft_time="20" tags="learnable,workbenchCrafting,fluidPump">
       <ingredient name="resourceForgedIron" count="12" />
       <ingredient name="resourceMechanicalParts" count="8" />
@@ -162,4 +198,6 @@
     </recipe>
   </append>
 </configs>
+
+
 

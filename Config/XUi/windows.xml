@@ -204,9 +204,27 @@
 
             </rect>
         </window>
+    
+        <window name="windowPipeProbeHud" controller="PipeProbeHud, 7DaysToAutomate" width="460" height="200" panel="TopCenter" dynamic_position="true" open_sound="" close_sound="">
+            <rect pos="0,120">
+                <sprite depth="1" name="bg" width="460" height="200" type="sliced" color="0,0,0,210"/>
+                <label depth="2" pos="20,-12" width="420" height="32" text="{probe_title}" font_size="28" color="[limeGreen]" effect="outline"/>
+                <label depth="2" pos="20,-42" width="420" height="24" text="{probe_line1}" font_size="22" color="[white]"/>
+                <label depth="2" pos="20,-66" width="420" height="24" text="{probe_line2}" font_size="22" color="[white]"/>
+                <label depth="2" pos="20,-90" width="420" height="24" text="{probe_line3}" font_size="22" color="[white]"/>
+                <label depth="2" pos="20,-114" width="420" height="24" text="{probe_line4}" font_size="22" color="[white]"/>
+                <label depth="2" pos="20,-138" width="420" height="24" text="{probe_line5}" font_size="22" color="[white]"/>
+                <label depth="2" pos="20,-162" width="420" height="24" text="{probe_line6}" font_size="22" color="[white]"/>
+            </rect>
+        </window>
+
+
     </append>
 
 </configs>
+
+
+
 
 
 
