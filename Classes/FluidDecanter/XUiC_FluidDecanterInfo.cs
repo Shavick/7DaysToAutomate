@@ -1,14 +1,14 @@
-using System;
+﻿using System;
 using System.Globalization;
 using UnityEngine;
 
-public class XUiC_FuelConverterInfo : XUiController
+public class XUiC_FluidDecanterInfo : XUiController
 {
     private Vector3i blockPosition;
-    private TileEntityFuelConverter te;
+    private TileEntityFluidDecanter te;
 
-    private XUiC_FuelConverterInputContainerList inputList;
-    private XUiC_FuelConverterOutputContainerList outputList;
+    private XUiC_FluidDecanterInputContainerList inputList;
+    private XUiC_FluidDecanterOutputContainerList outputList;
 
     public Vector3i BlockPosition => blockPosition;
 
@@ -18,7 +18,7 @@ public class XUiC_FuelConverterInfo : XUiController
 
         var closeBtn = GetChildById("closeButton")?.ViewComponent as XUiV_Button;
         if (closeBtn != null)
-            closeBtn.Controller.OnPress += (c, b) => xui.playerUI.windowManager.Close("FuelConverterInfo");
+            closeBtn.Controller.OnPress += (c, b) => xui.playerUI.windowManager.Close("FluidDecanterInfo");
 
         var powerBtn = GetChildById("powerbutton")?.ViewComponent as XUiV_Button;
         if (powerBtn != null)
@@ -26,14 +26,14 @@ public class XUiC_FuelConverterInfo : XUiController
 
         var fluidPrevBtn = GetChildById("fluidprevbutton")?.ViewComponent as XUiV_Button;
         if (fluidPrevBtn != null)
-            fluidPrevBtn.Controller.OnPress += (c, b) => Helper.RequestFuelConverterCycleFluid(blockPosition, -1);
+            fluidPrevBtn.Controller.OnPress += (c, b) => Helper.RequestFluidDecanterCycleFluid(blockPosition, -1);
 
         var fluidNextBtn = GetChildById("fluidnextbutton")?.ViewComponent as XUiV_Button;
         if (fluidNextBtn != null)
-            fluidNextBtn.Controller.OnPress += (c, b) => Helper.RequestFuelConverterCycleFluid(blockPosition, 1);
+            fluidNextBtn.Controller.OnPress += (c, b) => Helper.RequestFluidDecanterCycleFluid(blockPosition, 1);
 
-        inputList = GetChildByType<XUiC_FuelConverterInputContainerList>();
-        outputList = GetChildByType<XUiC_FuelConverterOutputContainerList>();
+        inputList = GetChildByType<XUiC_FluidDecanterInputContainerList>();
+        outputList = GetChildByType<XUiC_FluidDecanterOutputContainerList>();
     }
 
     public static void Open(EntityPlayerLocal player, Vector3i pos)
@@ -41,11 +41,11 @@ public class XUiC_FuelConverterInfo : XUiController
         if (player?.playerUI == null)
             return;
 
-        var ctrl = player.playerUI.xui?.GetChildByType<XUiC_FuelConverterInfo>();
+        var ctrl = player.playerUI.xui?.GetChildByType<XUiC_FluidDecanterInfo>();
         if (ctrl != null)
             ctrl.blockPosition = pos;
 
-        player.playerUI.windowManager.Open("FuelConverterInfo", true, false, true);
+        player.playerUI.windowManager.Open("FluidDecanterInfo", true, false, true);
     }
 
     public override void OnOpen()
@@ -86,17 +86,17 @@ public class XUiC_FuelConverterInfo : XUiController
         RefreshBindings(true);
     }
 
-    public TileEntityFuelConverter GetTileEntity()
+    public TileEntityFluidDecanter GetTileEntity()
     {
         if (blockPosition == default || GameManager.Instance?.World == null)
             return null;
 
-        return GameManager.Instance.World.GetTileEntity(blockPosition) as TileEntityFuelConverter;
+        return GameManager.Instance.World.GetTileEntity(blockPosition) as TileEntityFluidDecanter;
     }
 
     public override bool GetBindingValueInternal(ref string value, string bindingName)
     {
-        TileEntityFuelConverter converter = GetTileEntity();
+        TileEntityFluidDecanter converter = GetTileEntity();
         WorldBase world = GameManager.Instance?.World;
 
         string key = bindingName?.Trim() ?? string.Empty;
@@ -242,10 +242,10 @@ public class XUiC_FuelConverterInfo : XUiController
     private void EnsureListContexts()
     {
         if (inputList == null)
-            inputList = GetChildByType<XUiC_FuelConverterInputContainerList>();
+            inputList = GetChildByType<XUiC_FluidDecanterInputContainerList>();
 
         if (outputList == null)
-            outputList = GetChildByType<XUiC_FuelConverterOutputContainerList>();
+            outputList = GetChildByType<XUiC_FluidDecanterOutputContainerList>();
 
         if (te == null)
             te = GetTileEntity();
@@ -260,4 +260,5 @@ public class XUiC_FuelConverterInfo : XUiController
             outputList.SetContext(te, blockPosition);
     }
 }
+
 

@@ -1,4 +1,4 @@
-<configs>
+﻿<configs>
 
     <append xpath="//ruleset[@name='default']">
 
@@ -18,8 +18,8 @@
             <window name="windowUniversalWasher"/>
         </window_group> -->
 
-        <window_group name="FuelConverterInfo" open_backpack_on_open="false" close_compass_on_open="true" defaultSelected="bp.content">
-            <window name="windowFuelConverterInfo"/>
+        <window_group name="FluidDecanterInfo" open_backpack_on_open="false" close_compass_on_open="true" defaultSelected="bp.content">
+            <window name="windowFluidDecanterInfo"/>
         </window_group>
 
         <window_group name="PipeProbeHud" open_backpack_on_open="false">
@@ -30,4 +30,5 @@
     </append>
 
 </configs>
+
 

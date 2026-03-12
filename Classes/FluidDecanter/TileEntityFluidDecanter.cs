@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -6,7 +6,7 @@ using System.IO;
 using System.Reflection;
 using UnityEngine;
 
-public class TileEntityFuelConverter : TileEntityMachine
+public class TileEntityFluidDecanter : TileEntityMachine
 {
     private const int PersistVersion = 102;
     private const int ClientSyncVersion = 1;
@@ -40,7 +40,7 @@ public class TileEntityFuelConverter : TileEntityMachine
     {
         "FluidConvertType",
         "FuelConvertFluidType",
-        "FuelConverterFluidType",
+        "FluidDecanterFluidType",
         "FuelConvertFluid"
     };
 
@@ -48,7 +48,7 @@ public class TileEntityFuelConverter : TileEntityMachine
     {
         "FluidConvertAmountGallons",
         "FuelConvertAmountGallons",
-        "FuelConverterAmountGallons",
+        "FluidDecanterAmountGallons",
         "FuelConvertGallons"
     };
 
@@ -56,7 +56,7 @@ public class TileEntityFuelConverter : TileEntityMachine
     {
         "FluidConvertReturnItem",
         "FuelConvertReturnItem",
-        "FuelConverterReturnItem"
+        "FluidDecanterReturnItem"
     };
 
     public List<InputTargetInfo> availableInputTargets = new List<InputTargetInfo>();
@@ -101,13 +101,13 @@ public class TileEntityFuelConverter : TileEntityMachine
 
     private string pendingItemOutputName = string.Empty;
 
-    public TileEntityFuelConverter(Chunk chunk) : base(chunk)
+    public TileEntityFluidDecanter(Chunk chunk) : base(chunk)
     {
     }
 
     public override TileEntityType GetTileEntityType()
     {
-        return unchecked((TileEntityType)UCTileEntityIDs.FuelConverter);
+        return unchecked((TileEntityType)UCTileEntityIDs.FluidDecanter);
     }
 
     public override void SetSimulatedByHLR(bool value)
@@ -1304,7 +1304,7 @@ public class TileEntityFuelConverter : TileEntityMachine
 
                 int inputCount = br.ReadInt32();
                 if (inputCount < 0 || inputCount > MaxSerializedInputTargets)
-                    throw new InvalidOperationException($"Invalid fuel converter input target count: {inputCount}");
+                    throw new InvalidOperationException($"Invalid fluid decanter input target count: {inputCount}");
 
                 availableInputTargets = new List<InputTargetInfo>(inputCount);
                 for (int i = 0; i < inputCount; i++)
@@ -1323,7 +1323,7 @@ public class TileEntityFuelConverter : TileEntityMachine
 
                 int outputCount = br.ReadInt32();
                 if (outputCount < 0 || outputCount > MaxSerializedOutputTargets)
-                    throw new InvalidOperationException($"Invalid fuel converter output target count: {outputCount}");
+                    throw new InvalidOperationException($"Invalid fluid decanter output target count: {outputCount}");
 
                 availableOutputTargets = new List<OutputTargetInfo>(outputCount);
                 for (int i = 0; i < outputCount; i++)
@@ -1456,7 +1456,7 @@ public class TileEntityFuelConverter : TileEntityMachine
         }
         catch (Exception ex)
         {
-            Log.Error($"[FuelConverter][READ] Failed at {ToWorldPos()} mode={mode}: {ex.Message}");
+            Log.Error($"[FluidDecanter][READ] Failed at {ToWorldPos()} mode={mode}: {ex.Message}");
             ResetState();
         }
     }
@@ -2050,6 +2050,7 @@ public class TileEntityFuelConverter : TileEntityMachine
             setModified();
     }
 }
+
 
 
 

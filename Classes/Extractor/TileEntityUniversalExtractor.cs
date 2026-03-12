@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -13,7 +13,7 @@ public static class UCTileEntityIDs
     public const int LiquidPipe = 137;
     public const int FluidPump = 138;
     public const int FluidStorage = 139;
-    public const int FuelConverter = 140;
+    public const int FluidDecanter = 140;
 }
 
 public class TileEntityUniversalExtractor : TileEntityMachine
@@ -76,7 +76,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
     // ---------------------------------------------
     public TileEntityUniversalExtractor(Chunk chunk) : base(chunk)
     {
-        DevLog($"CTOR — TileEntityUniversalExtractor CREATED -> IsOn = {isExtractorOn}");
+        DevLog($"CTOR â€” TileEntityUniversalExtractor CREATED -> IsOn = {isExtractorOn}");
     }
 
     // ---------------------------------------------
@@ -132,11 +132,11 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         if (!enabled)
         {
             isExtractorOn = false;
-            DevLog("SERVER SET ENABLED — false");
+            DevLog("SERVER SET ENABLED â€” false");
         }
         else
         {
-            DevLog("SERVER SET ENABLED — true");
+            DevLog("SERVER SET ENABLED â€” true");
         }
 
         SetModified();
@@ -168,9 +168,9 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             selectedOutputContainer = null;
 
             if (changed)
-                DevLog("SERVER SELECT OUTPUT — cleared (changed)");
+                DevLog("SERVER SELECT OUTPUT â€” cleared (changed)");
             else
-                DevLog("SERVER SELECT OUTPUT — cleared (no change)");
+                DevLog("SERVER SELECT OUTPUT â€” cleared (no change)");
 
             SetModified();
             NeedsUiRefresh = true;
@@ -228,9 +228,9 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         selectedOutputContainer = comp;
 
         if (changed)
-            DevLog($"SERVER SELECT OUTPUT — {chestPos} mode={mode} pipeGraphId={parsedPipeGraphId} (changed)");
+            DevLog($"SERVER SELECT OUTPUT â€” {chestPos} mode={mode} pipeGraphId={parsedPipeGraphId} (changed)");
         else
-            DevLog($"SERVER SELECT OUTPUT — {chestPos} mode={mode} pipeGraphId={parsedPipeGraphId} (same selection)");
+            DevLog($"SERVER SELECT OUTPUT â€” {chestPos} mode={mode} pipeGraphId={parsedPipeGraphId} (same selection)");
 
         SetModified();
         NeedsUiRefresh = true;
@@ -288,7 +288,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             return;
 
         availableOutputTargets = MachineOutputDiscovery.GetAvailableOutputs(world, 0, ToWorldPos(), 8);
-        DevLog($"RefreshAvailableOutputTargets — count={availableOutputTargets?.Count ?? 0}");
+        DevLog($"RefreshAvailableOutputTargets â€” count={availableOutputTargets?.Count ?? 0}");
     }
 
     protected override void OnPowerStateChanged(bool state)
@@ -335,7 +335,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
     // ---------------------------------------------
     public override IHLRSnapshot BuildHLRSnapshot(WorldBase world)
     {
-        DevLog("HLR SNAPSHOT BUILD — BEGIN");
+        DevLog("HLR SNAPSHOT BUILD â€” BEGIN");
         DevLog($"WorldTime={world.GetWorldTime()} IsOn={isExtractorOn} Timers={timers.Count}");
 
         for (int i = 0; i < timers.Count; i++)
@@ -355,7 +355,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             OwedResources = new Dictionary<string, int>()
         };
 
-        DevLog("HLR SNAPSHOT BUILD — END");
+        DevLog("HLR SNAPSHOT BUILD â€” END");
         return snapshot;
     }
 
@@ -364,11 +364,11 @@ public class TileEntityUniversalExtractor : TileEntityMachine
     // ---------------------------------------------
     public override void ApplyHLRSnapshot(object snapshotObj)
     {
-        DevLog("HLR SNAPSHOT APPLY — BEGIN");
+        DevLog("HLR SNAPSHOT APPLY â€” BEGIN");
 
         if (!(snapshotObj is ExtractorSnapshotV1 snapshot))
         {
-            DevLog("HLR SNAPSHOT APPLY — FAILED (invalid snapshot type)");
+            DevLog("HLR SNAPSHOT APPLY â€” FAILED (invalid snapshot type)");
             return;
         }
 
@@ -395,7 +395,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             foreach (var kvp in snapshot.OwedResources)
             {
                 AddPendingOutput(kvp.Key, kvp.Value);
-                DevLog($"Applied OwedResource — {kvp.Value}x {kvp.Key}");
+                DevLog($"Applied OwedResource â€” {kvp.Value}x {kvp.Key}");
             }
         }
         else
@@ -406,7 +406,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         // HLR is done with this machine
         simulatedByHLR = false;
 
-        DevLog("HLR SNAPSHOT APPLY — END");
+        DevLog("HLR SNAPSHOT APPLY â€” END");
     }
 
     public void EnsureTimersLoaded()
@@ -674,20 +674,20 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
         if (world.IsRemote())
         {
-            DevLog("UpdateTick ABORT — remote world");
+            DevLog("UpdateTick ABORT â€” remote world");
             return;
         }
 
         if (simulatedByHLR)
         {
-            DevLog("UpdateTick ABORT — simulated by HLR");
+            DevLog("UpdateTick ABORT â€” simulated by HLR");
             return;
         }
 
         bool resolvedOutput = ResolveSelectedOutputIfNeeded(world);
         if (resolvedOutput)
         {
-            DevLog("UpdateTick — selected output runtime state refreshed");
+            DevLog("UpdateTick â€” selected output runtime state refreshed");
         }
 
         RefreshAvailableOutputTargets(world);
@@ -700,7 +700,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         // -----------------------------
         if (timers.Count == 0)
         {
-            DevLog("No timers loaded — LoadConfig()");
+            DevLog("No timers loaded â€” LoadConfig()");
             LoadConfig();
         }
 
@@ -713,7 +713,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         {
             if (isExtractorOn)
             {
-                DevLog("Selected output is invalid or missing — shutting down extractor");
+                DevLog("Selected output is invalid or missing â€” shutting down extractor");
             }
 
             isExtractorOn = false;
@@ -738,7 +738,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         // -----------------------------
         if (!isExtractorOn && isEnabledByPlayer)
         {
-            DevLog("Output storage found — extractor running");
+            DevLog("Output storage found â€” extractor running");
             isExtractorOn = true;
             SetModified();
         }
@@ -753,7 +753,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             if (!HasFuelToRunThisTick())
             {
                 if (isExtractorOn)
-                    DevLog("Fuel unavailable — extractor paused");
+                    DevLog("Fuel unavailable â€” extractor paused");
 
                 isExtractorOn = false;
                 SetModified();
@@ -769,7 +769,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         // -----------------------------
         if (pendingOutput.Count > 0)
         {
-            DevLog($"PendingOutput DETECTED — entries={pendingOutput.Count}");
+            DevLog($"PendingOutput DETECTED â€” entries={pendingOutput.Count}");
             LogPendingOutput();
             FlushPendingOutput(world);
         }
@@ -782,12 +782,12 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         foreach (var timer in timers)
         {
             timer.Counter++;
-            DevLog($"Timer TICK — {timer.Resource} {timer.Counter}/{timer.Speed}");
+            DevLog($"Timer TICK â€” {timer.Resource} {timer.Counter}/{timer.Speed}");
 
             if (timer.Counter >= timer.Speed)
             {
                 timer.Counter = 0;
-                DevLog($"Timer READY — producing {timer.Resource}");
+                DevLog($"Timer READY â€” producing {timer.Resource}");
                 ProduceResource(world, timer);
             }
         }
@@ -824,12 +824,12 @@ public class TileEntityUniversalExtractor : TileEntityMachine
     // ---------------------------------------------
     private void ProduceResource(World world, ResourceTimer timer)
     {
-        DevLog($"ProduceResource BEGIN — {timer.Resource}");
+        DevLog($"ProduceResource BEGIN â€” {timer.Resource}");
 
         var iv = ItemClass.GetItem(timer.Resource, false);
         if (iv == null || iv.type == ItemValue.None.type)
         {
-            DevLog($"ProduceResource FAIL — invalid item '{timer.Resource}'");
+            DevLog($"ProduceResource FAIL â€” invalid item '{timer.Resource}'");
             return;
         }
 
@@ -841,7 +841,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
 
         AddPendingOutput(timer.Resource, amount);
-        DevLog($"ProduceResource QUEUED — {amount}x {timer.Resource}");
+        DevLog($"ProduceResource QUEUED â€” {amount}x {timer.Resource}");
 
         LogPendingOutput();
         DevLog("ProduceResource END");
@@ -856,7 +856,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
         if (pendingOutput.Count == 0)
         {
-            DevLog("FLUSH ABORT — no pending output");
+            DevLog("FLUSH ABORT â€” no pending output");
             return;
         }
 
@@ -865,7 +865,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         if (SelectedOutputMode == OutputTransportMode.Pipe &&
             !PipeTransportManager.CanDispatch(LastPipeDispatchWorldTime, now, world, 0, SelectedPipeGraphId, ToWorldPos(), SelectedOutputChestPos))
         {
-            DevLog("FLUSH WAIT — pipe dispatch interval not ready yet");
+            DevLog("FLUSH WAIT â€” pipe dispatch interval not ready yet");
             return;
         }
 
@@ -878,7 +878,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
             if (pipeJobsAllowedThisPass <= 0)
             {
-                DevLog($"FLUSH PIPE BLOCKED — graph {SelectedPipeGraphId} has no remaining job capacity");
+                DevLog($"FLUSH PIPE BLOCKED â€” graph {SelectedPipeGraphId} has no remaining job capacity");
                 return;
             }
         }
@@ -888,7 +888,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         {
             if (SelectedOutputChestPos == Vector3i.zero || SelectedPipeGraphId == Guid.Empty)
             {
-                DevLog("FLUSH BLOCKED — pipe output selected but target/graph is invalid");
+                DevLog("FLUSH BLOCKED â€” pipe output selected but target/graph is invalid");
                 return;
             }
 
@@ -909,11 +909,11 @@ public class TileEntityUniversalExtractor : TileEntityMachine
                     if (!pendingOutput.TryGetValue(itemName, out int count))
                         continue;
 
-                    DevLog($"FLUSH ATTEMPT — {count}x {itemName}");
+                    DevLog($"FLUSH ATTEMPT â€” {count}x {itemName}");
 
                     if (count <= 0)
                     {
-                        DevLog($"FLUSH CLEANUP — removing zero-count entry '{itemName}'");
+                        DevLog($"FLUSH CLEANUP â€” removing zero-count entry '{itemName}'");
                         pendingOutput.Remove(itemName);
                         continue;
                     }
@@ -921,7 +921,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
                     ItemValue itemValue = ItemClass.GetItem(itemName, false);
                     if (itemValue == null || itemValue.type == ItemValue.None.type)
                     {
-                        DevLog($"FLUSH FAILED — invalid item '{itemName}', removing");
+                        DevLog($"FLUSH FAILED â€” invalid item '{itemName}', removing");
                         pendingOutput.Remove(itemName);
                         continue;
                     }
@@ -951,17 +951,17 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
                         pendingOutputRoundRobinIndex = index + 1;
 
-                        DevLog($"FLUSH PIPE SUCCESS — queued job {job.JobId} for {acceptedAmount}x {itemName} routeLen={job.RoutePipePositions.Count}");
+                        DevLog($"FLUSH PIPE SUCCESS â€” queued job {job.JobId} for {acceptedAmount}x {itemName} routeLen={job.RoutePipePositions.Count}");
                     }
                     else
                     {
-                        DevLog($"FLUSH PIPE BLOCKED — could not create transport job for {count}x {itemName}");
+                        DevLog($"FLUSH PIPE BLOCKED â€” could not create transport job for {count}x {itemName}");
                     }
                 }
 
                 if (!dispatchedAnyThisCycle)
                 {
-                    DevLog("FLUSH PIPE STOP — no dispatches succeeded this cycle");
+                    DevLog("FLUSH PIPE STOP â€” no dispatches succeeded this cycle");
                     break;
                 }
             }
@@ -969,7 +969,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             if (pipeJobsDispatchedThisPass > 0)
             {
                 LastPipeDispatchWorldTime = now;
-                DevLog($"FLUSH PIPE PASS COMPLETE — dispatched {pipeJobsDispatchedThisPass}/{pipeJobsAllowedThisPass} jobs this pass");
+                DevLog($"FLUSH PIPE PASS COMPLETE â€” dispatched {pipeJobsDispatchedThisPass}/{pipeJobsAllowedThisPass} jobs this pass");
             }
 
             DevLog("FLUSH END");
@@ -982,11 +982,11 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             string itemName = kvp.Key;
             int count = kvp.Value;
 
-            DevLog($"FLUSH ATTEMPT — {count}x {itemName}");
+            DevLog($"FLUSH ATTEMPT â€” {count}x {itemName}");
 
             if (count <= 0)
             {
-                DevLog($"FLUSH CLEANUP — removing zero-count entry '{itemName}'");
+                DevLog($"FLUSH CLEANUP â€” removing zero-count entry '{itemName}'");
                 pendingOutput.Remove(itemName);
                 continue;
             }
@@ -994,14 +994,14 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             ItemValue itemValue = ItemClass.GetItem(itemName, false);
             if (itemValue == null || itemValue.type == ItemValue.None.type)
             {
-                DevLog($"FLUSH FAILED — invalid item '{itemName}', removing");
+                DevLog($"FLUSH FAILED â€” invalid item '{itemName}', removing");
                 pendingOutput.Remove(itemName);
                 continue;
             }
 
             if (SelectedOutputChestPos == Vector3i.zero)
             {
-                DevLog("FLUSH BLOCKED — adjacent output selected but no chest is selected");
+                DevLog("FLUSH BLOCKED â€” adjacent output selected but no chest is selected");
                 break;
             }
 
@@ -1011,11 +1011,11 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             if (success)
             {
                 pendingOutput.Remove(itemName);
-                DevLog($"FLUSH ADJACENT SUCCESS — deposited {count}x {itemName} into selected chest");
+                DevLog($"FLUSH ADJACENT SUCCESS â€” deposited {count}x {itemName} into selected chest");
             }
             else
             {
-                DevLog($"FLUSH ADJACENT BLOCKED — selected chest could not accept {count}x {itemName}");
+                DevLog($"FLUSH ADJACENT BLOCKED â€” selected chest could not accept {count}x {itemName}");
                 break;
             }
         }
@@ -1063,7 +1063,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
         if (outputs == null || outputs.Count == 0)
         {
-            DevLog("ResolveSelectedOutputIfNeeded — no available outputs found");
+            DevLog("ResolveSelectedOutputIfNeeded â€” no available outputs found");
             return changed;
         }
 
@@ -1090,7 +1090,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
         if (fallbackTarget == null)
         {
-            DevLog("ResolveSelectedOutputIfNeeded — selected pipe output could not be refreshed");
+            DevLog("ResolveSelectedOutputIfNeeded â€” selected pipe output could not be refreshed");
             return changed;
         }
 
@@ -1098,7 +1098,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         {
             SelectedPipeGraphId = fallbackTarget.PipeGraphId;
             changed = true;
-            DevLog($"ResolveSelectedOutputIfNeeded — refreshed pipe graph id to {SelectedPipeGraphId}");
+            DevLog($"ResolveSelectedOutputIfNeeded â€” refreshed pipe graph id to {SelectedPipeGraphId}");
         }
 
         return changed;
@@ -1111,13 +1111,13 @@ public class TileEntityUniversalExtractor : TileEntityMachine
     {
         if (remaining == null || remaining.IsEmpty() || remaining.count <= 0)
         {
-            DevLog("TryAddToSelectedAdjacentStorage ABORT — remaining stack was null/empty");
+            DevLog("TryAddToSelectedAdjacentStorage ABORT â€” remaining stack was null/empty");
             return true;
         }
 
         if (SelectedOutputChestPos == Vector3i.zero)
         {
-            DevLog("TryAddToSelectedAdjacentStorage ABORT — no selected output chest");
+            DevLog("TryAddToSelectedAdjacentStorage ABORT â€” no selected output chest");
             return false;
         }
 
@@ -1127,31 +1127,31 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         int manhattan = Math.Abs(delta.x) + Math.Abs(delta.y) + Math.Abs(delta.z);
         if (manhattan != 1)
         {
-            DevLog($"TryAddToSelectedAdjacentStorage ABORT — selected chest at {SelectedOutputChestPos} is not directly adjacent");
+            DevLog($"TryAddToSelectedAdjacentStorage ABORT â€” selected chest at {SelectedOutputChestPos} is not directly adjacent");
             return false;
         }
 
         if (!(world.GetTileEntity(0, SelectedOutputChestPos) is TileEntityComposite comp))
         {
-            DevLog($"TryAddToSelectedAdjacentStorage FAIL — no composite TE at {SelectedOutputChestPos}");
+            DevLog($"TryAddToSelectedAdjacentStorage FAIL â€” no composite TE at {SelectedOutputChestPos}");
             return false;
         }
 
         TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
         if (storage == null || storage.items == null)
         {
-            DevLog($"TryAddToSelectedAdjacentStorage FAIL — selected chest at {SelectedOutputChestPos} has no storage feature");
+            DevLog($"TryAddToSelectedAdjacentStorage FAIL â€” selected chest at {SelectedOutputChestPos} has no storage feature");
             return false;
         }
 
         if (storage.IsUserAccessing())
         {
-            DevLog($"TryAddToSelectedAdjacentStorage WAIT — selected chest at {SelectedOutputChestPos} is currently in use");
+            DevLog($"TryAddToSelectedAdjacentStorage WAIT â€” selected chest at {SelectedOutputChestPos} is currently in use");
             return false;
         }
 
         string itemName = remaining.itemValue?.ItemClass?.GetItemName() ?? "unknown";
-        DevLog($"TryAddToSelectedAdjacentStorage BEGIN — {remaining.count}x {itemName} into {SelectedOutputChestPos}");
+        DevLog($"TryAddToSelectedAdjacentStorage BEGIN â€” {remaining.count}x {itemName} into {SelectedOutputChestPos}");
 
         bool changed = false;
 
@@ -1200,11 +1200,11 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
         if (remaining.count <= 0)
         {
-            DevLog("TryAddToSelectedAdjacentStorage SUCCESS — fully deposited");
+            DevLog("TryAddToSelectedAdjacentStorage SUCCESS â€” fully deposited");
             return true;
         }
 
-        DevLog($"TryAddToSelectedAdjacentStorage BLOCKED — selected chest full, {remaining.count} remaining");
+        DevLog($"TryAddToSelectedAdjacentStorage BLOCKED â€” selected chest full, {remaining.count} remaining");
         return false;
     }
 
@@ -1222,7 +1222,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         string resStr = blockValue.Block.Properties.GetString("ResourceGenerated");
         if (string.IsNullOrEmpty(resStr))
         {
-            DevLog("LoadConfig ABORT — no ResourceGenerated");
+            DevLog("LoadConfig ABORT â€” no ResourceGenerated");
             return;
         }
 
@@ -1254,10 +1254,10 @@ public class TileEntityUniversalExtractor : TileEntityMachine
                 Counter = 0
             });
 
-            DevLog($"Configured Timer — {res[i]} {min}-{max} speed={speed}");
+            DevLog($"Configured Timer â€” {res[i]} {min}-{max} speed={speed}");
         }
         setModified();
-        DevLog($"LoadConfig END — timers={timers.Count}");
+        DevLog($"LoadConfig END â€” timers={timers.Count}");
     }
 
     // ---------------------------------------------
@@ -1489,6 +1489,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
     }
 }
+
 
 
 

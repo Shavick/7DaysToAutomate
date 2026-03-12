@@ -1,12 +1,12 @@
-using UnityEngine;
+﻿using UnityEngine;
 
-public class XUiC_FuelConverterOutputContainerEntry : XUiController
+public class XUiC_FluidDecanterOutputContainerEntry : XUiController
 {
     public TileEntityComposite ContainerTE;
     public OutputTargetInfo OutputTarget;
 
     public bool IsSelected { get; private set; }
-    public XUiC_FuelConverterOutputContainerList OutputList;
+    public XUiC_FluidDecanterOutputContainerList OutputList;
 
     public override void Init()
     {
@@ -70,3 +70,4 @@ public class XUiC_FuelConverterOutputContainerEntry : XUiController
         return te.teData?.Block?.GetLocalizedBlockName() ?? string.Empty;
     }
 }
+

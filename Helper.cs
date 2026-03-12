@@ -1,4 +1,4 @@
-using _7DaysToAutomate.Classes.Net_Packages;
+﻿using _7DaysToAutomate.Classes.Net_Packages;
 
 public static class Helper
 {
@@ -23,7 +23,7 @@ public static class Helper
             crafter.NeedsUiRefresh = true;
         }
 
-        if (te is TileEntityFuelConverter converter)
+        if (te is TileEntityFluidDecanter converter)
         {
             converter.RefreshAvailableInputTargets(world);
             converter.RefreshAvailableOutputTargets(world);
@@ -81,9 +81,9 @@ public static class Helper
                 }
 
 
-                if (customUi == "FuelConverterInfo")
+                if (customUi == "FluidDecanterInfo")
                 {
-                    XUiC_FuelConverterInfo.Open(localPlayer, blockPos);
+                    XUiC_FluidDecanterInfo.Open(localPlayer, blockPos);
                     return;
                 }
                 Log.Error($"[NetPkg][MachineUI][SERVER] Unknown local-host UI key '{customUi}'");
@@ -369,87 +369,87 @@ public static class Helper
 
         te.ServerSetPipePriority(priority);
     }
-    public static void RequestFuelConverterSelectInput(Vector3i blockPos, Vector3i chestPos, string pipeGraphId)
+    public static void RequestFluidDecanterSelectInput(Vector3i blockPos, Vector3i chestPos, string pipeGraphId)
     {
         var world = GameManager.Instance.World;
         if (world == null)
         {
-            Log.Error("[FuelConverter][Helper] RequestFuelConverterSelectInput world is null");
+            Log.Error("[FluidDecanter][Helper] RequestFluidDecanterSelectInput world is null");
             return;
         }
 
         if (world.IsRemote())
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
-                NetPackageManager.GetPackage<NetPackageFuelConverterControl>()
+                NetPackageManager.GetPackage<NetPackageFluidDecanterControl>()
                     .SetupSelectInput(blockPos, GetLocalRequesterEntityId(world), chestPos, pipeGraphId),
                 false
             );
             return;
         }
 
-        var te = world.GetTileEntity(blockPos) as TileEntityFuelConverter;
+        var te = world.GetTileEntity(blockPos) as TileEntityFluidDecanter;
         if (te == null)
         {
-            Log.Error($"[FuelConverter][Helper] No converter at pos={blockPos}");
+            Log.Error($"[FluidDecanter][Helper] No converter at pos={blockPos}");
             return;
         }
 
         te.ServerSelectInputContainer(chestPos, pipeGraphId);
     }
 
-    public static void RequestFuelConverterSelectOutput(Vector3i blockPos, Vector3i targetPos, int mode, string pipeGraphId)
+    public static void RequestFluidDecanterSelectOutput(Vector3i blockPos, Vector3i targetPos, int mode, string pipeGraphId)
     {
         var world = GameManager.Instance.World;
         if (world == null)
         {
-            Log.Error("[FuelConverter][Helper] RequestFuelConverterSelectOutput world is null");
+            Log.Error("[FluidDecanter][Helper] RequestFluidDecanterSelectOutput world is null");
             return;
         }
 
         if (world.IsRemote())
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
-                NetPackageManager.GetPackage<NetPackageFuelConverterControl>()
+                NetPackageManager.GetPackage<NetPackageFluidDecanterControl>()
                     .SetupSelectOutput(blockPos, GetLocalRequesterEntityId(world), targetPos, mode, pipeGraphId),
                 false
             );
             return;
         }
 
-        var te = world.GetTileEntity(blockPos) as TileEntityFuelConverter;
+        var te = world.GetTileEntity(blockPos) as TileEntityFluidDecanter;
         if (te == null)
         {
-            Log.Error($"[FuelConverter][Helper] No converter at pos={blockPos}");
+            Log.Error($"[FluidDecanter][Helper] No converter at pos={blockPos}");
             return;
         }
 
         te.ServerSelectOutputContainer(targetPos, (OutputTransportMode)mode, pipeGraphId);
     }
 
-    public static void RequestFuelConverterCycleFluid(Vector3i blockPos, int direction)
+    public static void RequestFluidDecanterCycleFluid(Vector3i blockPos, int direction)
     {
         var world = GameManager.Instance.World;
         if (world == null)
         {
-            Log.Error("[FuelConverter][Helper] RequestFuelConverterCycleFluid world is null");
+            Log.Error("[FluidDecanter][Helper] RequestFluidDecanterCycleFluid world is null");
             return;
         }
 
         if (world.IsRemote())
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
-                NetPackageManager.GetPackage<NetPackageFuelConverterControl>()
+                NetPackageManager.GetPackage<NetPackageFluidDecanterControl>()
                     .SetupCycleFluid(blockPos, GetLocalRequesterEntityId(world), direction),
                 false
             );
             return;
         }
 
-        var te = world.GetTileEntity(blockPos) as TileEntityFuelConverter;
+        var te = world.GetTileEntity(blockPos) as TileEntityFluidDecanter;
         if (te == null)
         {
-            Log.Error($"[FuelConverter][Helper] No converter at pos={blockPos}");
+            Log.Error($"[FluidDecanter][Helper] No converter at pos={blockPos}");
             return;
         }
 
@@ -486,6 +486,7 @@ public static class Helper
         );
     }
 }
+
 
 
 

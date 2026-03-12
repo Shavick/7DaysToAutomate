@@ -1,6 +1,6 @@
-namespace _7DaysToAutomate.Classes.Net_Packages
+﻿namespace _7DaysToAutomate.Classes.Net_Packages
 {
-    public class NetPackageFuelConverterControl : NetPackage
+    public class NetPackageFluidDecanterControl : NetPackage
     {
         public enum MessageType : byte
         {
@@ -18,7 +18,7 @@ namespace _7DaysToAutomate.Classes.Net_Packages
         private string _pipeGraphId;
         private int _direction;
 
-        public NetPackageFuelConverterControl SetupSelectInput(Vector3i blockPos, int requesterEntityId, Vector3i chestPos, string pipeGraphId)
+        public NetPackageFluidDecanterControl SetupSelectInput(Vector3i blockPos, int requesterEntityId, Vector3i chestPos, string pipeGraphId)
         {
             _blockPos = blockPos;
             _messageType = MessageType.RequestSelectInput;
@@ -30,7 +30,7 @@ namespace _7DaysToAutomate.Classes.Net_Packages
             return this;
         }
 
-        public NetPackageFuelConverterControl SetupSelectOutput(Vector3i blockPos, int requesterEntityId, Vector3i chestPos, int outputMode, string pipeGraphId)
+        public NetPackageFluidDecanterControl SetupSelectOutput(Vector3i blockPos, int requesterEntityId, Vector3i chestPos, int outputMode, string pipeGraphId)
         {
             _blockPos = blockPos;
             _messageType = MessageType.RequestSelectOutput;
@@ -42,7 +42,7 @@ namespace _7DaysToAutomate.Classes.Net_Packages
             return this;
         }
 
-        public NetPackageFuelConverterControl SetupCycleFluid(Vector3i blockPos, int requesterEntityId, int direction)
+        public NetPackageFluidDecanterControl SetupCycleFluid(Vector3i blockPos, int requesterEntityId, int direction)
         {
             _blockPos = blockPos;
             _messageType = MessageType.RequestCycleFluid;
@@ -107,11 +107,11 @@ namespace _7DaysToAutomate.Classes.Net_Packages
             if (!SingletonMonoBehaviour<ConnectionManager>.Instance.IsServer)
                 return;
 
-            if (!NetPackageMachineAuthority.TryValidateRequester(world, this, _requesterEntityId, _blockPos, "FuelConverterControl", out EntityPlayer requester))
+            if (!NetPackageMachineAuthority.TryValidateRequester(world, this, _requesterEntityId, _blockPos, "FluidDecanterControl", out EntityPlayer requester))
                 return;
 
             TileEntity te = world.GetTileEntity(_blockPos);
-            if (!(te is TileEntityFuelConverter converter))
+            if (!(te is TileEntityFluidDecanter converter))
                 return;
 
             switch (_messageType)
@@ -131,3 +131,4 @@ namespace _7DaysToAutomate.Classes.Net_Packages
         }
     }
 }
+

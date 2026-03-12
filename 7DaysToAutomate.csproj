@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -100,13 +100,13 @@
     <Compile Include="Classes\Extractor\UniversalExtractorBlock.cs" />
     <Compile Include="Classes\Extractor\TileEntityUniversalExtractor.cs" />
     <Compile Include="Classes\Extractor\XUiC_IronExtractorInfo.cs" />
-    <Compile Include="Classes\FuelConverter\FuelConverterBlock.cs" />
-    <Compile Include="Classes\FuelConverter\TileEntityFuelConverter.cs" />
-    <Compile Include="Classes\FuelConverter\XUiC_FuelConverterInfo.cs" />
-    <Compile Include="Classes\FuelConverter\Containers\Input\XUiC_FuelConverterInputContainerEntry.cs" />
-    <Compile Include="Classes\FuelConverter\Containers\Input\XUiC_FuelConverterInputContainerList.cs" />
-    <Compile Include="Classes\FuelConverter\Containers\Output\XUiC_FuelConverterOutputContainerEntry.cs" />
-    <Compile Include="Classes\FuelConverter\Containers\Output\XUiC_FuelConverterOutputContainerList.cs" />
+    <Compile Include="Classes\FluidDecanter\FluidDecanterBlock.cs" />
+    <Compile Include="Classes\FluidDecanter\TileEntityFluidDecanter.cs" />
+    <Compile Include="Classes\FluidDecanter\XUiC_FluidDecanterInfo.cs" />
+    <Compile Include="Classes\FluidDecanter\Containers\Input\XUiC_FluidDecanterInputContainerEntry.cs" />
+    <Compile Include="Classes\FluidDecanter\Containers\Input\XUiC_FluidDecanterInputContainerList.cs" />
+    <Compile Include="Classes\FluidDecanter\Containers\Output\XUiC_FluidDecanterOutputContainerEntry.cs" />
+    <Compile Include="Classes\FluidDecanter\Containers\Output\XUiC_FluidDecanterOutputContainerList.cs" />
     <Compile Include="Classes\HarmonyPatches\BlockCompositeTileEntity_PipeEndpointDirtyPatch.cs" />
     <Compile Include="Classes\HarmonyPatches\Block_OnBlockActivated_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\ProgressionFromXML_Load_Patches.cs" />
@@ -123,7 +123,7 @@
     <Compile Include="Classes\Machines\TileEntityMachine.cs" />
     <Compile Include="Classes\Net Packages\NetPackageExtractor.cs" />
     <Compile Include="Classes\Net Packages\NetPackageExtractorControl.cs" />
-    <Compile Include="Classes\Net Packages\NetPackageFuelConverterControl.cs" />
+    <Compile Include="Classes\Net Packages\NetPackageFluidDecanterControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageOpenMachineUi.cs" />
     <Compile Include="Classes\\Net Packages\\NetPackageToggleMachinePower.cs" />
     <Compile Include="Classes\Networks\NetworkControllerBlock.cs" />
@@ -169,6 +169,7 @@
     <PostBuildEvent>call build.cmd</PostBuildEvent>
   </PropertyGroup>
 </Project>
+
 
 
 

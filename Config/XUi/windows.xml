@@ -1,4 +1,4 @@
-<configs>
+﻿<configs>
 
     <append xpath="/windows">
 
@@ -213,7 +213,7 @@
             </rect>
         </window>
 
-        <window name="windowFuelConverterInfo" controller="FuelConverterInfo, 7DaysToAutomate" width="450" height="380" panel="Center" cursor_area="true">
+        <window name="windowFluidDecanterInfo" controller="FluidDecanterInfo, 7DaysToAutomate" width="450" height="380" panel="Center" cursor_area="true">
             <rect pos="-125,-100">
 
                 <panel name="header" height="50" depth="1">
@@ -281,7 +281,7 @@
                         <label depth="6" pos="-75,-4" width="450" height="40" text="Input Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
                     </panel>
 
-                    <grid name="fuelInputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="FuelConverterInputContainerList, 7DaysToAutomate">
+                    <grid name="fuelInputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="FluidDecanterInputContainerList, 7DaysToAutomate">
                         <fuel_converter_input_container_entry name="0"/>
                     </grid>
                 </rect>
@@ -292,7 +292,7 @@
                         <label depth="6" pos="-75,-4" width="450" height="40" text="Output Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
                     </panel>
 
-                    <grid name="fuelOutputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="FuelConverterOutputContainerList, 7DaysToAutomate">
+                    <grid name="fuelOutputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="FluidDecanterOutputContainerList, 7DaysToAutomate">
                         <fuel_converter_output_container_entry name="0"/>
                     </grid>
                 </rect>
@@ -337,5 +337,6 @@
     </append>
 
 </configs>
+
 
 

@@ -1,4 +1,4 @@
-<configs>
+﻿<configs>
   <append xpath="/recipes">
     <!-- PIPE T1 -->
     <recipe name="itemPipe" count="12" craft_area="workbench" craft_time="15" tags="learnable,workbenchCrafting,itemPipe">
@@ -192,7 +192,7 @@
       <ingredient name="resourceMechanicalParts" count="6" />
       <ingredient name="resourceDuctTape" count="4" />
     </recipe>
-    <recipe name="universalFuelConverter" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalFuelConverter">
+    <recipe name="universalFluidDecanter" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalFluidDecanter">
       <ingredient name="resourceForgedSteel" count="20" />
       <ingredient name="resourceMechanicalParts" count="12" />
       <ingredient name="resourceElectricParts" count="8" />
@@ -206,6 +206,7 @@
     </recipe>
   </append>
 </configs>
+
 
 
 

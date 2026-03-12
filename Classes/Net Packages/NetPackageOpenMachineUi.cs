@@ -1,4 +1,4 @@
-namespace _7DaysToAutomate.Classes.Net_Packages
+﻿namespace _7DaysToAutomate.Classes.Net_Packages
 {
     public class NetPackageOpenMachineUi : NetPackage
     {
@@ -186,17 +186,17 @@ namespace _7DaysToAutomate.Classes.Net_Packages
                         Log.Out($"[NetPkg][MachineUI][CLIENT] Crafter UI open call executed");
                         break;
 
-                    case "FuelConverterInfo":
-                        if (!(te is TileEntityFuelConverter))
+                    case "FluidDecanterInfo":
+                        if (!(te is TileEntityFluidDecanter))
                         {
-                            Log.Error($"[NetPkg][MachineUI][CLIENT] TileEntity is not TileEntityFuelConverter for UI {CustomUi}");
+                            Log.Error($"[NetPkg][MachineUI][CLIENT] TileEntity is not TileEntityFluidDecanter for UI {CustomUi}");
                             return;
                         }
 
-                        Log.Out($"[NetPkg][MachineUI][CLIENT] Opening Fuel Converter UI at {BlockPos}");
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Opening Fluid Decanter UI at {BlockPos}");
                         localPlayer.AimingGun = false;
-                        XUiC_FuelConverterInfo.Open(localPlayer, BlockPos);
-                        Log.Out($"[NetPkg][MachineUI][CLIENT] Fuel Converter UI open call executed");
+                        XUiC_FluidDecanterInfo.Open(localPlayer, BlockPos);
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Fluid Decanter UI open call executed");
                         break;
 
                     default:
@@ -213,6 +213,7 @@ namespace _7DaysToAutomate.Classes.Net_Packages
 
     }
 }
+
 
 
 

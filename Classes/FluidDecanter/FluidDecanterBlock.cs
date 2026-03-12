@@ -1,8 +1,8 @@
-public class FuelConverterBlock : MachineBlock<TileEntityFuelConverter>
+﻿public class FluidDecanterBlock : MachineBlock<TileEntityFluidDecanter>
 {
-    protected override TileEntityFuelConverter CreateTileEntity(Chunk chunk)
+    protected override TileEntityFluidDecanter CreateTileEntity(Chunk chunk)
     {
-        return new TileEntityFuelConverter(chunk);
+        return new TileEntityFluidDecanter(chunk);
     }
 
     public override bool HasBlockActivationCommands(
@@ -43,7 +43,7 @@ public class FuelConverterBlock : MachineBlock<TileEntityFuelConverter>
         BlockValue blockValue,
         EntityPlayerLocal player)
     {
-        Helper.RequestMachineUIOpen(clrIdx, blockPos, player.entityId, "FuelConverterInfo");
+        Helper.RequestMachineUIOpen(clrIdx, blockPos, player.entityId, "FluidDecanterInfo");
         return true;
     }
 
@@ -70,6 +70,7 @@ public class FuelConverterBlock : MachineBlock<TileEntityFuelConverter>
         return $"{key} Open {name}";
     }
 }
+
 
 
 

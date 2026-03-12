@@ -1,15 +1,15 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
-public class XUiC_FuelConverterInputContainerList : XUiController
+public class XUiC_FluidDecanterInputContainerList : XUiController
 {
-    public TileEntityFuelConverter te;
+    public TileEntityFluidDecanter te;
     private Vector3i blockPos;
 
-    public XUiC_FuelConverterInputContainerEntry[] entries;
-    public XUiC_FuelConverterInputContainerEntry SelectedEntry;
+    public XUiC_FluidDecanterInputContainerEntry[] entries;
+    public XUiC_FluidDecanterInputContainerEntry SelectedEntry;
 
-    public void SetContext(TileEntityFuelConverter converter, Vector3i pos)
+    public void SetContext(TileEntityFluidDecanter converter, Vector3i pos)
     {
         te = converter;
         blockPos = pos;
@@ -20,7 +20,7 @@ public class XUiC_FuelConverterInputContainerList : XUiController
     {
         base.Init();
 
-        entries = GetChildrenByType<XUiC_FuelConverterInputContainerEntry>();
+        entries = GetChildrenByType<XUiC_FluidDecanterInputContainerEntry>();
         if (entries != null)
         {
             for (int i = 0; i < entries.Length; i++)
@@ -108,15 +108,16 @@ public class XUiC_FuelConverterInputContainerList : XUiController
 
     public void OnEntryPressed(XUiController sender, int mouseButton)
     {
-        XUiC_FuelConverterInputContainerEntry entry = sender as XUiC_FuelConverterInputContainerEntry;
+        XUiC_FluidDecanterInputContainerEntry entry = sender as XUiC_FluidDecanterInputContainerEntry;
         if (entry == null)
             return;
 
         if (entry.ContainerPos == Vector3i.zero || entry.PipeGraphId == Guid.Empty)
             return;
 
-        Helper.RequestFuelConverterSelectInput(blockPos, entry.ContainerPos, entry.PipeGraphId.ToString());
+        Helper.RequestFluidDecanterSelectInput(blockPos, entry.ContainerPos, entry.PipeGraphId.ToString());
         IsDirty = true;
         RefreshBindings(true);
     }
 }
+

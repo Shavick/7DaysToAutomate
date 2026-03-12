@@ -1,14 +1,14 @@
-using System;
+﻿using System;
 using UnityEngine;
 
-public class XUiC_FuelConverterInputContainerEntry : XUiController
+public class XUiC_FluidDecanterInputContainerEntry : XUiController
 {
     public TileEntityComposite ContainerTE;
     public Vector3i ContainerPos = Vector3i.zero;
     public Guid PipeGraphId = Guid.Empty;
 
     public bool IsSelected { get; private set; }
-    public XUiC_FuelConverterInputContainerList InputList;
+    public XUiC_FluidDecanterInputContainerList InputList;
 
     public override void Init()
     {
@@ -73,3 +73,4 @@ public class XUiC_FuelConverterInputContainerEntry : XUiController
         return te.teData?.Block?.GetLocalizedBlockName() ?? string.Empty;
     }
 }
+

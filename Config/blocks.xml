@@ -1,4 +1,4 @@
-<configs>
+﻿<configs>
     <append xpath="/blocks">
         <!-- Universal Extractor - Iron T1 -->
         <block name="universalIronExtractort1">
@@ -523,8 +523,8 @@
             <property name="FluidMax" value="100"/>
         </block>
 
-        <block name="universalFuelConverter">
-            <property name="Class" value="FuelConverterBlock, 7DaysToAutomate"/>
+        <block name="universalFluidDecanter">
+            <property name="Class" value="FluidDecanterBlock, 7DaysToAutomate"/>
             <property name="Material" value="Mmetal_hard"/>
             <property name="Shape" value="ModelEntity"/>
             <property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab"/>
@@ -534,7 +534,7 @@
             <property name="CustomIcon" value="generatorbank"/>
             <property name="Stacknumber" value="1"/>
             <property name="EconomicValue" value="1250"/>
-            <property name="DescriptionKey" value="fuelConverterDesc"/>
+            <property name="DescriptionKey" value="fluidDecanterDesc"/>
             <property name="UnlockedBy" value="craftingElectrician"/>
             <property name="InputSpeed" value="2"/>
             <property name="DevLogs" value="true"/>
@@ -682,6 +682,7 @@
      <property name="PipeSpeed" value="2" />
      <property name="PipeLatency" value="3" />
 -->
+
 
 
 
