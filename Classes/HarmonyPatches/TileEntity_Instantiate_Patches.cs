@@ -85,6 +85,14 @@ public static class UCPatch_TileEntity_Instantiate
             Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
             return false;
         }
+
+        if (tid == 140)
+        {
+            Log.Out("[UCPatch][TE.Instantiate] Handling tid=140 -> TileEntityFuelConverter");
+            __result = new TileEntityFuelConverter(_chunk);
+            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
+            return false;
+        }
         return true;
     }
 }

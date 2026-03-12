@@ -2,6 +2,38 @@ using _7DaysToAutomate.Classes.Net_Packages;
 
 public static class Helper
 {
+    public static void PrepareMachineForUiOpen(World world, TileEntity te, Vector3i blockPos)
+    {
+        if (world == null || te == null || world.IsRemote())
+            return;
+
+        if (te is TileEntityUniversalExtractor ex)
+        {
+            ex.EnsureTimersLoaded();
+            ex.setModified();
+        }
+
+        if (te is TileEntityUniversalCrafter crafter)
+        {
+            crafter.RefreshAvailableInputTargets(world);
+            crafter.RefreshAvailableOutputTargets(world);
+            crafter.ResolveSelectedInputContainer();
+            crafter.ResolveSelectedOutputContainer();
+            crafter.setModified();
+            crafter.NeedsUiRefresh = true;
+        }
+
+        if (te is TileEntityFuelConverter converter)
+        {
+            converter.RefreshAvailableInputTargets(world);
+            converter.RefreshAvailableOutputTargets(world);
+            converter.ResolveSelectedInputContainer();
+            converter.ResolveSelectedOutputContainer();
+            converter.ResolveFluidOutputGraph(world);
+            converter.setModified();
+            converter.NeedsUiRefresh = true;
+        }
+    }
     private static int GetLocalRequesterEntityId(World world)
     {
         if (world == null)
@@ -13,15 +45,15 @@ public static class Helper
 
     public static void RequestMachineUIOpen(int clrIdx, Vector3i blockPos, int entityPlayerId, string customUi)
     {
-        World world = GameManager.Instance.World;
-
-        // Ensure extractor state is ready before opening UI (works for SP + dedi)
-        var te = world.GetTileEntity(clrIdx, blockPos);
-        if (te is TileEntityUniversalExtractor ex)
+        World world = GameManager.Instance?.World;
+        if (world == null)
         {
-            ex.EnsureTimersLoaded();
-            ex.setModified();
+            Log.Error("[NetPkg][MachineUI] RequestMachineUIOpen world is null");
+            return;
         }
+
+        var te = world.GetTileEntity(clrIdx, blockPos);
+        PrepareMachineForUiOpen(world, te, blockPos);
 
         var cm = SingletonMonoBehaviour<ConnectionManager>.Instance;
 
@@ -33,6 +65,8 @@ public static class Helper
             {
                 if (te is TileEntityMachine machine && machine.IsDevLogging)
                     Log.Out($"[NetPkg][MachineUI][SERVER] Local host detected -> opening UI locally for {localPlayer.entityName}");
+
+                localPlayer.AimingGun = false;
 
                 if (customUi == "CrafterInfo")
                 {
@@ -335,12 +369,12 @@ public static class Helper
 
         te.ServerSetPipePriority(priority);
     }
-    public static void RequestFuelConverterSetEnabled(Vector3i blockPos, bool enabled)
+    public static void RequestFuelConverterSelectInput(Vector3i blockPos, Vector3i chestPos, string pipeGraphId)
     {
         var world = GameManager.Instance.World;
         if (world == null)
         {
-            Log.Error("[FuelConverter][Helper] RequestFuelConverterSetEnabled world is null");
+            Log.Error("[FuelConverter][Helper] RequestFuelConverterSelectInput world is null");
             return;
         }
 
@@ -348,7 +382,7 @@ public static class Helper
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageFuelConverterControl>()
-                    .SetupSetEnabled(blockPos, GetLocalRequesterEntityId(world), enabled),
+                    .SetupSelectInput(blockPos, GetLocalRequesterEntityId(world), chestPos, pipeGraphId),
                 false
             );
             return;
@@ -361,15 +395,15 @@ public static class Helper
             return;
         }
 
-        te.ServerSetEnabled(enabled);
+        te.ServerSelectInputContainer(chestPos, pipeGraphId);
     }
 
-    public static void RequestFuelConverterLoadHeld(Vector3i blockPos)
+    public static void RequestFuelConverterSelectOutput(Vector3i blockPos, Vector3i targetPos, int mode, string pipeGraphId)
     {
         var world = GameManager.Instance.World;
         if (world == null)
         {
-            Log.Error("[FuelConverter][Helper] RequestFuelConverterLoadHeld world is null");
+            Log.Error("[FuelConverter][Helper] RequestFuelConverterSelectOutput world is null");
             return;
         }
 
@@ -377,7 +411,7 @@ public static class Helper
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageFuelConverterControl>()
-                    .SetupLoadHeld(blockPos, GetLocalRequesterEntityId(world)),
+                    .SetupSelectOutput(blockPos, GetLocalRequesterEntityId(world), targetPos, mode, pipeGraphId),
                 false
             );
             return;
@@ -390,16 +424,15 @@ public static class Helper
             return;
         }
 
-        EntityPlayer requester = world.GetPrimaryPlayer();
-        te.ServerLoadFromHeldItem(requester);
+        te.ServerSelectOutputContainer(targetPos, (OutputTransportMode)mode, pipeGraphId);
     }
 
-    public static void RequestFuelConverterEject(Vector3i blockPos)
+    public static void RequestFuelConverterCycleFluid(Vector3i blockPos, int direction)
     {
         var world = GameManager.Instance.World;
         if (world == null)
         {
-            Log.Error("[FuelConverter][Helper] RequestFuelConverterEject world is null");
+            Log.Error("[FuelConverter][Helper] RequestFuelConverterCycleFluid world is null");
             return;
         }
 
@@ -407,7 +440,7 @@ public static class Helper
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
                 NetPackageManager.GetPackage<NetPackageFuelConverterControl>()
-                    .SetupEject(blockPos, GetLocalRequesterEntityId(world)),
+                    .SetupCycleFluid(blockPos, GetLocalRequesterEntityId(world), direction),
                 false
             );
             return;
@@ -420,10 +453,8 @@ public static class Helper
             return;
         }
 
-        EntityPlayer requester = world.GetPrimaryPlayer();
-        te.ServerEjectToPlayer(requester);
+        te.ServerCycleFluidSelection(direction);
     }
-
     public static void RequestPipeProbeSnapshot(int clrIdx, Vector3i blockPos, int entityPlayerId)
     {
         var world = GameManager.Instance?.World;
@@ -455,3 +486,18 @@ public static class Helper
         );
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

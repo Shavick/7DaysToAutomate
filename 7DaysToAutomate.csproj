@@ -103,6 +103,10 @@
     <Compile Include="Classes\FuelConverter\FuelConverterBlock.cs" />
     <Compile Include="Classes\FuelConverter\TileEntityFuelConverter.cs" />
     <Compile Include="Classes\FuelConverter\XUiC_FuelConverterInfo.cs" />
+    <Compile Include="Classes\FuelConverter\Containers\Input\XUiC_FuelConverterInputContainerEntry.cs" />
+    <Compile Include="Classes\FuelConverter\Containers\Input\XUiC_FuelConverterInputContainerList.cs" />
+    <Compile Include="Classes\FuelConverter\Containers\Output\XUiC_FuelConverterOutputContainerEntry.cs" />
+    <Compile Include="Classes\FuelConverter\Containers\Output\XUiC_FuelConverterOutputContainerList.cs" />
     <Compile Include="Classes\HarmonyPatches\BlockCompositeTileEntity_PipeEndpointDirtyPatch.cs" />
     <Compile Include="Classes\HarmonyPatches\Block_OnBlockActivated_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\ProgressionFromXML_Load_Patches.cs" />
@@ -136,7 +140,8 @@
     <Compile Include="Classes\Fluids\ItemActionPipeProbeNoAction.cs" />
     <Compile Include="Classes\Fluids\PipeProbeHudManager.cs" />
     <Compile Include="Classes\Fluids\XUiC_PipeProbeHud.cs" />
-    <Compile Include="Classes\Net Packages\NetPackagePipeProbe.cs" />    <Compile Include="Classes\Fluids\FluidConstants.cs" />
+    <Compile Include="Classes\Net Packages\NetPackagePipeProbe.cs" />
+    <Compile Include="Classes\Fluids\FluidConstants.cs" />
     <Compile Include="Classes\Fluids\FluidGraphData.cs" />
     <Compile Include="Classes\Fluids\FluidGraphManager.cs" />
     <Compile Include="Classes\Fluids\FluidPumpBlock.cs" />
@@ -164,3 +169,7 @@
     <PostBuildEvent>call build.cmd</PostBuildEvent>
   </PropertyGroup>
 </Project>
+
+
+
+

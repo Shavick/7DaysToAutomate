@@ -13,6 +13,7 @@ public static class UCTileEntityIDs
     public const int LiquidPipe = 137;
     public const int FluidPump = 138;
     public const int FluidStorage = 139;
+    public const int FuelConverter = 140;
 }
 
 public class TileEntityUniversalExtractor : TileEntityMachine
@@ -1488,6 +1489,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
     }
 }
+
 
 
 

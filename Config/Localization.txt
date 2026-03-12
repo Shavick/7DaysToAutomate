@@ -26,6 +26,10 @@ universalOilShaleExtractorDesc,"Automates oil shale extraction from oil shale so
 universalWasher,"Universal Washer"
 universalWasherDesc,"Washes selected materials using water as a processing fluid."
 
+universalFuelConverter,"Fluid Decanter"
+universalFluidConverter,"Fluid Decanter"
+fuelConverterDesc,"Extracts fluid from compatible items and injects it into connected liquid pipes."
+
 itemPipe,"Item Pipe (T1)"
 itemPipeElbow,"Item Pipe Elbow (T1)"
 itemPipeSmallJoint,"Item Pipe Junction (T1)"
@@ -81,3 +85,4 @@ fluidValveT3,"Fluid Valve (T3)"
 fluidValveDesc,"Inline shutoff valve for liquid pipes. Toggle open or closed to control flow."
 fluidValveT2Desc,"Improved inline valve with higher throughput."
 fluidValveT3Desc,"Advanced inline valve with high throughput."
+

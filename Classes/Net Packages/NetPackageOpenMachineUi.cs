@@ -81,25 +81,7 @@ namespace _7DaysToAutomate.Classes.Net_Packages
                     Log.Error($"[NetPkg][MachineUI][SERVER] TileEntity at {BlockPos} is not a TileEntityMachine");
                     return;
                 }
-
-                if (te is TileEntityUniversalExtractor ex)
-                {
-                    Log.Out($"[NetPkg][MachineUI][SERVER] EnsureTimersLoaded BEFORE count={(ex.timers?.Count ?? -1)}");
-                    ex.EnsureTimersLoaded();
-                    Log.Out($"[NetPkg][MachineUI][SERVER] EnsureTimersLoaded AFTER  count={(ex.timers?.Count ?? -1)}");
-                    ex.setModified();
-                }
-
-                if (te is TileEntityUniversalCrafter crafter)
-                {
-                    // Server-authoritative target discovery before UI open.
-                    crafter.RefreshAvailableInputTargets(_world);
-                    crafter.RefreshAvailableOutputTargets(_world);
-                    crafter.ResolveSelectedInputContainer();
-                    crafter.ResolveSelectedOutputContainer();
-                    crafter.setModified();
-                    crafter.NeedsUiRefresh = true;
-                }
+                Helper.PrepareMachineForUiOpen(_world, te, BlockPos);
 
                 if (string.IsNullOrEmpty(CustomUi))
                 {
@@ -116,7 +98,6 @@ namespace _7DaysToAutomate.Classes.Net_Packages
                 }
 
                 Log.Out($"[NetPkg][MachineUI][SERVER] Player validated: {player.entityName} ({player.entityId})");
-
                 var response = NetPackageManager.GetPackage<NetPackageOpenMachineUi>()
                     .Setup(ClrIdx, BlockPos, EntityIdThatOpenedIt, MessageType.OpenClient, CustomUi);
 
@@ -205,6 +186,19 @@ namespace _7DaysToAutomate.Classes.Net_Packages
                         Log.Out($"[NetPkg][MachineUI][CLIENT] Crafter UI open call executed");
                         break;
 
+                    case "FuelConverterInfo":
+                        if (!(te is TileEntityFuelConverter))
+                        {
+                            Log.Error($"[NetPkg][MachineUI][CLIENT] TileEntity is not TileEntityFuelConverter for UI {CustomUi}");
+                            return;
+                        }
+
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Opening Fuel Converter UI at {BlockPos}");
+                        localPlayer.AimingGun = false;
+                        XUiC_FuelConverterInfo.Open(localPlayer, BlockPos);
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Fuel Converter UI open call executed");
+                        break;
+
                     default:
                         Log.Error($"[NetPkg][MachineUI][CLIENT] Unknown UI key '{CustomUi}'");
                         break;
@@ -219,3 +213,13 @@ namespace _7DaysToAutomate.Classes.Net_Packages
 
     }
 }
+
+
+
+
+
+
+
+
+
+

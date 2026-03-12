@@ -192,6 +192,14 @@
       <ingredient name="resourceMechanicalParts" count="6" />
       <ingredient name="resourceDuctTape" count="4" />
     </recipe>
+    <recipe name="universalFuelConverter" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalFuelConverter">
+      <ingredient name="resourceForgedSteel" count="20" />
+      <ingredient name="resourceMechanicalParts" count="12" />
+      <ingredient name="resourceElectricParts" count="8" />
+      <ingredient name="resourceDuctTape" count="6" />
+      <ingredient name="resourceOil" count="20" />
+    </recipe>
+
     <!-- WASHER RECIPES -->
     <recipe name="resourceScrapIron" count="1" craft_area="washer" craft_time="10" tags="fluid:water,fluid_amount:2">
       <ingredient name="resourceScrapBrass" count="10" />

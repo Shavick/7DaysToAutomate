@@ -827,6 +827,78 @@ public static class PipeGraphManager
         return true;
     }
 
+    public static bool TryFindFirstMatchingStorageItem(
+        WorldBase world,
+        int clrIdx,
+        Guid pipeGraphId,
+        Vector3i storagePos,
+        HashSet<string> candidateItemNames,
+        out string matchedItemName,
+        out int matchedCount,
+        out string blockedReason)
+    {
+        matchedItemName = string.Empty;
+        matchedCount = 0;
+        blockedReason = "Unknown";
+
+        if (world == null || pipeGraphId == Guid.Empty || storagePos == Vector3i.zero)
+        {
+            blockedReason = "Invalid input graph selection";
+            return false;
+        }
+
+        if (candidateItemNames == null || candidateItemNames.Count == 0)
+        {
+            blockedReason = "No conversion rules for selected fluid";
+            return false;
+        }
+
+        if (!graphsById.TryGetValue(pipeGraphId, out PipeGraphData graph) || graph == null)
+        {
+            blockedReason = "Input graph unavailable";
+            return false;
+        }
+
+        if (!graph.ContainsStorageEndpoint(storagePos))
+        {
+            blockedReason = "Selected input not in graph";
+            return false;
+        }
+
+        if (!TryGetStorageItemCounts(world, clrIdx, pipeGraphId, storagePos, out Dictionary<string, int> itemCounts))
+        {
+            blockedReason = "Input storage unavailable";
+            return false;
+        }
+
+        if (itemCounts == null || itemCounts.Count == 0)
+        {
+            blockedReason = "Input storage empty";
+            return false;
+        }
+
+        List<string> orderedCandidates = new List<string>(candidateItemNames);
+        orderedCandidates.Sort(StringComparer.Ordinal);
+
+        for (int i = 0; i < orderedCandidates.Count; i++)
+        {
+            string itemName = orderedCandidates[i];
+            if (string.IsNullOrEmpty(itemName))
+                continue;
+
+            if (!itemCounts.TryGetValue(itemName, out int count) || count <= 0)
+                continue;
+
+            matchedItemName = itemName;
+            matchedCount = count;
+            blockedReason = string.Empty;
+            return true;
+        }
+
+        blockedReason = "No matching input item";
+        return false;
+    }
+
     public static bool TryConsumeStorageItems(
         WorldBase world,
         int clrIdx,
@@ -1219,6 +1291,7 @@ public static class PipeGraphManager
         yield return center + Vector3i.down;
     }
 }
+
 
 
 

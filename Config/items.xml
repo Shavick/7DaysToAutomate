@@ -1,9 +1,15 @@
-<items>
+<configs>
 
-    <append xpath="items">
-
+    <append xpath="/items/item[@name='drinkJarBoiledWater']">
+        <property name="FluidConvertType" value="water"/>
+        <property name="FluidConvertAmountGallons" value="0.5"/>
+        <property name="FluidConvertReturnItem" value="drinkJarEmpty"/>
     </append>
 
-</items>
+    <append xpath="/items/item[@name='ammoGasCan']">
+        <property name="FluidConvertType" value="gas"/>
+        <property name="FluidConvertAmountGallons" value="2"/>
+    </append>
 
+</configs>
 
