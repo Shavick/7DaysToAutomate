@@ -342,6 +342,35 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
         Log.Out($"[FluidGraph][Intake] {intakePos} below={belowPos} block={blockName}");
     }
 
+    public override void OnBlockLoaded(
+        WorldBase world,
+        int clrIdx,
+        Vector3i blockPos,
+        BlockValue blockValue)
+    {
+        base.OnBlockLoaded(world, clrIdx, blockPos, blockValue);
+
+        if (world.IsRemote() || blockValue.ischild)
+            return;
+
+        MarkSelfAndAdjacentPipesDirty(world, clrIdx, blockPos);
+    }
+
+    public override void OnBlockUnloaded(
+        WorldBase world,
+        int clrIdx,
+        Vector3i blockPos,
+        BlockValue blockValue)
+    {
+        if (!world.IsRemote() && !blockValue.ischild)
+        {
+            for (int i = 0; i < NeighborOffsets.Length; i++)
+                MarkPipeDirtyAt(world, clrIdx, blockPos + NeighborOffsets[i]);
+        }
+
+        base.OnBlockUnloaded(world, clrIdx, blockPos, blockValue);
+    }
+
     public override void OnBlockAdded(
         WorldBase world,
         Chunk chunk,

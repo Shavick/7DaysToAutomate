@@ -19,6 +19,8 @@ public static class FluidGraphManager
 
     private static readonly Dictionary<Guid, FluidGraphData> graphsById = new Dictionary<Guid, FluidGraphData>();
     private static readonly HashSet<Vector3i> dirtyPipePositions = new HashSet<Vector3i>();
+    private static readonly Dictionary<Guid, ulong> lastGraphRebuildWorldTime = new Dictionary<Guid, ulong>();
+    private const ulong GraphRebuildCooldownTicks = 20UL;
 
     public static ulong LastRebuildWorldTime { get; private set; } = 0UL;
 
@@ -483,6 +485,7 @@ public static class FluidGraphManager
     {
         graphsById.Clear();
         dirtyPipePositions.Clear();
+        lastGraphRebuildWorldTime.Clear();
         LastRebuildWorldTime = 0UL;
     }
 
@@ -499,6 +502,7 @@ public static class FluidGraphManager
         if (dirtyPipePositions.Count == 0)
             return;
 
+        ulong now = world.GetWorldTime();
         int processed = 0;
         List<Vector3i> batch = new List<Vector3i>(dirtyPipePositions);
 
@@ -508,15 +512,26 @@ public static class FluidGraphManager
             if (!dirtyPipePositions.Contains(seedPos))
                 continue;
 
-            RebuildGraphFromSeed(world, 0, seedPos);
+            if (SafeWorldRead.TryGetTileEntity(world, 0, seedPos, out TileEntity seedEntity) && seedEntity is TileEntityLiquidPipe seedPipe)
+            {
+                Guid currentGraphId = seedPipe.FluidGraphId;
+                if (currentGraphId != Guid.Empty &&
+                    lastGraphRebuildWorldTime.TryGetValue(currentGraphId, out ulong lastRebuildTime) &&
+                    now < lastRebuildTime + GraphRebuildCooldownTicks)
+                {
+                    continue;
+                }
+            }
+
+            RebuildGraphFromSeed(world, 0, seedPos, now);
             processed++;
         }
 
         if (processed > 0)
-            LastRebuildWorldTime = world.GetWorldTime();
+            LastRebuildWorldTime = now;
     }
 
-    private static void RebuildGraphFromSeed(WorldBase world, int clrIdx, Vector3i seedPos)
+    private static void RebuildGraphFromSeed(WorldBase world, int clrIdx, Vector3i seedPos, ulong worldTime)
     {
         if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, seedPos, out TileEntity seedEntity) || !(seedEntity is TileEntityLiquidPipe))
         {
@@ -551,6 +566,8 @@ public static class FluidGraphManager
         string retainedFluidType = string.Empty;
         foreach (Guid oldGraphId in oldGraphIds)
         {
+            lastGraphRebuildWorldTime.Remove(oldGraphId);
+
             if (!graphsById.TryGetValue(oldGraphId, out FluidGraphData oldGraph) || oldGraph == null)
                 continue;
 
@@ -579,6 +596,7 @@ public static class FluidGraphManager
         PopulateGraphEndpoints(world, clrIdx, newGraph);
 
         graphsById[newGraph.FluidGraphId] = newGraph;
+        lastGraphRebuildWorldTime[newGraph.FluidGraphId] = worldTime;
     }
 
     private static HashSet<Vector3i> CollectConnectedPipeRegion(WorldBase world, int clrIdx, Vector3i seedPos)

@@ -9,7 +9,9 @@ public static class PipeGraphManager
     private static readonly HashSet<Vector3i> dirtyPipePositions = new HashSet<Vector3i>();
     private static readonly Dictionary<Guid, int> graphRouteVersions = new Dictionary<Guid, int>();
     private static readonly Dictionary<Guid, Dictionary<RouteCacheKey, RouteCacheEntry>> routeCacheByGraph = new Dictionary<Guid, Dictionary<RouteCacheKey, RouteCacheEntry>>();
+    private static readonly Dictionary<Guid, ulong> lastGraphRebuildWorldTime = new Dictionary<Guid, ulong>();
     private const int MaxRouteCacheEntriesPerGraph = 256;
+    private const ulong GraphRebuildCooldownTicks = 20UL;
     private struct RouteCacheKey : IEquatable<RouteCacheKey>
     {
         public int ClrIdx;
@@ -141,6 +143,7 @@ public static class PipeGraphManager
         dirtyPipePositions.Clear();
         graphRouteVersions.Clear();
         routeCacheByGraph.Clear();
+        lastGraphRebuildWorldTime.Clear();
 
         if (devLoggingEnabled)
             Log.Out("[PipeGraphManager] ClearAll()");
@@ -318,7 +321,7 @@ public static class PipeGraphManager
         }
 
         if (devLoggingEnabled)
-            Log.Out($"[PipeGraphManager] RebuildAllGraphs ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â found {pipePositions.Count} pipes");
+            Log.Out($"[PipeGraphManager] RebuildAllGraphs: found {pipePositions.Count} pipes");
 
         for (int i = 0; i < pipePositions.Count; i++)
         {
@@ -335,7 +338,7 @@ public static class PipeGraphManager
             ProcessDirtyGraphs(world, int.MaxValue);
 
         if (devLoggingEnabled)
-            Log.Out($"[PipeGraphManager] RebuildAllGraphs END ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â graphs={GetGraphCount()} dirty={GetDirtyPipeCount()}");
+            Log.Out($"[PipeGraphManager] RebuildAllGraphs END: graphs={GetGraphCount()} dirty={GetDirtyPipeCount()}");
     }
 
 
@@ -485,6 +488,7 @@ public static class PipeGraphManager
 
         graphsById.Remove(pipeGraphId);
         RemoveGraphRouteState(pipeGraphId);
+        lastGraphRebuildWorldTime.Remove(pipeGraphId);
     }
 
     public static void RegisterGraph(PipeGraphData graph)
@@ -509,6 +513,7 @@ public static class PipeGraphManager
         if (dirtyPipePositions.Count == 0)
             return;
 
+        ulong now = world.GetWorldTime();
         int processed = 0;
         List<Vector3i> batch = new List<Vector3i>(dirtyPipePositions);
 
@@ -519,12 +524,23 @@ public static class PipeGraphManager
             if (!dirtyPipePositions.Contains(seedPos))
                 continue;
 
-            RebuildGraphFromSeed(world, 0, seedPos);
+            if (SafeWorldRead.TryGetTileEntity(world, 0, seedPos, out TileEntity seedTileEntity) && seedTileEntity is TileEntityItemPipe seedPipe)
+            {
+                Guid currentGraphId = seedPipe.PipeGraphId;
+                if (currentGraphId != Guid.Empty &&
+                    lastGraphRebuildWorldTime.TryGetValue(currentGraphId, out ulong lastRebuildTime) &&
+                    now < lastRebuildTime + GraphRebuildCooldownTicks)
+                {
+                    continue;
+                }
+            }
+
+            RebuildGraphFromSeed(world, 0, seedPos, now);
             processed++;
         }
     }
 
-    private static void RebuildGraphFromSeed(WorldBase world, int clrIdx, Vector3i seedPos)
+    private static void RebuildGraphFromSeed(WorldBase world, int clrIdx, Vector3i seedPos, ulong worldTime)
     {
         if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, seedPos, out TileEntity seedTileEntity) || !(seedTileEntity is TileEntityItemPipe))
         {
@@ -582,6 +598,7 @@ public static class PipeGraphManager
 
             graphsById.Remove(oldGraphId);
             RemoveGraphRouteState(oldGraphId);
+            lastGraphRebuildWorldTime.Remove(oldGraphId);
 
         }
 
@@ -617,6 +634,7 @@ public static class PipeGraphManager
         newGraph.PruneStorageSnapshotsToEndpoints();
         graphsById[newGraph.PipeGraphId] = newGraph;
         BumpGraphRouteVersion(newGraph.PipeGraphId);
+        lastGraphRebuildWorldTime[newGraph.PipeGraphId] = worldTime;
 
         if (graphDevLoggingEnabled)
             Log.Out($"[PipeGraphManager] Rebuilt graph {newGraph.PipeGraphId} Pipes={newGraph.PipePositions.Count} StorageEndpoints={newGraph.StorageEndpoints.Count}");

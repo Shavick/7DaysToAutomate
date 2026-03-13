@@ -23,6 +23,31 @@ public class FluidPumpBlock : MachineBlock<TileEntityFluidPump>
         return new TileEntityFluidPump(chunk);
     }
 
+    public override void OnBlockLoaded(
+        WorldBase world,
+        int clrIdx,
+        Vector3i blockPos,
+        BlockValue blockValue)
+    {
+        base.OnBlockLoaded(world, clrIdx, blockPos, blockValue);
+        if (world.IsRemote() || blockValue.ischild)
+            return;
+
+        MarkAdjacentPipesDirty(world, clrIdx, blockPos);
+    }
+
+    public override void OnBlockUnloaded(
+        WorldBase world,
+        int clrIdx,
+        Vector3i blockPos,
+        BlockValue blockValue)
+    {
+        if (!world.IsRemote() && !blockValue.ischild)
+            MarkAdjacentPipesDirty(world, clrIdx, blockPos);
+
+        base.OnBlockUnloaded(world, clrIdx, blockPos, blockValue);
+    }
+
     public override void OnBlockAdded(
         WorldBase world,
         Chunk chunk,

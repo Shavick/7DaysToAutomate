@@ -63,6 +63,7 @@ public static class BlockCompositeTileEntity_PipeEndpointDirtyPatch
             return;
 
         PipeGraphManager.TryApplyStorageSnapshotForPosition(_world, _clrIdx, _blockPos);
+        MarkAdjacentPipesDirty(_world, _clrIdx, _blockPos);
     }
 
     [HarmonyPrefix]
@@ -80,6 +81,7 @@ public static class BlockCompositeTileEntity_PipeEndpointDirtyPatch
             return;
 
         PipeGraphManager.CaptureStorageSnapshotForPosition(_world, _clrIdx, _blockPos);
+        MarkAdjacentPipesDirty(_world, _clrIdx, _blockPos);
     }
 
     private static bool HasStorageFeature(WorldBase world, int clrIdx, Vector3i blockPos)

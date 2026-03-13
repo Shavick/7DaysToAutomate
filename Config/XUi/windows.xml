@@ -23,8 +23,8 @@
                             <label depth="6" pos="-10,-20" width="70" height="24" text="Fuel" justify="center" font_size="20" color="[limeGreen]" effect="outline"/>
                             <sprite depth="5" pos="0,0" width="36" height="130" sprite="menu_empty3px" type="sliced" color="[black]" fillcenter="false"/>
                             <sprite depth="5" pos="2,-2" width="32" height="126" type="sliced" color="[darkGrey]" visible="{fluidfueldisabled}"/>
-                            <filledsprite depth="6" pos="2,-2" width="32" height="126" type="filled" fill="{fluidfuelfill}" color="0,180,90,200" visible="{fluidfuelenabled}"/>
-                            <label depth="7" pos="-24,-56" width="84" height="28" text="{fluidfueltext}" justify="center" font_size="18" color="[white]" effect="outline"/>
+                            <filledsprite depth="6" pos="2,-2" width="32" height="126" type="filled" fill="{fluidfuelfill}" color="0,180,90,200" visible="{fluidfuelenabled}" filldirection="vertical"/>
+                            <!-- <label depth="7" pos="-24,-56" width="84" height="28" text="{fluidfueltext}" justify="center" font_size="18" color="[white]" effect="outline"/> -->
                             <label depth="6" pos="-45,-142" width="130" height="24" text="{fluidfuelstatus}" justify="center" font_size="16" color="[white]"/>
                         </rect>
                     </rect>
@@ -214,7 +214,7 @@
         </window>
 
         <window name="windowFluidDecanterInfo" controller="FluidDecanterInfo, 7DaysToAutomate" width="450" height="380" panel="Center" cursor_area="true">
-            <rect pos="-125,-100">
+            <rect pos="0,-100">
 
                 <panel name="header" height="50" depth="1">
                     <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
@@ -252,26 +252,52 @@
                 <rect pos="-310,0">
                     <panel name="pendingItemsHeader" pos="-2,0" width="300" height="40" depth="1">
                         <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Pending Items" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+                        <label depth="6" pos="-75,-4" width="450" height="40" text="Items" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
                     </panel>
 
-                    <panel name="pendingItemsPanel" pos="0,-50" width="280" height="150" depth="1">
+                    <panel name="pendingItemsPanel" pos="-2,-45" width="300" height="120" depth="1">
                         <sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8"/>
-                        <label depth="6" pos="20,-16" width="240" height="28" text="Pending Input: {pending_item_input}" font_size="22" color="[white]" />
-                        <label depth="6" pos="20,-50" width="240" height="28" text="Pending Output: {pending_item_output}" font_size="22" color="[white]" />
+
+                        <label depth="6" pos="27,-14" width="110" height="28" text="Pending Input" font_size="22" justify="center" color="[white]" />
+                        <label depth="6" pos="164,-14" width="110" height="28" text="Pending Output" font_size="22" justify="center" color="[white]" />
+
+                        <sprite depth="2" name="pendingInputItemFrame" sprite="menu_empty3px" pos="51,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+                        <sprite depth="3" name="pendingInputItemBg" pos="54,-43" width="56" height="56" color="[mediumGrey]" type="sliced" />
+                        <sprite depth="4" name="pendingInputItemIcon" atlas="ItemIconAtlas" sprite="{pending_item_input_icon}" pos="54,-43" width="56" height="56" foregroundlayer="true" visible="{pending_item_input_has_item}" />
+                        <label depth="5" name="pendingInputItemCount" pos="82,-90" width="26" height="18" text="{pending_item_input}" font_size="20" justify="right" color="[white]" effect="outline" visible="{pending_item_input_has_item}" />
+                        <label depth="5" name="pendingInputItemName" pos="27,-102" width="110" height="18" text="{pending_item_input_name}" font_size="16" justify="center" color="[white]" visible="{pending_item_input_has_item}" />
+
+                        <sprite depth="2" name="pendingOutputItemFrame" sprite="menu_empty3px" pos="188,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+                        <sprite depth="3" name="pendingOutputItemBg" pos="191,-43" width="56" height="56" color="[mediumGrey]" type="sliced" />
+                        <sprite depth="4" name="pendingOutputItemIcon" atlas="ItemIconAtlas" sprite="{pending_item_output_icon}" pos="191,-43" width="56" height="56" foregroundlayer="true" visible="{pending_item_output_has_item}" />
+                        <label depth="5" name="pendingOutputItemCount" pos="219,-90" width="26" height="18" text="{pending_item_output}" font_size="20" justify="right" color="[white]" effect="outline" visible="{pending_item_output_has_item}" />
+                        <label depth="5" name="pendingOutputItemName" pos="164,-102" width="110" height="18" text="{pending_item_output_name}" font_size="16" justify="center" color="[white]" visible="{pending_item_output_has_item}" />
                     </panel>
                 </rect>
 
                 <rect pos="-310,-175">
                     <panel name="pendingFluidHeader" pos="-2,0" width="300" height="40" depth="1">
                         <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Pending Fluid" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+                        <label depth="6" pos="-75,-4" width="450" height="40" text="Fluid" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
                     </panel>
 
-                    <panel name="pendingFluidPanel" pos="0,-50" width="280" height="150" depth="1">
+                    <panel name="pendingFluidPanel" pos="-2,-45" width="300" height="120" depth="1">
                         <sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8"/>
-                        <label depth="6" pos="20,-16" width="240" height="28" text="Pending Input: {pending_fluid_input}" font_size="22" color="[white]" />
-                        <label depth="6" pos="20,-50" width="240" height="28" text="Pending Output: {pending_fluid_output}" font_size="22" color="[white]" />
+
+                        <label depth="6" pos="27,-12" width="110" height="28" text="Pending Input" font_size="22" justify="center" color="[white]" />
+                        <label depth="6" pos="164,-12" width="110" height="28" text="Pending Output" font_size="22" justify="center" color="[white]" />
+
+                        <!-- <sprite depth="2" name="pendingInputFluidFrame" sprite="menu_empty3px" pos="51,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+                        <sprite depth="3" name="pendingInputFluidBg" pos="54,-43" width="56" height="56" color="[mediumGrey]" type="sliced" /> -->
+                        <sprite depth="4" name="pendingInputFluidIcon" sprite="ui_game_symbol_water" pos="54,-36" width="56" height="56" foregroundlayer="true" />
+                        <label depth="5" name="pendingInputFluidAmount" pos="48,-90" width="60" height="18" text="{pending_fluid_input}" font_size="16" justify="right" color="[white]" effect="outline" />
+                        <label depth="5" name="pendingInputFluidName" pos="27,-102" width="110" height="18" text="{pending_fluid_input_name}" font_size="16" justify="center" color="[white]" />
+
+                        <!-- <sprite depth="2" name="pendingOutputFluidFrame" sprite="menu_empty3px" pos="188,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+                        <sprite depth="3" name="pendingOutputFluidBg" pos="191,-43" width="56" height="56" color="[mediumGrey]" type="sliced" /> -->
+                        <sprite depth="4" name="pendingOutputFluidIcon" sprite="ui_game_symbol_water" pos="191,-36" width="56" height="56" foregroundlayer="true" />
+                        <label depth="5" name="pendingOutputFluidAmount" pos="185,-90" width="60" height="18" text="{pending_fluid_output}" font_size="16" justify="right" color="[white]" effect="outline" />
+                        <label depth="5" name="pendingOutputFluidName" pos="164,-102" width="110" height="18" text="{pending_fluid_output_name}" font_size="16" justify="center" color="[white]" />
                     </panel>
                 </rect>
 

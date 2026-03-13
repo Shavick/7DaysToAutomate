@@ -29,6 +29,9 @@ public static class PipeTransportManager
     }
 
     private static readonly Dictionary<Guid, GraphDispatchState> graphDispatchStates = new Dictionary<Guid, GraphDispatchState>();
+    private static readonly Dictionary<Guid, string> lastBlockedReasonByJob = new Dictionary<Guid, string>();
+    private static readonly Dictionary<Guid, ulong> lastBlockedReasonLogTimeByJob = new Dictionary<Guid, ulong>();
+    private const ulong RepeatBlockedReasonLogIntervalTicks = 20UL;
     private static bool IsDevLoggingEnabledForJob(WorldBase world, PipeTransportJob job)
     {
         if (world == null || job == null || job.RoutePipePositions == null)
@@ -46,11 +49,61 @@ public static class PipeTransportManager
 
         return false;
     }
+    private static bool IsDevLoggingEnabledForMachine(WorldBase world, int clrIdx, Vector3i machinePos)
+    {
+        if (world == null || machinePos == Vector3i.zero)
+            return false;
+
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, machinePos, out TileEntity machineTe))
+            return false;
+
+        if (!(machineTe is TileEntityMachine machine))
+            return false;
+
+        return machine.IsDevLogging;
+    }
+
+    private static void ClearJobDebugState(Guid jobId)
+    {
+        if (jobId == Guid.Empty)
+            return;
+
+        lastBlockedReasonByJob.Remove(jobId);
+        lastBlockedReasonLogTimeByJob.Remove(jobId);
+    }
+
+    private static bool ShouldEmitBlockedJobLog(PipeTransportJob job, string blockedReason, ulong worldTime)
+    {
+        if (job == null || job.JobId == Guid.Empty || string.IsNullOrEmpty(blockedReason))
+            return false;
+
+        if (!lastBlockedReasonByJob.TryGetValue(job.JobId, out string previousReason))
+        {
+            lastBlockedReasonByJob[job.JobId] = blockedReason;
+            lastBlockedReasonLogTimeByJob[job.JobId] = worldTime;
+            return true;
+        }
+
+        if (!lastBlockedReasonLogTimeByJob.TryGetValue(job.JobId, out ulong previousLogTime))
+            previousLogTime = 0UL;
+
+        if (!string.Equals(previousReason, blockedReason, StringComparison.Ordinal) ||
+            worldTime >= previousLogTime + RepeatBlockedReasonLogIntervalTicks)
+        {
+            lastBlockedReasonByJob[job.JobId] = blockedReason;
+            lastBlockedReasonLogTimeByJob[job.JobId] = worldTime;
+            return true;
+        }
+
+        return false;
+    }
 
     public static void ClearAll()
     {
         activeJobs.Clear();
         graphDispatchStates.Clear();
+        lastBlockedReasonByJob.Clear();
+        lastBlockedReasonLogTimeByJob.Clear();
         Log.Out("[PipeTransportManager] ClearAll()");
     }
 
@@ -538,51 +591,130 @@ public static class PipeTransportManager
     out PipeTransportJob job,
     out int acceptedAmount)
     {
+        return TryCreateJob(
+            world,
+            clrIdx,
+            pipeGraphId,
+            sourceMachinePos,
+            targetStoragePos,
+            itemName,
+            pendingAmount,
+            out job,
+            out acceptedAmount,
+            out _);
+    }
+
+    public static bool TryCreateJob(
+    WorldBase world,
+    int clrIdx,
+    Guid pipeGraphId,
+    Vector3i sourceMachinePos,
+    Vector3i targetStoragePos,
+    string itemName,
+    int pendingAmount,
+    out PipeTransportJob job,
+    out int acceptedAmount,
+    out string blockedReason)
+    {
         job = null;
         acceptedAmount = 0;
+        blockedReason = string.Empty;
+
+        bool devLog = IsDevLoggingEnabledForMachine(world, clrIdx, sourceMachinePos);
+
+        void LogCreateBlocked(string reason, int accepted)
+        {
+            if (!devLog)
+                return;
+
+            Log.Out($"[PipeTransportManager][CreateJob][{sourceMachinePos}] BLOCKED graph={pipeGraphId} target={targetStoragePos} item={itemName} pending={pendingAmount} accepted={accepted} reason={reason}");
+        }
 
         if (world == null || world.IsRemote())
+        {
+            blockedReason = "Invalid world context for dispatch";
+            LogCreateBlocked(blockedReason, acceptedAmount);
             return false;
+        }
 
         if (pipeGraphId == Guid.Empty)
+        {
+            blockedReason = "No pipe graph selected";
+            LogCreateBlocked(blockedReason, acceptedAmount);
             return false;
+        }
 
         if (string.IsNullOrEmpty(itemName) || pendingAmount <= 0)
+        {
+            blockedReason = "No valid pending item to dispatch";
+            LogCreateBlocked(blockedReason, acceptedAmount);
             return false;
+        }
 
         if (!PipeGraphManager.TryFindRoute(world, clrIdx, pipeGraphId, sourceMachinePos, targetStoragePos, out List<Vector3i> route))
         {
+            blockedReason = "No route between machine and selected storage";
+            LogCreateBlocked(blockedReason, acceptedAmount);
             return false;
         }
 
         if (route == null || route.Count == 0)
+        {
+            blockedReason = "Resolved route is empty";
+            LogCreateBlocked(blockedReason, acceptedAmount);
             return false;
+        }
 
         int routeThroughput = GetRouteThroughput(world, clrIdx, route);
         if (routeThroughput <= 0)
+        {
+            blockedReason = $"Route throughput is zero (routeLen={route.Count})";
+            LogCreateBlocked(blockedReason, acceptedAmount);
             return false;
+        }
 
         acceptedAmount = Math.Min(pendingAmount, routeThroughput);
         if (acceptedAmount <= 0)
-            return false;
-
-        if (GetRemainingCapacityForGraph(world, clrIdx, pipeGraphId) <= 0)
         {
+            blockedReason = $"Route accepted amount is zero (pending={pendingAmount} routeThroughput={routeThroughput})";
+            LogCreateBlocked(blockedReason, acceptedAmount);
+            return false;
+        }
+
+        int activeJobsForGraph = GetActiveJobCountForGraph(pipeGraphId);
+        int maxJobsForGraph = ComputeMaxActiveJobsForGraph(world, clrIdx, pipeGraphId);
+        int remainingCapacityForGraph = maxJobsForGraph - activeJobsForGraph;
+        if (remainingCapacityForGraph <= 0)
+        {
+            blockedReason = $"Pipe graph active-job capacity is exhausted (active={activeJobsForGraph} max={maxJobsForGraph})";
+            LogCreateBlocked(blockedReason, acceptedAmount);
             return false;
         }
 
         ulong now = world.GetWorldTime();
         int remainingBudget = GetRemainingThroughputBudget(world, clrIdx, pipeGraphId, now);
         if (remainingBudget <= 0)
+        {
+            blockedReason = $"Pipe graph throughput budget is exhausted for this tick (worldTime={now})";
+            LogCreateBlocked(blockedReason, acceptedAmount);
             return false;
+        }
 
         acceptedAmount = Math.Min(acceptedAmount, remainingBudget);
         if (acceptedAmount <= 0)
+        {
+            blockedReason = $"Accepted amount reduced to zero by throughput budget (remainingBudget={remainingBudget})";
+            LogCreateBlocked(blockedReason, acceptedAmount);
             return false;
+        }
 
         int machinePriority = GetMachinePriority(world, clrIdx, sourceMachinePos);
         if (!TryReserveMachineTurn(pipeGraphId, sourceMachinePos, machinePriority, now))
+        {
+            blockedReason = $"Fairness scheduler denied this machine dispatch turn (priority={machinePriority})";
+            LogCreateBlocked(blockedReason, acceptedAmount);
             return false;
+        }
 
         ulong travelTicks = GetRouteTravelTicks(world, clrIdx, route);
         ulong arrival = now + travelTicks;
@@ -600,7 +732,7 @@ public static class PipeTransportManager
             arrival
         );
 
-        // Machine->storage jobs have already "picked up" items at dispatch time.
+        // Machine->storage jobs have already picked up items at dispatch time.
         job.HasPickedUpItems = true;
         job.TransitStartWorldTime = now;
 
@@ -609,6 +741,16 @@ public static class PipeTransportManager
         {
             ConsumeThroughputBudget(pipeGraphId, now, acceptedAmount);
             AdvanceMachineTurn(pipeGraphId, sourceMachinePos, now);
+
+            if (devLog)
+            {
+                Log.Out($"[PipeTransportManager][CreateJob][{sourceMachinePos}] SUCCESS graph={pipeGraphId} target={targetStoragePos} item={itemName} accepted={acceptedAmount} pending={pendingAmount} routeLen={route.Count} routeThroughput={routeThroughput} budgetBefore={remainingBudget} active={activeJobsForGraph} max={maxJobsForGraph} priority={machinePriority}");
+            }
+        }
+        else
+        {
+            blockedReason = "Failed to register transport job";
+            LogCreateBlocked(blockedReason, acceptedAmount);
         }
 
         return registered;
@@ -663,6 +805,7 @@ public static class PipeTransportManager
             return;
 
         activeJobs.Remove(jobId);
+        ClearJobDebugState(jobId);
     }
 
     public static void ProcessJobs(WorldBase world)
@@ -691,11 +834,18 @@ public static class PipeTransportManager
                 continue;
             }
 
+            bool devLogForJob = IsDevLoggingEnabledForJob(world, job) || IsDevLoggingEnabledForMachine(world, 0, job.SourcePos);
+
             if (job.IsStorageToMachine() && job.IsWaitingForPickup())
             {
-                bool pickedUp = TryPickupInputJob(world, job);
+                bool pickedUp = TryPickupInputJob(world, job, out string pickupBlockedReason);
                 if (!pickedUp)
                 {
+                    string reasonText = string.IsNullOrEmpty(pickupBlockedReason) ? "Pickup blocked" : pickupBlockedReason;
+                    string throttledReason = "PICKUP: " + reasonText;
+                    if (devLogForJob && ShouldEmitBlockedJobLog(job, throttledReason, worldTime))
+                        Log.Out($"[PipeTransportManager][Job][{job.JobId}] WAIT reason={throttledReason} graph={job.PipeGraphId} source={job.SourcePos} target={job.TargetPos}");
+
                     continue;
                 }
             }
@@ -703,21 +853,41 @@ public static class PipeTransportManager
             if (!job.IsReadyToArrive(worldTime))
                 continue;
 
-            bool delivered = TryDeliverJob(world, job);
+            bool delivered = TryDeliverJob(world, job, out string deliveryBlockedReason);
             if (delivered)
             {
+                if (devLogForJob)
+                    Log.Out($"[PipeTransportManager][Job][{job.JobId}] DELIVERED graph={job.PipeGraphId} source={job.SourcePos} target={job.TargetPos} items={job.GetTotalItemCount()}");
+
                 job.IsComplete = true;
                 completedOrFailed.Add(kvp.Key);
+                continue;
             }
+
+            string deliveryReasonText = string.IsNullOrEmpty(deliveryBlockedReason) ? "Delivery blocked" : deliveryBlockedReason;
+            string deliveryThrottledReason = "DELIVERY: " + deliveryReasonText;
+            if (devLogForJob && ShouldEmitBlockedJobLog(job, deliveryThrottledReason, worldTime))
+                Log.Out($"[PipeTransportManager][Job][{job.JobId}] WAIT reason={deliveryThrottledReason} graph={job.PipeGraphId} source={job.SourcePos} target={job.TargetPos}");
         }
 
         for (int i = 0; i < completedOrFailed.Count; i++)
-            activeJobs.Remove(completedOrFailed[i]);
+            RemoveJob(completedOrFailed[i]);
     }
+
     private static bool TryPickupInputJob(WorldBase world, PipeTransportJob job)
     {
+        return TryPickupInputJob(world, job, out _);
+    }
+
+    private static bool TryPickupInputJob(WorldBase world, PipeTransportJob job, out string blockedReason)
+    {
+        blockedReason = string.Empty;
+
         if (world == null || job == null)
+        {
+            blockedReason = "Invalid world or job while attempting pickup";
             return false;
+        }
 
         // If the source chest is loaded and open, preserve existing behavior and wait.
         if (SafeWorldRead.TryGetTileEntity(world, job.SourcePos, out TileEntity te) &&
@@ -725,15 +895,24 @@ public static class PipeTransportManager
         {
             TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
             if (storage != null && storage.items != null && storage.IsUserAccessing())
+            {
+                blockedReason = "Source storage is being accessed by a player";
                 return false;
+            }
         }
 
         Dictionary<string, int> request = job.GetPacketItemCountsCopy();
         if (request == null || request.Count == 0)
+        {
+            blockedReason = "Input packet is empty";
             return false;
+        }
 
         if (!PipeGraphManager.TryConsumeStorageItems(world, 0, job.PipeGraphId, job.SourcePos, request, out Dictionary<string, int> consumed))
+        {
+            blockedReason = "Source storage could not provide requested packet";
             return false;
+        }
 
         Dictionary<string, int> pickedPacket = new Dictionary<string, int>();
         int totalPicked = 0;
@@ -749,7 +928,10 @@ public static class PipeTransportManager
         }
 
         if (totalPicked <= 0)
+        {
+            blockedReason = "No items were removed from source storage during pickup";
             return false;
+        }
 
         if (totalPicked != job.GetTotalItemCount())
             Log.Out($"[PipeTransportManager] Input packet partial pickup {job.JobId} picked={totalPicked}");
@@ -782,36 +964,69 @@ public static class PipeTransportManager
     }
     private static bool TryDeliverJob(WorldBase world, PipeTransportJob job)
     {
+        return TryDeliverJob(world, job, out _);
+    }
+
+    private static bool TryDeliverJob(WorldBase world, PipeTransportJob job, out string blockedReason)
+    {
+        blockedReason = string.Empty;
+
         if (job == null || world == null)
+        {
+            blockedReason = "Invalid world or job while attempting delivery";
             return false;
+        }
 
         if (job.IsMachineToStorage())
         {
             if (!SafeWorldRead.TryGetTileEntity(world, job.TargetPos, out TileEntity te))
+            {
+                blockedReason = "Target storage tile entity is missing";
                 return false;
+            }
+
             if (!(te is TileEntityComposite comp))
+            {
+                blockedReason = "Target tile entity is not a composite storage";
                 return false;
+            }
 
             TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
             if (storage == null || storage.items == null)
+            {
+                blockedReason = "Target storage feature is unavailable";
                 return false;
+            }
 
             if (storage.IsUserAccessing())
+            {
+                blockedReason = "Target storage is currently open by a player";
                 return false;
+            }
 
             Dictionary<string, int> packet = job.GetPacketItemCountsCopy();
             if (packet.Count == 0)
+            {
+                blockedReason = "Transport packet is empty";
                 return false;
+            }
 
             foreach (var kvp in packet)
             {
                 ItemValue itemValue = ItemClass.GetItem(kvp.Key, false);
                 if (itemValue == null || itemValue.type == ItemValue.None.type)
+                {
+                    blockedReason = $"Invalid item in transport packet: {kvp.Key}";
                     return false;
+                }
 
                 ItemStack remaining = new ItemStack(itemValue, kvp.Value);
-                if (!TryAddToStorage(storage, remaining))
+                if (!TryAddToStorage(storage, remaining, out string storageBlockedReason))
+                {
+                    string reasonText = string.IsNullOrEmpty(storageBlockedReason) ? "Unknown storage insert failure" : storageBlockedReason;
+                    blockedReason = $"Failed to deposit {kvp.Value}x {kvp.Key} into target storage ({reasonText})";
                     return false;
+                }
             }
 
             return true;
@@ -820,13 +1035,23 @@ public static class PipeTransportManager
         if (job.IsStorageToMachine())
         {
             if (!SafeWorldRead.TryGetTileEntity(world, job.TargetPos, out TileEntity te))
+            {
+                blockedReason = "Target machine tile entity is missing";
                 return false;
+            }
+
             if (!(te is TileEntityMachine machine))
+            {
+                blockedReason = "Target tile entity is not a machine";
                 return false;
+            }
 
             Dictionary<string, int> requestedPacket = job.GetPacketItemCountsCopy();
             if (requestedPacket.Count == 0)
+            {
+                blockedReason = "Input packet is empty";
                 return false;
+            }
 
             Dictionary<string, int> remainingPacket = new Dictionary<string, int>();
             int deliveredTotal = 0;
@@ -852,22 +1077,36 @@ public static class PipeTransportManager
             }
 
             if (deliveredTotal <= 0)
+            {
+                blockedReason = "Target machine accepted zero items from packet";
                 return false;
+            }
 
             if (remainingPacket.Count == 0)
                 return true;
 
             job.SetPacketItemCounts(remainingPacket);
+            blockedReason = $"Target machine partially accepted packet (delivered={deliveredTotal} remaining={job.GetTotalItemCount()})";
+
             if (IsDevLoggingEnabledForJob(world, job))
                 Log.Out($"[PipeTransportManager] Input packet partial delivery {job.JobId} delivered={deliveredTotal} remaining={job.GetTotalItemCount()}");
+
             return false;
         }
 
+        blockedReason = "Unsupported transport job direction";
         return false;
     }
 
     private static bool TryAddToStorage(TEFeatureStorage storage, ItemStack remaining)
     {
+        return TryAddToStorage(storage, remaining, out _);
+    }
+
+    private static bool TryAddToStorage(TEFeatureStorage storage, ItemStack remaining, out string blockedReason)
+    {
+        blockedReason = string.Empty;
+
         if (remaining == null || remaining.IsEmpty() || remaining.count <= 0)
             return true;
 
@@ -911,7 +1150,12 @@ public static class PipeTransportManager
         if (changed)
             storage.SetModified();
 
-        return remaining.count <= 0;
+        if (remaining.count <= 0)
+            return true;
+
+        string itemName = remaining.itemValue?.ItemClass?.GetItemName() ?? "unknown";
+        blockedReason = $"Target storage has no room for {remaining.count}x {itemName}";
+        return false;
     }
 
     private static int GetRouteThroughput(WorldBase world, int clrIdx, List<Vector3i> routePipePositions)
@@ -1084,10 +1328,6 @@ public static class PipeTransportManager
         return latency;
     }
 }
-
-
-
-
 
 
 

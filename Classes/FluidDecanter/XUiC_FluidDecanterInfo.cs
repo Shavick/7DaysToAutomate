@@ -159,6 +159,42 @@ public class XUiC_FluidDecanterInfo : XUiController
                 value = (converter?.pendingItemOutput ?? 0).ToString();
                 return true;
 
+            case "pending_item_input_icon":
+                value = GetItemIconName(converter?.PendingItemInputName);
+                return true;
+
+            case "pending_item_output_icon":
+                value = GetItemIconName(converter?.PendingItemOutputName);
+                return true;
+
+            case "pending_item_input_has_item":
+                value = converter != null && converter.pendingItemInput > 0 && !string.IsNullOrEmpty(converter.PendingItemInputName)
+                    ? "true"
+                    : "false";
+                return true;
+
+            case "pending_item_output_has_item":
+                value = converter != null && converter.pendingItemOutput > 0 && !string.IsNullOrEmpty(converter.PendingItemOutputName)
+                    ? "true"
+                    : "false";
+                return true;
+
+            case "pending_item_input_name":
+                value = GetItemDisplayName(converter?.PendingItemInputName);
+                return true;
+
+            case "pending_item_output_name":
+                value = GetItemDisplayName(converter?.PendingItemOutputName);
+                return true;
+
+            case "pending_fluid_input_name":
+                value = GetFluidDisplayName(converter?.SelectedFluidType);
+                return true;
+
+            case "pending_fluid_output_name":
+                value = GetFluidDisplayName(converter?.SelectedFluidType);
+                return true;
+
             case "pending_fluid_input":
                 value = converter == null
                     ? "0 gal"
@@ -227,6 +263,39 @@ public class XUiC_FluidDecanterInfo : XUiController
     {
         double gallons = milliGallons / (double)FluidConstants.MilliGallonsPerGallon;
         return gallons.ToString("0.###", CultureInfo.InvariantCulture);
+    }
+
+    private static string GetItemIconName(string itemName)
+    {
+        if (string.IsNullOrEmpty(itemName))
+            return string.Empty;
+
+        ItemValue itemValue = ItemClass.GetItem(itemName, false);
+        if (itemValue?.ItemClass == null)
+            return string.Empty;
+
+        return itemValue.ItemClass.GetIconName();
+    }
+
+    private static string GetItemDisplayName(string itemName)
+    {
+        if (string.IsNullOrEmpty(itemName))
+            return string.Empty;
+
+        ItemValue itemValue = ItemClass.GetItem(itemName, false);
+        if (itemValue?.ItemClass != null)
+            return itemValue.ItemClass.GetLocalizedItemName();
+
+        return itemName;
+    }
+
+    private static string GetFluidDisplayName(string fluidType)
+    {
+        if (string.IsNullOrWhiteSpace(fluidType))
+            return string.Empty;
+
+        string normalized = fluidType.Trim().Replace('_', ' ');
+        return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(normalized.ToLowerInvariant());
     }
 
     private void TogglePower()

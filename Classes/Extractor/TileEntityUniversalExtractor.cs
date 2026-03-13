@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -453,34 +453,6 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             LastFluidFuelStatus = "Fuel enabled";
     }
 
-    private bool TryGetValidFluidFuelConfig(out string requestedFluid, out int bufferGallons, out int usePerSecond, out int pullPerSecond)
-    {
-        requestedFluid = string.Empty;
-        bufferGallons = 0;
-        usePerSecond = 0;
-        pullPerSecond = 0;
-
-        if (!TryGetBlockPropertyBool("NeedsFluidToRun", out bool needsFluid) || !needsFluid)
-            return false;
-
-        if (!TryGetBlockPropertyString("FluidFuel", out string rawFuel))
-            return false;
-
-        requestedFluid = rawFuel.Trim().ToLowerInvariant();
-        if (string.IsNullOrEmpty(requestedFluid))
-            return false;
-
-        if (!TryGetBlockPropertyInt("FluidFuelBufferGallons", out bufferGallons) || bufferGallons <= 0)
-            return false;
-
-        if (!TryGetBlockPropertyInt("FluidFuelUsePerSecond", out usePerSecond) || usePerSecond <= 0)
-            return false;
-
-        if (!TryGetBlockPropertyInt("FluidFuelPullPerSecond", out pullPerSecond) || pullPerSecond <= 0)
-            return false;
-
-        return true;
-    }
 
     private bool TryResolveFluidFuelGraph(WorldBase world)
     {
@@ -643,31 +615,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         return (mg + (FluidConstants.MilliGallonsPerGallon / 2)) / FluidConstants.MilliGallonsPerGallon;
     }
 
-    private bool TryGetBlockPropertyBool(string propertyName, out bool parsed)
-    {
-        parsed = false;
-        string raw = blockValue.Block?.Properties?.GetString(propertyName);
-        if (string.IsNullOrEmpty(raw))
-            return false;
 
-        return bool.TryParse(raw, out parsed);
-    }
-
-    private bool TryGetBlockPropertyInt(string propertyName, out int parsed)
-    {
-        parsed = 0;
-        string raw = blockValue.Block?.Properties?.GetString(propertyName);
-        if (string.IsNullOrEmpty(raw))
-            return false;
-
-        return int.TryParse(raw, out parsed);
-    }
-
-    private bool TryGetBlockPropertyString(string propertyName, out string parsed)
-    {
-        parsed = blockValue.Block?.Properties?.GetString(propertyName);
-        return !string.IsNullOrEmpty(parsed);
-    }
     public override void UpdateTick(World world)
     {
         DevLog("UpdateTick ENTER");
@@ -865,7 +813,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         if (SelectedOutputMode == OutputTransportMode.Pipe &&
             !PipeTransportManager.CanDispatch(LastPipeDispatchWorldTime, now, world, 0, SelectedPipeGraphId, ToWorldPos(), SelectedOutputChestPos))
         {
-            DevLog("FLUSH WAIT — pipe dispatch interval not ready yet");
+            DevLog($"FLUSH PIPE BLOCKED — dispatch interval not ready yet (now={now} last={LastPipeDispatchWorldTime})");
             return;
         }
 
@@ -935,7 +883,8 @@ public class TileEntityUniversalExtractor : TileEntityMachine
                         itemName,
                         count,
                         out PipeTransportJob job,
-                        out int acceptedAmount))
+                        out int acceptedAmount,
+                        out string blockedReason))
                     {
                         if (acceptedAmount >= count)
                         {
@@ -955,7 +904,8 @@ public class TileEntityUniversalExtractor : TileEntityMachine
                     }
                     else
                     {
-                        DevLog($"FLUSH PIPE BLOCKED — could not create transport job for {count}x {itemName}");
+                        string reasonText = string.IsNullOrEmpty(blockedReason) ? "unknown" : blockedReason;
+                        DevLog($"FLUSH PIPE BLOCKED — could not create transport job for {count}x {itemName}. reason={reasonText}");
                     }
                 }
 

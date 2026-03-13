@@ -92,8 +92,8 @@
             <property name="NeedsFluidToRun" value="true"/>
             <property name="FluidFuel" value="gas"/>
             <property name="FluidFuelBufferGallons" value="20"/>
-            <property name="FluidFuelUsePerSecond" value="2"/>
-            <property name="FluidFuelPullPerSecond" value="3"/>
+            <property name="FluidFuelUsePerSecond" value="5"/>
+            <property name="FluidFuelPullPerSecond" value="10"/>
         </block>
 
         <!-- Universal Extractor - Nitrate -->
@@ -184,7 +184,7 @@
             <property name="UnlockedBy" value="craftingWorkstations"/>
             <!-- Placeholder properties - fill later -->
             <property name="CraftingSpeed" value="1"/>
-            <property name="InternalStorageMultiplier" value="25"/>
+            <property name="InternalStorageMultiplier" value="5"/>
             <property name="DevLogs" value="true"/>
         </block>
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
@@ -489,6 +489,38 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
     // ─────────────────────────────────────────────
     // BLOCK LIFECYCLE
     // ─────────────────────────────────────────────
+    public override void OnBlockLoaded(
+        WorldBase world,
+        int clrIdx,
+        Vector3i blockPos,
+        BlockValue blockValue)
+    {
+        base.OnBlockLoaded(world, clrIdx, blockPos, blockValue);
+
+        if (world.IsRemote() || blockValue.ischild)
+            return;
+
+        DevLog(blockValue, blockPos, "OnBlockLoaded()");
+        MarkSelfAndAdjacentPipesDirty(world, clrIdx, blockPos);
+    }
+
+    public override void OnBlockUnloaded(
+        WorldBase world,
+        int clrIdx,
+        Vector3i blockPos,
+        BlockValue blockValue)
+    {
+        if (!world.IsRemote() && !blockValue.ischild)
+        {
+            DevLog(blockValue, blockPos, "OnBlockUnloaded()");
+
+            for (int i = 0; i < NeighborOffsets.Length; i++)
+                MarkPipeDirtyAt(world, clrIdx, blockPos + NeighborOffsets[i]);
+        }
+
+        base.OnBlockUnloaded(world, clrIdx, blockPos, blockValue);
+    }
+
     public override void OnBlockAdded(
         WorldBase world,
         Chunk chunk,

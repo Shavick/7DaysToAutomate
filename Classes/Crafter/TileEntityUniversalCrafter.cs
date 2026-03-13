@@ -795,7 +795,8 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                         itemName,
                         count,
                         out PipeTransportJob job,
-                        out int acceptedAmount))
+                        out int acceptedAmount,
+                        out string blockedReason))
                     {
                         if (acceptedAmount >= count)
                             pendingOutput.Remove(itemName);
@@ -810,7 +811,8 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                     }
                     else
                     {
-                        DevLog($"FLUSH PIPE BLOCKED -> could not create transport job for {count}x {itemName}");
+                        string reasonText = string.IsNullOrEmpty(blockedReason) ? "unknown" : blockedReason;
+                        DevLog($"FLUSH PIPE BLOCKED -> graph={SelectedPipeGraphId} target={SelectedOutputChestPos} could not create transport job for {count}x {itemName}. reason={reasonText}");
                     }
                 }
 

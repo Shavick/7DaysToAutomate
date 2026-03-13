@@ -138,6 +138,61 @@ public abstract class TileEntityMachine : TileEntity
         return simulatedByHLR;
     }
 
+    protected bool TryGetBlockPropertyBool(string propertyName, out bool parsed)
+    {
+        parsed = false;
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        if (string.IsNullOrEmpty(raw))
+            return false;
+
+        return bool.TryParse(raw, out parsed);
+    }
+
+    protected bool TryGetBlockPropertyInt(string propertyName, out int parsed)
+    {
+        parsed = 0;
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        if (string.IsNullOrEmpty(raw))
+            return false;
+
+        return int.TryParse(raw, out parsed);
+    }
+
+    protected bool TryGetBlockPropertyString(string propertyName, out string parsed)
+    {
+        parsed = blockValue.Block?.Properties?.GetString(propertyName);
+        return !string.IsNullOrEmpty(parsed);
+    }
+
+    protected bool TryGetValidFluidFuelConfig(out string requestedFluid, out int bufferGallons, out int usePerSecond, out int pullPerSecond)
+    {
+        requestedFluid = string.Empty;
+        bufferGallons = 0;
+        usePerSecond = 0;
+        pullPerSecond = 0;
+
+        if (!TryGetBlockPropertyBool("NeedsFluidToRun", out bool needsFluid) || !needsFluid)
+            return false;
+
+        if (!TryGetBlockPropertyString("FluidFuel", out string rawFuel))
+            return false;
+
+        requestedFluid = rawFuel.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(requestedFluid))
+            return false;
+
+        if (!TryGetBlockPropertyInt("FluidFuelBufferGallons", out bufferGallons) || bufferGallons <= 0)
+            return false;
+
+        if (!TryGetBlockPropertyInt("FluidFuelUsePerSecond", out usePerSecond) || usePerSecond <= 0)
+            return false;
+
+        if (!TryGetBlockPropertyInt("FluidFuelPullPerSecond", out pullPerSecond) || pullPerSecond <= 0)
+            return false;
+
+        return true;
+    }
+
     public bool ServerSetPipePriority(int requestedPriority)
     {
         int clampedPriority = requestedPriority;

@@ -9,7 +9,7 @@ using UnityEngine;
 public class TileEntityFluidDecanter : TileEntityMachine
 {
     private const int PersistVersion = 102;
-    private const int ClientSyncVersion = 1;
+    private const int ClientSyncVersion = 2;
     private const int MaxSerializedInputTargets = 64;
     private const int MaxSerializedOutputTargets = 64;
     private const int MaxSerializedFluidOptions = 64;
@@ -100,6 +100,9 @@ public class TileEntityFluidDecanter : TileEntityMachine
     private string pendingItemInputReturnItemName = string.Empty;
 
     private string pendingItemOutputName = string.Empty;
+
+    public string PendingItemInputName => pendingItemInputName ?? string.Empty;
+    public string PendingItemOutputName => pendingItemOutputName ?? string.Empty;
 
     public TileEntityFluidDecanter(Chunk chunk) : base(chunk)
     {
@@ -1216,6 +1219,8 @@ public class TileEntityFluidDecanter : TileEntityMachine
             bw.Write(pendingItemOutput);
             bw.Write(pendingFluidInput);
             bw.Write(pendingFluidOutput);
+            bw.Write(pendingItemInputName ?? string.Empty);
+            bw.Write(pendingItemOutputName ?? string.Empty);
 
             bw.Write(cycleTickCounter);
             bw.Write(cycleTickLength);
@@ -1273,7 +1278,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         {
             if (mode == StreamModeRead.FromServer)
             {
-                int _ = br.ReadInt32();
+                int clientSyncVersion = br.ReadInt32();
 
                 IsOn = br.ReadBoolean();
 
@@ -1358,17 +1363,32 @@ public class TileEntityFluidDecanter : TileEntityMachine
                 pendingFluidInput = Math.Max(0, br.ReadInt32());
                 pendingFluidOutput = Math.Max(0, br.ReadInt32());
 
+                if (clientSyncVersion >= 2)
+                {
+                    pendingItemInputName = br.ReadString() ?? string.Empty;
+                    pendingItemOutputName = br.ReadString() ?? string.Empty;
+                }
+                else
+                {
+                    pendingItemInputName = string.Empty;
+                    pendingItemOutputName = string.Empty;
+                }
+
+                if (pendingItemInput <= 0)
+                    pendingItemInputName = string.Empty;
+
+                if (pendingItemOutput <= 0)
+                    pendingItemOutputName = string.Empty;
+
+                pendingItemInputFluidAmountMg = 0;
+                pendingItemInputReturnItemName = string.Empty;
+
                 cycleTickCounter = Math.Max(0, br.ReadInt32());
                 cycleTickLength = Math.Max(1, br.ReadInt32());
                 pendingFluidOutputCapacityMg = Math.Max(0, br.ReadInt32());
 
                 LastAction = br.ReadString() ?? string.Empty;
                 LastBlockReason = br.ReadString() ?? string.Empty;
-
-                pendingItemInputName = string.Empty;
-                pendingItemInputFluidAmountMg = 0;
-                pendingItemInputReturnItemName = string.Empty;
-                pendingItemOutputName = string.Empty;
 
                 NeedsUiRefresh = true;
                 return;
