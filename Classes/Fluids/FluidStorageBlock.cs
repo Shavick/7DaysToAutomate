@@ -32,6 +32,7 @@ public class FluidStorageBlock : MachineBlock<TileEntityFluidStorage>
         if (world.IsRemote() || blockValue.ischild)
             return;
 
+        FluidGraphManager.TryApplyStorageSnapshotForPosition(world, clrIdx, blockPos);
         MarkAdjacentPipesDirty(world, clrIdx, blockPos);
     }
 
@@ -42,7 +43,10 @@ public class FluidStorageBlock : MachineBlock<TileEntityFluidStorage>
         BlockValue blockValue)
     {
         if (!world.IsRemote() && !blockValue.ischild)
+        {
+            FluidGraphManager.CaptureStorageSnapshotForPosition(world, clrIdx, blockPos);
             MarkAdjacentPipesDirty(world, clrIdx, blockPos);
+        }
 
         base.OnBlockUnloaded(world, clrIdx, blockPos, blockValue);
     }
@@ -68,7 +72,10 @@ public class FluidStorageBlock : MachineBlock<TileEntityFluidStorage>
         BlockValue blockValue)
     {
         if (!world.IsRemote())
+        {
+            FluidGraphManager.RemoveStorageSnapshotAtPosition(blockPos, true);
             MarkAdjacentPipesDirty(world, 0, blockPos);
+        }
 
         base.OnBlockRemoved(world, chunk, blockPos, blockValue);
     }

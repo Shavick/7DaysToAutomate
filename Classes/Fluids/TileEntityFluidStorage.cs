@@ -128,6 +128,19 @@ public class TileEntityFluidStorage : TileEntityMachine
         return removed;
     }
 
+    public void ApplySnapshotState(string snapshotFluidType, int snapshotAmountMg)
+    {
+        int amount = Math.Max(0, snapshotAmountMg);
+        int capacity = GetCapacityMg();
+        if (amount > capacity)
+            amount = capacity;
+
+        fluidAmountMg = amount;
+        fluidType = amount > 0 ? (snapshotFluidType ?? string.Empty) : string.Empty;
+        acceptedThisTickMg = 0;
+        setModified();
+    }
+
     public override void write(PooledBinaryWriter bw, StreamModeWrite mode)
     {
         base.write(bw, mode);

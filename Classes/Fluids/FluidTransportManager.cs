@@ -21,6 +21,8 @@ public static class FluidTransportManager
     {
         public Vector3i Pos;
         public TileEntityFluidStorage Storage;
+        public FluidGraphData.StorageSnapshot Snapshot;
+        public bool UsingSnapshot;
         public int RemainingInputMg;
         public int RemainingFreeSpaceMg;
         public int RemainingOutputMg;
@@ -68,7 +70,7 @@ public static class FluidTransportManager
             return;
         }
 
-        List<StorageRuntime> storage = ResolveStorage(world, clrIdx, graph.StorageEndpoints);
+        List<StorageRuntime> storage = ResolveStorage(world, clrIdx, graph, now);
         if (storage.Count == 0)
         {
             RecordBlocked(graph, pumpState.LivePumps, now, ReasonNoStorage, "No fluid storage connected to graph");
@@ -108,14 +110,14 @@ public static class FluidTransportManager
         for (int i = 0; i < storage.Count; i++)
         {
             StorageRuntime node = storage[i];
-            node.Storage.ResetTickBudget();
-            node.RemainingInputMg = node.Storage.GetRemainingInputBudgetMg();
-            node.RemainingFreeSpaceMg = node.Storage.GetFreeSpaceMg();
-            node.RemainingOutputMg = node.Storage.GetAvailableOutputMg();
+            PrepareStorageNodeForTick(node, now);
+            node.RemainingInputMg = GetStorageNodeRemainingInputBudgetMg(node, now);
+            node.RemainingFreeSpaceMg = GetStorageNodeFreeSpaceMg(node);
+            node.RemainingOutputMg = GetStorageNodeAvailableOutputMg(node);
             node.AllocatedIntakeMg = 0;
             node.AllocatedDrainMg = 0;
 
-            if (!node.Storage.CanAcceptType(graphFluidType))
+            if (!CanStorageNodeAcceptType(node, graphFluidType))
                 continue;
 
             if (node.RemainingInputMg > 0 && node.RemainingFreeSpaceMg > 0)
@@ -156,7 +158,7 @@ public static class FluidTransportManager
             acceptedTotal = providedTotal;
         }
 
-        ApplySinkIntake(graphFluidType, sinkNodes);
+        ApplySinkIntake(graph, graphFluidType, sinkNodes, now);
     }
 
     private static PumpResolution ResolveActivePumps(WorldBase world, int clrIdx, FluidGraphData graph)
@@ -195,19 +197,39 @@ public static class FluidTransportManager
         return state;
     }
 
-    private static List<StorageRuntime> ResolveStorage(WorldBase world, int clrIdx, HashSet<Vector3i> storagePositions)
+    private static List<StorageRuntime> ResolveStorage(WorldBase world, int clrIdx, FluidGraphData graph, ulong now)
     {
         List<StorageRuntime> storage = new List<StorageRuntime>();
+        if (graph == null || graph.StorageEndpoints == null)
+            return storage;
 
-        foreach (Vector3i pos in storagePositions)
+        foreach (Vector3i pos in graph.StorageEndpoints)
         {
-            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out TileEntity te) || !(te is TileEntityFluidStorage tank))
+            if (SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out TileEntity te) && te is TileEntityFluidStorage tank)
+            {
+                storage.Add(new StorageRuntime
+                {
+                    Pos = pos,
+                    Storage = tank,
+                    UsingSnapshot = false
+                });
                 continue;
+            }
+
+            if (!graph.TryGetStorageSnapshot(pos, out FluidGraphData.StorageSnapshot snapshot) || snapshot == null)
+                continue;
+
+            if (snapshot.LastInputBudgetWorldTime != now)
+            {
+                snapshot.LastInputBudgetWorldTime = now;
+                snapshot.AcceptedThisTickMg = 0;
+            }
 
             storage.Add(new StorageRuntime
             {
                 Pos = pos,
-                Storage = tank
+                Snapshot = snapshot,
+                UsingSnapshot = true
             });
         }
 
@@ -226,8 +248,9 @@ public static class FluidTransportManager
         string found = string.Empty;
         for (int i = 0; i < storage.Count; i++)
         {
-            string localType = storage[i].Storage.FluidType;
-            if (string.IsNullOrEmpty(localType) || storage[i].Storage.FluidAmountMg <= 0)
+            string localType = GetStorageNodeFluidType(storage[i]);
+            int localAmount = GetStorageNodeFluidAmountMg(storage[i]);
+            if (string.IsNullOrEmpty(localType) || localAmount <= 0)
                 continue;
 
             if (string.IsNullOrEmpty(found))
@@ -247,8 +270,9 @@ public static class FluidTransportManager
     {
         for (int i = 0; i < storage.Count; i++)
         {
-            string localType = storage[i].Storage.FluidType;
-            if (string.IsNullOrEmpty(localType) || storage[i].Storage.FluidAmountMg <= 0)
+            string localType = GetStorageNodeFluidType(storage[i]);
+            int localAmount = GetStorageNodeFluidAmountMg(storage[i]);
+            if (string.IsNullOrEmpty(localType) || localAmount <= 0)
                 continue;
 
             if (!string.Equals(localType, graphFluidType, StringComparison.Ordinal))
@@ -520,7 +544,7 @@ public static class FluidTransportManager
         }
     }
 
-    private static void ApplySourceDrains(List<StorageRuntime> sources)
+    private static void ApplySourceDrains(FluidGraphData graph, List<StorageRuntime> sources, ulong now)
     {
         for (int i = 0; i < sources.Count; i++)
         {
@@ -528,11 +552,12 @@ public static class FluidTransportManager
             if (source.AllocatedDrainMg <= 0)
                 continue;
 
-            source.Storage.RemoveFluid(source.AllocatedDrainMg);
+            DrainFromStorageNode(source, source.AllocatedDrainMg, now);
+            PersistStorageNodeSnapshot(graph, source);
         }
     }
 
-    private static void ApplySinkIntake(string fluidType, List<StorageRuntime> sinks)
+    private static void ApplySinkIntake(FluidGraphData graph, string fluidType, List<StorageRuntime> sinks, ulong now)
     {
         for (int i = 0; i < sinks.Count; i++)
         {
@@ -540,8 +565,219 @@ public static class FluidTransportManager
             if (sink.AllocatedIntakeMg <= 0)
                 continue;
 
-            sink.Storage.AcceptFluid(fluidType, sink.AllocatedIntakeMg);
+            AcceptIntoStorageNode(sink, fluidType, sink.AllocatedIntakeMg, now);
+            PersistStorageNodeSnapshot(graph, sink);
         }
+    }
+
+    private static void PrepareStorageNodeForTick(StorageRuntime node, ulong now)
+    {
+        if (node == null)
+            return;
+
+        if (node.UsingSnapshot)
+        {
+            if (node.Snapshot == null)
+                return;
+
+            if (node.Snapshot.LastInputBudgetWorldTime != now)
+            {
+                node.Snapshot.LastInputBudgetWorldTime = now;
+                node.Snapshot.AcceptedThisTickMg = 0;
+            }
+
+            return;
+        }
+
+        node.Storage?.ResetTickBudget();
+    }
+
+    private static string GetStorageNodeFluidType(StorageRuntime node)
+    {
+        if (node == null)
+            return string.Empty;
+
+        if (node.UsingSnapshot)
+            return node.Snapshot?.FluidType ?? string.Empty;
+
+        return node.Storage?.FluidType ?? string.Empty;
+    }
+
+    private static int GetStorageNodeFluidAmountMg(StorageRuntime node)
+    {
+        if (node == null)
+            return 0;
+
+        if (node.UsingSnapshot)
+            return Math.Max(0, node.Snapshot?.FluidAmountMg ?? 0);
+
+        return Math.Max(0, node.Storage?.FluidAmountMg ?? 0);
+    }
+
+    private static bool CanStorageNodeAcceptType(StorageRuntime node, string fluidType)
+    {
+        if (node == null || string.IsNullOrEmpty(fluidType))
+            return false;
+
+        if (node.UsingSnapshot)
+        {
+            if (node.Snapshot == null)
+                return false;
+
+            if (string.IsNullOrEmpty(node.Snapshot.FluidType))
+                return true;
+
+            return string.Equals(node.Snapshot.FluidType, fluidType, StringComparison.Ordinal);
+        }
+
+        if (node.Storage == null)
+            return false;
+
+        return node.Storage.CanAcceptType(fluidType);
+    }
+
+    private static int GetStorageNodeRemainingInputBudgetMg(StorageRuntime node, ulong now)
+    {
+        if (node == null)
+            return 0;
+
+        if (node.UsingSnapshot)
+        {
+            if (node.Snapshot == null)
+                return 0;
+
+            if (node.Snapshot.LastInputBudgetWorldTime != now)
+            {
+                node.Snapshot.LastInputBudgetWorldTime = now;
+                node.Snapshot.AcceptedThisTickMg = 0;
+            }
+
+            int inputCap = Math.Max(0, node.Snapshot.InputCapMgPerTick);
+            int remaining = inputCap - Math.Max(0, node.Snapshot.AcceptedThisTickMg);
+            return remaining > 0 ? remaining : 0;
+        }
+
+        if (node.Storage == null)
+            return 0;
+
+        return node.Storage.GetRemainingInputBudgetMg();
+    }
+
+    private static int GetStorageNodeFreeSpaceMg(StorageRuntime node)
+    {
+        if (node == null)
+            return 0;
+
+        if (node.UsingSnapshot)
+        {
+            if (node.Snapshot == null)
+                return 0;
+
+            int capacity = Math.Max(0, node.Snapshot.CapacityMg);
+            int amount = Math.Max(0, node.Snapshot.FluidAmountMg);
+            int free = capacity - amount;
+            return free > 0 ? free : 0;
+        }
+
+        if (node.Storage == null)
+            return 0;
+
+        return node.Storage.GetFreeSpaceMg();
+    }
+
+    private static int GetStorageNodeAvailableOutputMg(StorageRuntime node)
+    {
+        if (node == null)
+            return 0;
+
+        if (node.UsingSnapshot)
+        {
+            if (node.Snapshot == null)
+                return 0;
+
+            int amount = Math.Max(0, node.Snapshot.FluidAmountMg);
+            int outputCap = Math.Max(0, node.Snapshot.OutputCapMgPerTick);
+            int available = Math.Min(amount, outputCap);
+            return available > 0 ? available : 0;
+        }
+
+        if (node.Storage == null)
+            return 0;
+
+        return node.Storage.GetAvailableOutputMg();
+    }
+
+    private static int AcceptIntoStorageNode(StorageRuntime node, string fluidType, int requestedMg, ulong now)
+    {
+        if (node == null || string.IsNullOrEmpty(fluidType) || requestedMg <= 0)
+            return 0;
+
+        if (!node.UsingSnapshot)
+        {
+            if (node.Storage == null)
+                return 0;
+
+            return node.Storage.AcceptFluid(fluidType, requestedMg);
+        }
+
+        if (node.Snapshot == null || !CanStorageNodeAcceptType(node, fluidType))
+            return 0;
+
+        int freeSpace = GetStorageNodeFreeSpaceMg(node);
+        int remainingBudget = GetStorageNodeRemainingInputBudgetMg(node, now);
+        int accepted = Math.Min(requestedMg, freeSpace);
+        accepted = Math.Min(accepted, remainingBudget);
+        if (accepted <= 0)
+            return 0;
+
+        node.Snapshot.FluidAmountMg += accepted;
+        node.Snapshot.AcceptedThisTickMg += accepted;
+        node.Snapshot.LastInputBudgetWorldTime = now;
+
+        int cap = Math.Max(0, node.Snapshot.CapacityMg);
+        if (node.Snapshot.FluidAmountMg > cap)
+            node.Snapshot.FluidAmountMg = cap;
+
+        if (string.IsNullOrEmpty(node.Snapshot.FluidType) && node.Snapshot.FluidAmountMg > 0)
+            node.Snapshot.FluidType = fluidType;
+
+        return accepted;
+    }
+
+    private static int DrainFromStorageNode(StorageRuntime node, int requestedMg, ulong now)
+    {
+        if (node == null || requestedMg <= 0)
+            return 0;
+
+        if (!node.UsingSnapshot)
+        {
+            if (node.Storage == null)
+                return 0;
+
+            return node.Storage.RemoveFluid(requestedMg);
+        }
+
+        if (node.Snapshot == null || node.Snapshot.FluidAmountMg <= 0)
+            return 0;
+
+        int removed = Math.Min(requestedMg, node.Snapshot.FluidAmountMg);
+        node.Snapshot.FluidAmountMg -= removed;
+        if (node.Snapshot.FluidAmountMg <= 0)
+        {
+            node.Snapshot.FluidAmountMg = 0;
+            node.Snapshot.FluidType = string.Empty;
+        }
+
+        node.Snapshot.LastInputBudgetWorldTime = now;
+        return removed;
+    }
+
+    private static void PersistStorageNodeSnapshot(FluidGraphData graph, StorageRuntime node)
+    {
+        if (graph == null || node == null || !node.UsingSnapshot || node.Snapshot == null)
+            return;
+
+        graph.SetStorageSnapshot(node.Pos, node.Snapshot);
     }
 
     private static void RecordBlocked(FluidGraphData graph, List<TileEntityFluidPump> pumps, ulong now, string reason, string detail)
