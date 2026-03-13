@@ -287,6 +287,13 @@ public class HigherLogicRegistry
                 isDirty = true;
                 break;
 
+            case DecanterSnapshot decanter:
+                HLRDevLog($"[HLR][Decanter] Simulate @ {decanter.Position} ticks={hlrTicksToSimulate}");
+                SimulateDecanter(decanter, worldTime, hlrTicksToSimulate);
+                decanter.LastHLRSimTime = worldTime;
+                isDirty = true;
+                break;
+
             default:
                 HLRDevLog($"[HLR] Unknown snapshot type '{snapshot.SnapshotKind}' — skipping");
                 break;
@@ -500,6 +507,502 @@ public class HigherLogicRegistry
         HLRDevLog($"[HLR][Crafter] SIMULATE END @ {crafter.Position}");
     }
 
+    private void SimulateDecanter(DecanterSnapshot decanter, ulong worldTime, int hlrTicksToSimulate)
+    {
+        if (decanter == null)
+            return;
+
+        if (!decanter.IsOn)
+        {
+            decanter.LastAction = "Idle";
+            decanter.LastBlockReason = string.Empty;
+            decanter.CycleTickCounter = 0;
+            return;
+        }
+
+        if (decanter.CycleTickLength <= 0)
+            decanter.CycleTickLength = 1;
+
+        string runtimeBlockReason = string.Empty;
+
+        if (!TryFlushDecanterPendingItemOutput(decanter, out string itemBlockedReason) && string.IsNullOrEmpty(runtimeBlockReason))
+            runtimeBlockReason = itemBlockedReason;
+
+        if (!TryFlushDecanterPendingFluidOutput(decanter, out string fluidBlockedReason) && string.IsNullOrEmpty(runtimeBlockReason))
+            runtimeBlockReason = fluidBlockedReason;
+
+        string requirementsReason = GetDecanterMissingRequirementReason(decanter);
+        if (!string.IsNullOrEmpty(requirementsReason))
+        {
+            decanter.LastAction = "Waiting";
+            decanter.LastBlockReason = requirementsReason;
+            decanter.CycleTickCounter = 0;
+            return;
+        }
+
+        decanter.CycleTickCounter += Math.Max(1, hlrTicksToSimulate);
+
+        string cycleAction = "Running";
+        string cycleBlockedReason = string.Empty;
+
+        while (decanter.CycleTickCounter >= decanter.CycleTickLength)
+        {
+            decanter.CycleTickCounter -= decanter.CycleTickLength;
+
+            bool ranCycle = TryRunDecanterCycle(decanter, out cycleAction, out cycleBlockedReason);
+            if (!ranCycle)
+                break;
+
+            if (!TryFlushDecanterPendingItemOutput(decanter, out itemBlockedReason) && string.IsNullOrEmpty(runtimeBlockReason))
+                runtimeBlockReason = itemBlockedReason;
+
+            if (!TryFlushDecanterPendingFluidOutput(decanter, out fluidBlockedReason) && string.IsNullOrEmpty(runtimeBlockReason))
+                runtimeBlockReason = fluidBlockedReason;
+
+            if (!string.IsNullOrEmpty(cycleBlockedReason))
+                break;
+        }
+
+        decanter.LastAction = string.IsNullOrEmpty(cycleAction) ? "Running" : cycleAction;
+
+        if (!string.IsNullOrEmpty(cycleBlockedReason))
+            decanter.LastBlockReason = cycleBlockedReason;
+        else if (!string.IsNullOrEmpty(runtimeBlockReason))
+            decanter.LastBlockReason = runtimeBlockReason;
+        else
+            decanter.LastBlockReason = string.Empty;
+
+        decanter.WorldTime = worldTime;
+    }
+
+    private string GetDecanterMissingRequirementReason(DecanterSnapshot decanter)
+    {
+        if (decanter == null)
+            return "World unavailable";
+
+        if (decanter.SelectedInputPipeGraphId == Guid.Empty || decanter.SelectedInputChestPos == Vector3i.zero)
+            return "Missing Item Input";
+
+        if (!HasValidGraphStorageEndpoint(decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos))
+            return "Missing Item Input";
+
+        if (string.IsNullOrEmpty(decanter.SelectedFluidType))
+            return "No fluid selected";
+
+        if (decanter.SelectedOutputChestPos == Vector3i.zero)
+            return "Missing Item Output";
+
+        if (decanter.SelectedOutputMode != OutputTransportMode.Pipe)
+            return "HLR requires pipe item output";
+
+        if (decanter.SelectedOutputPipeGraphId == Guid.Empty)
+            return "Missing Item Output";
+
+        if (!HasValidGraphStorageEndpoint(decanter.SelectedOutputPipeGraphId, decanter.SelectedOutputChestPos))
+            return "Missing Item Output";
+
+        if (!TryResolveDecanterFluidGraph(decanter, out Guid resolvedFluidGraphId))
+            return "Missing/Invalid Fluid Output";
+
+        decanter.SelectedFluidGraphId = resolvedFluidGraphId;
+
+        if (decanter.PendingItemInput <= 0)
+        {
+            if (!PipeGraphManager.TryGetStorageItemCounts(world, 0, decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
+                availableCounts == null)
+            {
+                return "Input item unavailable";
+            }
+
+            if (!TryFindDecanterInputCandidate(availableCounts, decanter.SelectedFluidType, out _, out _, out _))
+                return "No matching input item";
+        }
+
+        return string.Empty;
+    }
+
+    private bool TryResolveDecanterFluidGraph(DecanterSnapshot decanter, out Guid graphId)
+    {
+        graphId = Guid.Empty;
+
+        if (decanter == null || string.IsNullOrEmpty(decanter.SelectedFluidType))
+            return false;
+
+        string normalizedFluid = decanter.SelectedFluidType.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(normalizedFluid))
+            return false;
+
+        if (decanter.SelectedFluidGraphId != Guid.Empty && IsDecanterFluidGraphCompatible(decanter.SelectedFluidGraphId, normalizedFluid))
+        {
+            graphId = decanter.SelectedFluidGraphId;
+            return true;
+        }
+
+        List<Guid> candidates = GetDecanterAdjacentFluidGraphCandidates(decanter.Position);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            Guid candidate = candidates[i];
+            if (!IsDecanterFluidGraphCompatible(candidate, normalizedFluid))
+                continue;
+
+            graphId = candidate;
+            return true;
+        }
+
+        return false;
+    }
+
+    private List<Guid> GetDecanterAdjacentFluidGraphCandidates(Vector3i machinePos)
+    {
+        List<Guid> candidates = new List<Guid>();
+
+        Vector3i[] offsets =
+        {
+            Vector3i.forward,
+            Vector3i.back,
+            Vector3i.left,
+            Vector3i.right,
+            Vector3i.up,
+            Vector3i.down
+        };
+
+        for (int i = 0; i < offsets.Length; i++)
+        {
+            Vector3i pipePos = machinePos + offsets[i];
+            if (!SafeWorldRead.TryGetTileEntity(world, 0, pipePos, out TileEntity te) || !(te is TileEntityLiquidPipe pipe))
+                continue;
+
+            Guid candidate = pipe.FluidGraphId;
+            if (candidate == Guid.Empty)
+            {
+                if (FluidGraphManager.TryEnsureGraphForPipe(world, 0, pipePos, out FluidGraphData graph) && graph != null)
+                    candidate = graph.FluidGraphId;
+            }
+
+            if (candidate == Guid.Empty || candidates.Contains(candidate))
+                continue;
+
+            candidates.Add(candidate);
+        }
+
+        return candidates;
+    }
+
+    private static bool IsDecanterFluidGraphCompatible(Guid graphId, string fluidType)
+    {
+        if (graphId == Guid.Empty || string.IsNullOrEmpty(fluidType))
+            return false;
+
+        if (!FluidGraphManager.TryGetGraph(graphId, out FluidGraphData graph) || graph == null)
+            return false;
+
+        if (string.IsNullOrEmpty(graph.FluidType))
+            return true;
+
+        return string.Equals(graph.FluidType, fluidType, StringComparison.Ordinal);
+    }
+
+    private bool TryFindDecanterInputCandidate(
+        Dictionary<string, int> availableCounts,
+        string selectedFluidType,
+        out string matchedItemName,
+        out int fluidAmountMg,
+        out string returnItemName)
+    {
+        matchedItemName = string.Empty;
+        fluidAmountMg = 0;
+        returnItemName = string.Empty;
+
+        if (availableCounts == null || availableCounts.Count == 0 || string.IsNullOrEmpty(selectedFluidType))
+            return false;
+
+        string normalizedFluid = selectedFluidType.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(normalizedFluid))
+            return false;
+
+        List<string> itemNames = new List<string>(availableCounts.Keys);
+        itemNames.Sort(StringComparer.Ordinal);
+
+        for (int i = 0; i < itemNames.Count; i++)
+        {
+            string itemName = itemNames[i];
+            if (string.IsNullOrEmpty(itemName))
+                continue;
+
+            int count = availableCounts.TryGetValue(itemName, out int value) ? value : 0;
+            if (count <= 0)
+                continue;
+
+            if (!TileEntityFluidDecanter.TryGetConversionRuleForItem(itemName, out string fluidType, out int amountMg, out string returnItem))
+                continue;
+
+            if (!string.Equals(fluidType, normalizedFluid, StringComparison.Ordinal))
+                continue;
+
+            if (amountMg <= 0)
+                continue;
+
+            matchedItemName = itemName;
+            fluidAmountMg = amountMg;
+            returnItemName = returnItem ?? string.Empty;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryFlushDecanterPendingItemOutput(DecanterSnapshot decanter, out string blockedReason)
+    {
+        blockedReason = string.Empty;
+
+        if (decanter == null || decanter.PendingItemOutput <= 0)
+            return true;
+
+        if (decanter.SelectedOutputMode != OutputTransportMode.Pipe)
+        {
+            blockedReason = "HLR requires pipe item output";
+            return false;
+        }
+
+        if (decanter.SelectedOutputPipeGraphId == Guid.Empty || decanter.SelectedOutputChestPos == Vector3i.zero)
+        {
+            blockedReason = "Missing Item Output";
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(decanter.PendingItemOutputName))
+        {
+            decanter.PendingItemOutput = 0;
+            blockedReason = "Pending item output invalid";
+            return false;
+        }
+
+        Dictionary<string, int> request = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            { decanter.PendingItemOutputName, decanter.PendingItemOutput }
+        };
+
+        if (!TryDepositSnapshotOutput(decanter.SelectedOutputPipeGraphId, decanter.SelectedOutputChestPos, request, out Dictionary<string, int> deposited) ||
+            deposited == null ||
+            !deposited.TryGetValue(decanter.PendingItemOutputName, out int depositedCount) ||
+            depositedCount <= 0)
+        {
+            blockedReason = "Item output blocked";
+            return false;
+        }
+
+        decanter.PendingItemOutput -= depositedCount;
+        if (decanter.PendingItemOutput < 0)
+            decanter.PendingItemOutput = 0;
+
+        if (decanter.PendingItemOutput == 0)
+            decanter.PendingItemOutputName = string.Empty;
+
+        if (decanter.PendingItemOutput > 0)
+        {
+            blockedReason = "Item output blocked";
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryInjectDecanterFluidPartial(Guid fluidGraphId, string fluidType, int requestedMg, out int injectedMg, out string blockedReason)
+    {
+        injectedMg = 0;
+        blockedReason = string.Empty;
+
+        if (requestedMg <= 0)
+            return true;
+
+        if (fluidGraphId == Guid.Empty || string.IsNullOrEmpty(fluidType))
+        {
+            blockedReason = "Missing/Invalid Fluid Output";
+            return false;
+        }
+
+        if (FluidGraphManager.TryInjectFluid(world, 0, fluidGraphId, fluidType, requestedMg, out blockedReason))
+        {
+            injectedMg = requestedMg;
+            blockedReason = string.Empty;
+            return true;
+        }
+
+        bool retryWithSmallerAmount =
+            string.Equals(blockedReason, "Graph throughput full", StringComparison.Ordinal) ||
+            string.Equals(blockedReason, "No storage room", StringComparison.Ordinal);
+
+        if (!retryWithSmallerAmount || requestedMg <= 1)
+            return false;
+
+        int attempt = requestedMg / 2;
+        while (attempt > 0)
+        {
+            if (FluidGraphManager.TryInjectFluid(world, 0, fluidGraphId, fluidType, attempt, out string smallerReason))
+            {
+                injectedMg = attempt;
+                blockedReason = string.Empty;
+                return true;
+            }
+
+            bool canContinue =
+                string.Equals(smallerReason, "Graph throughput full", StringComparison.Ordinal) ||
+                string.Equals(smallerReason, "No storage room", StringComparison.Ordinal);
+
+            if (!canContinue)
+            {
+                blockedReason = smallerReason;
+                return false;
+            }
+
+            attempt /= 2;
+        }
+
+        return false;
+    }
+
+    private bool TryFlushDecanterPendingFluidOutput(DecanterSnapshot decanter, out string blockedReason)
+    {
+        blockedReason = string.Empty;
+
+        if (decanter == null || decanter.PendingFluidOutput <= 0)
+            return true;
+
+        if (!TryResolveDecanterFluidGraph(decanter, out Guid resolvedGraphId))
+        {
+            blockedReason = "Missing/Invalid Fluid Output";
+            return false;
+        }
+
+        decanter.SelectedFluidGraphId = resolvedGraphId;
+
+        if (!TryInjectDecanterFluidPartial(resolvedGraphId, decanter.SelectedFluidType, decanter.PendingFluidOutput, out int injectedMg, out blockedReason))
+            return false;
+
+        if (injectedMg <= 0)
+            return false;
+
+        decanter.PendingFluidOutput -= injectedMg;
+        if (decanter.PendingFluidOutput < 0)
+            decanter.PendingFluidOutput = 0;
+
+        if (decanter.PendingFluidOutput > 0)
+        {
+            blockedReason = "Graph throughput full";
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool TryRunDecanterCycle(DecanterSnapshot decanter, out string cycleAction, out string blockedReason)
+    {
+        cycleAction = "Running";
+        blockedReason = string.Empty;
+
+        if (decanter == null)
+        {
+            blockedReason = "World unavailable";
+            return false;
+        }
+
+        if (decanter.PendingItemInput > 0)
+        {
+            if (decanter.PendingItemOutput > 0)
+            {
+                blockedReason = "Pending item output full";
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(decanter.PendingItemInputName) || decanter.PendingItemInputFluidAmountMg <= 0)
+            {
+                decanter.PendingItemInput = 0;
+                decanter.PendingItemInputName = string.Empty;
+                decanter.PendingItemInputFluidAmountMg = 0;
+                decanter.PendingItemInputReturnItemName = string.Empty;
+                blockedReason = "Pending input invalid";
+                return true;
+            }
+
+            int freeCapacity = decanter.PendingFluidOutputCapacityMg - decanter.PendingFluidOutput;
+            if (freeCapacity < decanter.PendingItemInputFluidAmountMg)
+            {
+                blockedReason = "Pending fluid output full";
+                return false;
+            }
+
+            int convertedFluidMg = decanter.PendingItemInputFluidAmountMg;
+            string returnItem = decanter.PendingItemInputReturnItemName;
+
+            decanter.PendingItemInput = 0;
+            decanter.PendingItemInputName = string.Empty;
+            decanter.PendingItemInputFluidAmountMg = 0;
+            decanter.PendingItemInputReturnItemName = string.Empty;
+
+            decanter.PendingFluidOutput += Math.Max(0, convertedFluidMg);
+
+            if (!string.IsNullOrEmpty(returnItem))
+            {
+                ItemValue returnValue = ItemClass.GetItem(returnItem, false);
+                if (returnValue != null && returnValue.type != ItemValue.None.type)
+                {
+                    decanter.PendingItemOutput = 1;
+                    decanter.PendingItemOutputName = returnItem;
+                }
+            }
+
+            cycleAction = "Converted";
+            return true;
+        }
+
+        if (decanter.PendingItemOutput > 0)
+        {
+            blockedReason = "Pending item output full";
+            return false;
+        }
+
+        if (decanter.PendingFluidOutput >= decanter.PendingFluidOutputCapacityMg)
+        {
+            blockedReason = "Pending fluid output full";
+            return false;
+        }
+
+        if (!PipeGraphManager.TryGetStorageItemCounts(world, 0, decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
+            availableCounts == null)
+        {
+            blockedReason = "Input item unavailable";
+            return false;
+        }
+
+        if (!TryFindDecanterInputCandidate(availableCounts, decanter.SelectedFluidType, out string matchedItemName, out int fluidAmountMg, out string returnItemName))
+        {
+            blockedReason = "No matching input item";
+            return false;
+        }
+
+        Dictionary<string, int> request = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            { matchedItemName, 1 }
+        };
+
+        if (!PipeGraphManager.TryConsumeStorageItems(world, 0, decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos, request, out Dictionary<string, int> consumed) ||
+            consumed == null ||
+            !consumed.TryGetValue(matchedItemName, out int consumedCount) ||
+            consumedCount <= 0)
+        {
+            blockedReason = "Input item unavailable";
+            return false;
+        }
+
+        decanter.PendingItemInput = 1;
+        decanter.PendingItemInputName = matchedItemName;
+        decanter.PendingItemInputFluidAmountMg = Math.Max(0, fluidAmountMg);
+        decanter.PendingItemInputReturnItemName = returnItemName ?? string.Empty;
+
+        cycleAction = "Requested Input";
+        return true;
+    }
+
     private void FlushOwedResourcesToGraph(Guid pipeGraphId, Vector3i storagePos, Dictionary<string, int> owedResources, string snapshotKind)
     {
         if (owedResources == null || owedResources.Count == 0)
@@ -592,6 +1095,8 @@ public class HigherLogicRegistry
             lastSimTime = extractor.LastHLRSimTime;
         else if (snapshot is CrafterSnapshot crafter)
             lastSimTime = crafter.LastHLRSimTime;
+        else if (snapshot is DecanterSnapshot decanter)
+            lastSimTime = decanter.LastHLRSimTime;
         else
             return 0;
 
@@ -691,6 +1196,9 @@ public class HigherLogicRegistry
             case CrafterSnapshot crafter:
                 return CloneCrafterSnapshot(crafter);
 
+            case DecanterSnapshot decanter:
+                return CloneDecanterSnapshot(decanter);
+
             default:
                 Log.Error($"[HLR][Save] CloneSnapshotForSave FAIL — unknown snapshot kind '{snapshot?.SnapshotKind}'");
                 return null;
@@ -779,6 +1287,38 @@ public class HigherLogicRegistry
         }
 
         return clone;
+    }
+
+    private DecanterSnapshot CloneDecanterSnapshot(DecanterSnapshot source)
+    {
+        return new DecanterSnapshot
+        {
+            MachineId = source.MachineId,
+            Position = source.Position,
+            WorldTime = source.WorldTime,
+            LastHLRSimTime = source.LastHLRSimTime,
+            IsOn = source.IsOn,
+            SelectedInputChestPos = source.SelectedInputChestPos,
+            SelectedInputPipeGraphId = source.SelectedInputPipeGraphId,
+            SelectedOutputChestPos = source.SelectedOutputChestPos,
+            SelectedOutputMode = source.SelectedOutputMode,
+            SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
+            SelectedFluidType = source.SelectedFluidType,
+            SelectedFluidGraphId = source.SelectedFluidGraphId,
+            PendingItemInput = source.PendingItemInput,
+            PendingItemOutput = source.PendingItemOutput,
+            PendingFluidInput = source.PendingFluidInput,
+            PendingFluidOutput = source.PendingFluidOutput,
+            PendingItemInputName = source.PendingItemInputName,
+            PendingItemInputFluidAmountMg = source.PendingItemInputFluidAmountMg,
+            PendingItemInputReturnItemName = source.PendingItemInputReturnItemName,
+            PendingItemOutputName = source.PendingItemOutputName,
+            CycleTickCounter = source.CycleTickCounter,
+            CycleTickLength = source.CycleTickLength,
+            PendingFluidOutputCapacityMg = source.PendingFluidOutputCapacityMg,
+            LastAction = source.LastAction,
+            LastBlockReason = source.LastBlockReason
+        };
     }
 
     public Dictionary<string, int> GetSnapshotCountsByType()
@@ -990,6 +1530,14 @@ public class HigherLogicRegistry
                 HLRDevLog($"[HLR][Factory] Unsupported Crafter version {version}");
                 return null;
 
+            case "Decanter":
+                if (version == 1 || version == 2)
+                {
+                    return new DecanterSnapshot();
+                }
+                HLRDevLog($"[HLR][Factory] Unsupported Decanter version {version}");
+                return null;
+
             default:
                 Log.Error($"[HLR][Factory] Unknown snapshot kind '{kind}'");
                 return null;
@@ -1076,6 +1624,9 @@ public class HigherLogicRegistry
 
                     if (snapshot is CrafterSnapshot crafter)
                         SaveCrafterSnapshot(bw, crafter);
+
+                    if (snapshot is DecanterSnapshot decanter)
+                        SaveDecanterSnapshot(bw, decanter);
                 }
             }
 
@@ -1226,6 +1777,44 @@ public class HigherLogicRegistry
         HLRDevLog($"[HLR][Crafter][Save] END");
     }
 
+    private void SaveDecanterSnapshot(BinaryWriter bw, DecanterSnapshot decanter)
+    {
+        bw.Write(decanter.WorldTime);
+        bw.Write(decanter.LastHLRSimTime);
+        bw.Write(decanter.IsOn);
+
+        bw.Write(decanter.SelectedInputChestPos.x);
+        bw.Write(decanter.SelectedInputChestPos.y);
+        bw.Write(decanter.SelectedInputChestPos.z);
+        bw.Write(decanter.SelectedInputPipeGraphId.ToString());
+
+        bw.Write(decanter.SelectedOutputChestPos.x);
+        bw.Write(decanter.SelectedOutputChestPos.y);
+        bw.Write(decanter.SelectedOutputChestPos.z);
+        bw.Write((int)decanter.SelectedOutputMode);
+        bw.Write(decanter.SelectedOutputPipeGraphId.ToString());
+
+        bw.Write(decanter.SelectedFluidType ?? string.Empty);
+        bw.Write(decanter.SelectedFluidGraphId.ToString());
+
+        bw.Write(decanter.PendingItemInput);
+        bw.Write(decanter.PendingItemOutput);
+        bw.Write(decanter.PendingFluidInput);
+        bw.Write(decanter.PendingFluidOutput);
+
+        bw.Write(decanter.PendingItemInputName ?? string.Empty);
+        bw.Write(decanter.PendingItemInputFluidAmountMg);
+        bw.Write(decanter.PendingItemInputReturnItemName ?? string.Empty);
+        bw.Write(decanter.PendingItemOutputName ?? string.Empty);
+
+        bw.Write(decanter.CycleTickCounter);
+        bw.Write(decanter.CycleTickLength);
+        bw.Write(decanter.PendingFluidOutputCapacityMg);
+
+        bw.Write(decanter.LastAction ?? string.Empty);
+        bw.Write(decanter.LastBlockReason ?? string.Empty);
+    }
+
     public void Load()
     {
         EnsureSavePaths();
@@ -1293,6 +1882,8 @@ public class HigherLogicRegistry
                         LoadExtractorSnapshot(br, extractor, snapshotVersion);
                     if (snapshot is CrafterSnapshot crafter)
                         LoadCrafterSnapshot(br, crafter, snapshotVersion);
+                    if (snapshot is DecanterSnapshot decanter)
+                        LoadDecanterSnapshot(br, decanter, snapshotVersion);
                     snapshots[machineId] = snapshot;
                 }
             }
@@ -1476,6 +2067,66 @@ public class HigherLogicRegistry
         HLRDevLog($"[HLR][Crafter][Load] InputGraph={crafter.SelectedInputPipeGraphId} InputPos={crafter.SelectedInputChestPos}");
         HLRDevLog($"[HLR][Crafter][Load] OutputGraph={crafter.SelectedOutputPipeGraphId} OutputPos={crafter.SelectedOutputChestPos}");
         HLRDevLog($"[HLR][Crafter][Load] END");
+    }
+
+    private void LoadDecanterSnapshot(BinaryReader br, DecanterSnapshot decanter, int snapshotVersion)
+    {
+        decanter.WorldTime = br.ReadUInt64();
+        if (snapshotVersion >= 2)
+            decanter.LastHLRSimTime = br.ReadUInt64();
+        else
+            decanter.LastHLRSimTime = decanter.WorldTime;
+
+        decanter.IsOn = br.ReadBoolean();
+
+        int inX = br.ReadInt32();
+        int inY = br.ReadInt32();
+        int inZ = br.ReadInt32();
+        decanter.SelectedInputChestPos = new Vector3i(inX, inY, inZ);
+        string inputGraph = br.ReadString();
+        if (!Guid.TryParse(inputGraph, out decanter.SelectedInputPipeGraphId))
+            decanter.SelectedInputPipeGraphId = Guid.Empty;
+
+        int outX = br.ReadInt32();
+        int outY = br.ReadInt32();
+        int outZ = br.ReadInt32();
+        decanter.SelectedOutputChestPos = new Vector3i(outX, outY, outZ);
+        decanter.SelectedOutputMode = (OutputTransportMode)br.ReadInt32();
+        string outputGraph = br.ReadString();
+        if (!Guid.TryParse(outputGraph, out decanter.SelectedOutputPipeGraphId))
+            decanter.SelectedOutputPipeGraphId = Guid.Empty;
+
+        decanter.SelectedFluidType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
+        string fluidGraph = br.ReadString();
+        if (!Guid.TryParse(fluidGraph, out decanter.SelectedFluidGraphId))
+            decanter.SelectedFluidGraphId = Guid.Empty;
+
+        decanter.PendingItemInput = Math.Max(0, br.ReadInt32());
+        decanter.PendingItemOutput = Math.Max(0, br.ReadInt32());
+        decanter.PendingFluidInput = Math.Max(0, br.ReadInt32());
+        decanter.PendingFluidOutput = Math.Max(0, br.ReadInt32());
+
+        decanter.PendingItemInputName = br.ReadString() ?? string.Empty;
+        decanter.PendingItemInputFluidAmountMg = Math.Max(0, br.ReadInt32());
+        decanter.PendingItemInputReturnItemName = br.ReadString() ?? string.Empty;
+        decanter.PendingItemOutputName = br.ReadString() ?? string.Empty;
+
+        decanter.CycleTickCounter = Math.Max(0, br.ReadInt32());
+        decanter.CycleTickLength = Math.Max(1, br.ReadInt32());
+        decanter.PendingFluidOutputCapacityMg = Math.Max(0, br.ReadInt32());
+
+        decanter.LastAction = br.ReadString() ?? string.Empty;
+        decanter.LastBlockReason = br.ReadString() ?? string.Empty;
+
+        if (decanter.PendingItemInput <= 0)
+        {
+            decanter.PendingItemInputName = string.Empty;
+            decanter.PendingItemInputFluidAmountMg = 0;
+            decanter.PendingItemInputReturnItemName = string.Empty;
+        }
+
+        if (decanter.PendingItemOutput <= 0)
+            decanter.PendingItemOutputName = string.Empty;
     }
 
 }

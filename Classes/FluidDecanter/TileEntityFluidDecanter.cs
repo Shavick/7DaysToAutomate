@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -116,6 +116,90 @@ public class TileEntityFluidDecanter : TileEntityMachine
     public override void SetSimulatedByHLR(bool value)
     {
         simulatedByHLR = value;
+    }
+
+    public override IHLRSnapshot BuildHLRSnapshot(WorldBase world)
+    {
+        EnsureConfigLoaded();
+
+        ulong now = world?.GetWorldTime() ?? 0UL;
+
+        return new DecanterSnapshot
+        {
+            MachineId = MachineGuid,
+            Position = ToWorldPos(),
+            WorldTime = now,
+            LastHLRSimTime = now,
+            IsOn = IsOn,
+            SelectedInputChestPos = SelectedInputChestPos,
+            SelectedInputPipeGraphId = SelectedInputPipeGraphId,
+            SelectedOutputChestPos = SelectedOutputChestPos,
+            SelectedOutputMode = SelectedOutputMode,
+            SelectedOutputPipeGraphId = SelectedOutputPipeGraphId,
+            SelectedFluidType = SelectedFluidType ?? string.Empty,
+            SelectedFluidGraphId = SelectedFluidGraphId,
+            PendingItemInput = pendingItemInput,
+            PendingItemOutput = pendingItemOutput,
+            PendingFluidInput = pendingFluidInput,
+            PendingFluidOutput = pendingFluidOutput,
+            PendingItemInputName = pendingItemInputName ?? string.Empty,
+            PendingItemInputFluidAmountMg = pendingItemInputFluidAmountMg,
+            PendingItemInputReturnItemName = pendingItemInputReturnItemName ?? string.Empty,
+            PendingItemOutputName = pendingItemOutputName ?? string.Empty,
+            CycleTickCounter = cycleTickCounter,
+            CycleTickLength = cycleTickLength,
+            PendingFluidOutputCapacityMg = pendingFluidOutputCapacityMg,
+            LastAction = LastAction ?? string.Empty,
+            LastBlockReason = LastBlockReason ?? string.Empty
+        };
+    }
+
+    public override void ApplyHLRSnapshot(object snapshotObj)
+    {
+        if (!(snapshotObj is DecanterSnapshot snapshot))
+            return;
+
+        EnsureConfigLoaded();
+
+        IsOn = snapshot.IsOn;
+
+        SelectedInputChestPos = snapshot.SelectedInputChestPos;
+        SelectedInputPipeGraphId = snapshot.SelectedInputPipeGraphId;
+
+        SelectedOutputChestPos = snapshot.SelectedOutputChestPos;
+        SelectedOutputMode = snapshot.SelectedOutputMode;
+        SelectedOutputPipeGraphId = snapshot.SelectedOutputPipeGraphId;
+
+        SelectedFluidType = (snapshot.SelectedFluidType ?? string.Empty).Trim().ToLowerInvariant();
+        SelectedFluidGraphId = snapshot.SelectedFluidGraphId;
+
+        pendingItemInput = Math.Max(0, snapshot.PendingItemInput);
+        pendingItemOutput = Math.Max(0, snapshot.PendingItemOutput);
+        pendingFluidInput = Math.Max(0, snapshot.PendingFluidInput);
+        pendingFluidOutput = Math.Max(0, snapshot.PendingFluidOutput);
+
+        pendingItemInputName = snapshot.PendingItemInputName ?? string.Empty;
+        pendingItemInputFluidAmountMg = Math.Max(0, snapshot.PendingItemInputFluidAmountMg);
+        pendingItemInputReturnItemName = snapshot.PendingItemInputReturnItemName ?? string.Empty;
+        pendingItemOutputName = snapshot.PendingItemOutputName ?? string.Empty;
+
+        cycleTickCounter = Math.Max(0, snapshot.CycleTickCounter);
+        cycleTickLength = Math.Max(1, snapshot.CycleTickLength);
+        pendingFluidOutputCapacityMg = Math.Max(0, snapshot.PendingFluidOutputCapacityMg);
+
+        LastAction = snapshot.LastAction ?? string.Empty;
+        LastBlockReason = snapshot.LastBlockReason ?? string.Empty;
+
+        SanitizePendingState();
+        ResolveSelectedInputContainer();
+        ResolveSelectedOutputContainer();
+
+        simulatedByHLR = false;
+        NeedsUiRefresh = true;
+
+        World currentWorld = GameManager.Instance?.World;
+        if (currentWorld != null && !currentWorld.IsRemote())
+            setModified();
     }
 
     public List<string> GetFluidOptions()
@@ -1051,6 +1135,9 @@ public class TileEntityFluidDecanter : TileEntityMachine
         if (world.IsRemote())
             return;
 
+        if (simulatedByHLR)
+            return;
+
         bool changed = false;
 
         refreshTicker++;
@@ -1568,6 +1655,29 @@ public class TileEntityFluidDecanter : TileEntityMachine
                 fluidOptionsCache.Sort(StringComparer.Ordinal);
 
             conversionCacheLoaded = true;
+        }
+    }
+
+    public static bool TryGetConversionRuleForItem(string itemName, out string fluidType, out int fluidAmountMg, out string returnItemName)
+    {
+        fluidType = string.Empty;
+        fluidAmountMg = 0;
+        returnItemName = string.Empty;
+
+        if (string.IsNullOrEmpty(itemName))
+            return false;
+
+        EnsureItemConversionCacheLoaded();
+
+        lock (ConversionCacheLock)
+        {
+            if (!conversionRulesByItemCache.TryGetValue(itemName, out FuelConversionRule rule) || rule == null)
+                return false;
+
+            fluidType = rule.FluidType ?? string.Empty;
+            fluidAmountMg = Math.Max(0, rule.FluidAmountMg);
+            returnItemName = rule.ReturnItemName ?? string.Empty;
+            return true;
         }
     }
 
