@@ -45,6 +45,7 @@ public static class BlockCompositeTileEntity_PipeEndpointDirtyPatch
         if (!HasStorageFeature(_world, _chunk.ClrIdx, _blockPos))
             return;
 
+        PipeGraphManager.RemoveStorageSnapshotAtPosition(_blockPos, true);
         MarkAdjacentPipesDirty(_world, _chunk.ClrIdx, _blockPos);
     }
 
@@ -59,8 +60,17 @@ public static class BlockCompositeTileEntity_PipeEndpointDirtyPatch
         if (_world == null || _world.IsRemote() || _blockValue.ischild)
             return;
 
-        if (!HasStorageFeature(_world, _clrIdx, _blockPos))
+        bool hasStorage = HasStorageFeature(_world, _clrIdx, _blockPos);
+        if (!hasStorage)
+        {
+            // Position loaded with a non-storage composite: clear any stale
+            // unload snapshots/endpoints that may have survived older graphs.
+            int removed = PipeGraphManager.RemoveStorageSnapshotAtPosition(_blockPos, true);
+            if (removed > 0)
+                MarkAdjacentPipesDirty(_world, _clrIdx, _blockPos);
+
             return;
+        }
 
         PipeGraphManager.TryApplyStorageSnapshotForPosition(_world, _clrIdx, _blockPos);
         MarkAdjacentPipesDirty(_world, _clrIdx, _blockPos);

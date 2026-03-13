@@ -619,6 +619,7 @@ public static class PipeGraphManager
 
         bool graphDevLoggingEnabled = IsDevLoggingEnabled(world, clrIdx, newGraph);
         CollectStorageEndpoints(world, clrIdx, newGraph, graphDevLoggingEnabled);
+        RestoreSnapshotEndpoints(world, clrIdx, newGraph, carriedStorageSnapshots, graphDevLoggingEnabled);
 
         if (carriedStorageSnapshots.Count > 0)
         {
@@ -686,6 +687,114 @@ public static class PipeGraphManager
         }
         if (devLoggingEnabled)
             Log.Out($"[PipeGraph] Graph {graph.PipeGraphId} final storage endpoint count={graph.StorageEndpoints.Count}");
+    }
+
+    private static void RestoreSnapshotEndpoints(
+        WorldBase world,
+        int clrIdx,
+        PipeGraphData graph,
+        Dictionary<Vector3i, ItemStack[]> carriedStorageSnapshots,
+        bool devLoggingEnabled)
+    {
+        if (graph == null || carriedStorageSnapshots == null || carriedStorageSnapshots.Count == 0)
+            return;
+
+        foreach (var kvp in carriedStorageSnapshots)
+        {
+            Vector3i storagePos = kvp.Key;
+            ItemStack[] snapshot = kvp.Value;
+            if (storagePos == Vector3i.zero || snapshot == null)
+                continue;
+
+            // Snapshot endpoints are only valid if the current graph still has
+            // at least one pipe side connected to this storage position.
+            if (!IsPositionConnectedToGraphPipe(world, clrIdx, graph, storagePos))
+                continue;
+
+            // Keep unloaded storage endpoints alive when they have a cached slot snapshot.
+            // This allows graph-side simulation to continue while the storage chunk is out.
+            if (!graph.ContainsStorageEndpoint(storagePos))
+                graph.AddStorageEndpoint(storagePos);
+
+            if (devLoggingEnabled)
+            {
+                Log.Out(
+                    $"[PipeGraphSnapshot] Restored endpoint from snapshot " +
+                    $"pos={storagePos} graph={graph.PipeGraphId} slots={snapshot.Length}");
+            }
+        }
+    }
+
+    private static bool IsPositionConnectedToGraphPipe(WorldBase world, int clrIdx, PipeGraphData graph, Vector3i storagePos)
+    {
+        if (world == null || graph == null || storagePos == Vector3i.zero)
+            return false;
+
+        foreach (Vector3i neighborPos in GetNeighborPositions(storagePos))
+        {
+            if (!graph.PipePositions.Contains(neighborPos))
+                continue;
+
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, neighborPos, out BlockValue pipeValue))
+                continue;
+
+            if (!(pipeValue.Block is ItemPipeBlock))
+                continue;
+
+            HashSet<Vector3i> openSides = ItemPipeBlock.GetOpenSides(pipeValue);
+            Vector3i delta = storagePos - neighborPos;
+            if (openSides.Contains(delta))
+                return true;
+        }
+
+        return false;
+    }
+
+    public static int RemoveStorageSnapshotAtPosition(Vector3i storagePos, bool removeEndpoint = true)
+    {
+        if (storagePos == Vector3i.zero || graphsById.Count == 0)
+            return 0;
+
+        int changedGraphs = 0;
+        List<Guid> changedGraphIds = null;
+
+        foreach (var kvp in graphsById)
+        {
+            PipeGraphData graph = kvp.Value;
+            if (graph == null)
+                continue;
+
+            bool changed = false;
+
+            if (graph.UnloadedStorageSnapshots.ContainsKey(storagePos))
+            {
+                graph.RemoveStorageSnapshot(storagePos);
+                changed = true;
+            }
+
+            if (removeEndpoint && graph.StorageEndpoints.Contains(storagePos))
+            {
+                graph.StorageEndpoints.Remove(storagePos);
+                changed = true;
+            }
+
+            if (!changed)
+                continue;
+
+            changedGraphs++;
+            if (changedGraphIds == null)
+                changedGraphIds = new List<Guid>();
+
+            changedGraphIds.Add(kvp.Key);
+        }
+
+        if (changedGraphIds != null)
+        {
+            for (int i = 0; i < changedGraphIds.Count; i++)
+                BumpGraphRouteVersion(changedGraphIds[i]);
+        }
+
+        return changedGraphs;
     }
 
     private static bool IsStorageConnectedNeighbor(
@@ -825,14 +934,17 @@ public static class PipeGraphManager
         if (!graphsById.TryGetValue(pipeGraphId, out PipeGraphData graph) || graph == null)
             return false;
 
-        if (!graph.ContainsStorageEndpoint(storagePos))
-            return false;
-
         if (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] snapshotSlots) && snapshotSlots != null)
         {
+            if (!graph.ContainsStorageEndpoint(storagePos))
+                graph.AddStorageEndpoint(storagePos);
+
             itemCounts = BuildItemCountsFromSlots(snapshotSlots);
             return true;
         }
+
+        if (!graph.ContainsStorageEndpoint(storagePos))
+            return false;
 
         if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, storagePos, out TileEntity storageEntity) || !(storageEntity is TileEntityComposite comp))
             return false;
@@ -874,12 +986,6 @@ public static class PipeGraphManager
         if (!graphsById.TryGetValue(pipeGraphId, out PipeGraphData graph) || graph == null)
         {
             blockedReason = "Input graph unavailable";
-            return false;
-        }
-
-        if (!graph.ContainsStorageEndpoint(storagePos))
-        {
-            blockedReason = "Selected input not in graph";
             return false;
         }
 
@@ -1077,15 +1183,18 @@ public static class PipeGraphManager
         if (!graphsById.TryGetValue(pipeGraphId, out graph) || graph == null)
             return false;
 
-        if (!graph.ContainsStorageEndpoint(storagePos))
-            return false;
-
         if (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] snapshotSlots) && snapshotSlots != null)
         {
+            if (!graph.ContainsStorageEndpoint(storagePos))
+                graph.AddStorageEndpoint(storagePos);
+
             slots = CloneSlots(snapshotSlots);
             usingSnapshot = true;
             return true;
         }
+
+        if (!graph.ContainsStorageEndpoint(storagePos))
+            return false;
 
         if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, storagePos, out TileEntity storageEntity) || !(storageEntity is TileEntityComposite comp))
             return false;
