@@ -194,14 +194,40 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         return capacity < requiredPerCraft ? requiredPerCraft : capacity;
     }
 
+    private int GetTotalBufferedItemCount()
+    {
+        if (inputBuffer == null || inputBuffer.Count == 0)
+            return 0;
+
+        int total = 0;
+        foreach (var kvp in inputBuffer)
+        {
+            if (kvp.Value <= 0)
+                continue;
+
+            total += kvp.Value;
+            if (total == int.MaxValue)
+                break;
+        }
+
+        return total;
+    }
+
     private int GetInputBufferRemainingCapacity(string itemName)
     {
         int capacity = GetInputBufferCapacityForItem(itemName);
         if (capacity <= 0)
             return 0;
 
-        int remaining = capacity - GetBufferedItemCount(itemName);
-        return remaining > 0 ? remaining : 0;
+        int remainingByItem = capacity - GetBufferedItemCount(itemName);
+        if (remainingByItem <= 0)
+            return 0;
+
+        int remainingByTotal = GetMaxPendingInput() - GetTotalBufferedItemCount();
+        if (remainingByTotal <= 0)
+            return 0;
+
+        return Math.Min(remainingByItem, remainingByTotal);
     }
 
     public override int GetBufferedInputRemainingCapacity(string itemName)

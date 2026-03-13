@@ -47,6 +47,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
     private int fluidFuelBufferMg = 0;
     private int fluidFuelUseRemainder = 0;
     private int fluidFuelPullRemainder = 0;
+    private ulong lastFluidFuelUpdateWorldTime = 0UL;
 
     public Guid SelectedFluidFuelGraphId = Guid.Empty;
     public string LastFluidFuelStatus = string.Empty;
@@ -432,6 +433,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             fluidFuelBufferMg = 0;
             fluidFuelUseRemainder = 0;
             fluidFuelPullRemainder = 0;
+            lastFluidFuelUpdateWorldTime = 0UL;
             SelectedFluidFuelGraphId = Guid.Empty;
             LastFluidFuelStatus = string.Empty;
             return;
@@ -442,6 +444,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         fluidFuelBufferCapacityMg = bufferGallons * FluidConstants.MilliGallonsPerGallon;
         fluidFuelUsePerSecondMg = usePerSecond * FluidConstants.MilliGallonsPerGallon;
         fluidFuelPullPerSecondMg = pullPerSecond * FluidConstants.MilliGallonsPerGallon;
+        lastFluidFuelUpdateWorldTime = 0UL;
 
         if (fluidFuelBufferMg > fluidFuelBufferCapacityMg)
             fluidFuelBufferMg = fluidFuelBufferCapacityMg;
@@ -520,29 +523,67 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         return true;
     }
 
-    private int ComputePerTickAmount(int perSecondMg, ref int remainder)
+    private int ComputeAmountForElapsedWorldTicks(int perSecondMg, int elapsedWorldTicks, ref int remainder)
     {
-        if (perSecondMg <= 0)
+        if (perSecondMg <= 0 || elapsedWorldTicks <= 0)
             return 0;
 
-        int amount = perSecondMg / 20;
-        remainder += perSecondMg % 20;
-        if (remainder >= 20)
+        const int worldTicksPerSecond = 20;
+
+        long total = ((long)perSecondMg * elapsedWorldTicks) + remainder;
+        if (total <= 0L)
+            return 0;
+
+        long amountLong = total / worldTicksPerSecond;
+        remainder = (int)(total % worldTicksPerSecond);
+
+        if (amountLong > int.MaxValue)
         {
-            int extra = remainder / 20;
-            amount += extra;
-            remainder -= extra * 20;
+            remainder = 0;
+            return int.MaxValue;
         }
 
-        return amount;
+        return (int)amountLong;
     }
 
-    private bool HasFuelToRunThisTick()
+    private int ResolveFuelElapsedWorldTicks(WorldBase world)
+    {
+        if (world == null)
+            return 1;
+
+        ulong now = world.GetWorldTime();
+        if (lastFluidFuelUpdateWorldTime == 0UL)
+        {
+            lastFluidFuelUpdateWorldTime = now;
+            return 20;
+        }
+
+        ulong delta = now > lastFluidFuelUpdateWorldTime
+            ? now - lastFluidFuelUpdateWorldTime
+            : 1UL;
+
+        lastFluidFuelUpdateWorldTime = now;
+
+        if (delta > int.MaxValue)
+            return int.MaxValue;
+
+        return (int)Math.Max(1UL, delta);
+    }
+
+    private void SyncFuelClock(WorldBase world)
+    {
+        if (world == null)
+            return;
+
+        lastFluidFuelUpdateWorldTime = world.GetWorldTime();
+    }
+
+    private bool HasFuelToRunThisUpdate(int elapsedWorldTicks)
     {
         if (!fluidFuelConfigured)
             return true;
 
-        int required = ComputePerTickAmount(fluidFuelUsePerSecondMg, ref fluidFuelUseRemainder);
+        int required = ComputeAmountForElapsedWorldTicks(fluidFuelUsePerSecondMg, elapsedWorldTicks, ref fluidFuelUseRemainder);
         if (required <= 0)
             return true;
 
@@ -559,7 +600,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         return true;
     }
 
-    private void PullFuelIntoBuffer(WorldBase world)
+    private void PullFuelIntoBuffer(WorldBase world, int elapsedWorldTicks)
     {
         if (!fluidFuelConfigured || world == null)
             return;
@@ -583,7 +624,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             return;
         }
 
-        int requestMg = ComputePerTickAmount(fluidFuelPullPerSecondMg, ref fluidFuelPullRemainder);
+        int requestMg = ComputeAmountForElapsedWorldTicks(fluidFuelPullPerSecondMg, elapsedWorldTicks, ref fluidFuelPullRemainder);
         if (requestMg <= 0)
             requestMg = freeSpace;
 
@@ -665,6 +706,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             }
 
             isExtractorOn = false;
+            SyncFuelClock(world);
             SetModified();
             return;
         }
@@ -678,6 +720,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
                 DevLog("Extractor disabled by player");
 
             isExtractorOn = false;
+            SyncFuelClock(world);
             SetModified();
             return;
         }
@@ -696,9 +739,10 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         // -----------------------------
         if (fluidFuelConfigured)
         {
-            PullFuelIntoBuffer(world);
+            int elapsedFuelTicks = ResolveFuelElapsedWorldTicks(world);
+            PullFuelIntoBuffer(world, elapsedFuelTicks);
 
-            if (!HasFuelToRunThisTick())
+            if (!HasFuelToRunThisUpdate(elapsedFuelTicks))
             {
                 if (isExtractorOn)
                     DevLog("Fuel unavailable — extractor paused");

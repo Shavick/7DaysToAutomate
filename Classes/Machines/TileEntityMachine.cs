@@ -7,6 +7,8 @@ public abstract class TileEntityMachine : TileEntity
     public const int MinPipePriority = 0;
     public const int MaxPipePriority = 9;
     public const int DefaultPipePriority = 0;
+    public const int DefaultMaxPendingInput = 100;
+    public const int DefaultMaxPendingOutput = 100;
 
     protected Guid machineGuid = Guid.Empty;
     protected Dictionary<string, int> pendingOutput = new Dictionary<string, int>();
@@ -93,10 +95,53 @@ public abstract class TileEntityMachine : TileEntity
     {
         if (count <= 0)
             return;
+
+        int maxPendingOutput = GetMaxPendingOutput();
+        int totalPendingOutput = 0;
+        foreach (var kvp in pendingOutput)
+        {
+            if (kvp.Value <= 0)
+                continue;
+
+            totalPendingOutput += kvp.Value;
+            if (totalPendingOutput >= maxPendingOutput)
+                break;
+        }
+
+        int remainingCapacity = maxPendingOutput - totalPendingOutput;
+        if (remainingCapacity <= 0)
+            return;
+
+        int accepted = Math.Min(count, remainingCapacity);
+        if (accepted <= 0)
+            return;
+
         if (pendingOutput.TryGetValue(itemName, out int existing))
-            pendingOutput[itemName] = existing + count;
+            pendingOutput[itemName] = existing + accepted;
         else
-            pendingOutput[itemName] = count;
+            pendingOutput[itemName] = accepted;
+    }
+
+    protected int GetMaxPendingInput()
+    {
+        if (TryGetBlockPropertyInt("MaxPendingInput", out int parsed) && parsed > 0)
+            return parsed;
+
+        if (TryGetBlockPropertyInt("maxpendinginput", out parsed) && parsed > 0)
+            return parsed;
+
+        return DefaultMaxPendingInput;
+    }
+
+    protected int GetMaxPendingOutput()
+    {
+        if (TryGetBlockPropertyInt("MaxPendingOutput", out int parsed) && parsed > 0)
+            return parsed;
+
+        if (TryGetBlockPropertyInt("maxpendingoutput", out parsed) && parsed > 0)
+            return parsed;
+
+        return DefaultMaxPendingOutput;
     }
 
     protected void ClearPendingOutput()
