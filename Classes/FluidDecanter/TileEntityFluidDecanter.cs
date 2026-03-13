@@ -108,6 +108,14 @@ public class TileEntityFluidDecanter : TileEntityMachine
     {
     }
 
+    private void DevLog(string msg)
+    {
+        if (!IsDevLogging)
+            return;
+
+        Log.Out($"[Decanter][TE][{ToWorldPos()}] {msg}");
+    }
+
     public override TileEntityType GetTileEntityType()
     {
         return unchecked((TileEntityType)UCTileEntityIDs.FluidDecanter);
@@ -873,6 +881,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         if (SelectedOutputChestPos == Vector3i.zero)
         {
             blockedReason = "Missing Item Output";
+            DevLog($"ITEM FLUSH BLOCKED -> {blockedReason}");
             return false;
         }
 
@@ -881,6 +890,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
             pendingItemOutput = 0;
             changed = true;
             blockedReason = "Pending item output invalid";
+            DevLog($"ITEM FLUSH RESET -> {blockedReason}");
             return false;
         }
 
@@ -892,6 +902,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
             if (SelectedOutputPipeGraphId == Guid.Empty)
             {
                 blockedReason = "Missing Item Output";
+                DevLog($"PIPE DEPOSIT BLOCKED -> {blockedReason}");
                 return false;
             }
 
@@ -900,23 +911,31 @@ public class TileEntityFluidDecanter : TileEntityMachine
                 { pendingItemOutputName, pendingItemOutput }
             };
 
+            DevLog($"PIPE DEPOSIT ATTEMPT -> graph={SelectedOutputPipeGraphId} pos={SelectedOutputChestPos} request={pendingItemOutputName}:{pendingItemOutput}");
             if (!PipeGraphManager.TryDepositStorageItems(world, 0, SelectedOutputPipeGraphId, SelectedOutputChestPos, toDeposit, out Dictionary<string, int> deposited) ||
                 deposited == null ||
                 !deposited.TryGetValue(pendingItemOutputName, out depositedCount) ||
                 depositedCount <= 0)
             {
                 blockedReason = "Item output blocked";
+                DevLog($"PIPE DEPOSIT BLOCKED -> graph={SelectedOutputPipeGraphId} pos={SelectedOutputChestPos} item={pendingItemOutputName} reason={blockedReason}");
                 return false;
             }
+
+            DevLog($"PIPE DEPOSIT SUCCESS -> graph={SelectedOutputPipeGraphId} pos={SelectedOutputChestPos} item={pendingItemOutputName} deposited={depositedCount}");
         }
         else
         {
+            DevLog($"ADJACENT DEPOSIT ATTEMPT -> pos={SelectedOutputChestPos} request={pendingItemOutputName}:{pendingItemOutput}");
             if (!TryDepositToAdjacentOutput(world, pendingItemOutputName, pendingItemOutput, out depositedCount, out blockedReason) || depositedCount <= 0)
             {
                 if (string.IsNullOrEmpty(blockedReason))
                     blockedReason = "Item output blocked";
+                DevLog($"ADJACENT DEPOSIT BLOCKED -> pos={SelectedOutputChestPos} item={pendingItemOutputName} reason={blockedReason}");
                 return false;
             }
+
+            DevLog($"ADJACENT DEPOSIT SUCCESS -> pos={SelectedOutputChestPos} item={pendingItemOutputName} deposited={depositedCount}");
         }
 
         pendingItemOutput -= depositedCount;
@@ -931,6 +950,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         if (pendingItemOutput > 0)
         {
             blockedReason = "Item output blocked";
+            DevLog($"ITEM FLUSH PARTIAL -> item={pendingItemOutputName} remaining={pendingItemOutput}");
             return false;
         }
 
@@ -946,9 +966,12 @@ public class TileEntityFluidDecanter : TileEntityMachine
         if (requestedMg <= 0)
             return true;
 
+        DevLog($"FLUID INJECT ATTEMPT -> graph={SelectedFluidGraphId} fluid={SelectedFluidType} requestMg={requestedMg}");
+
         if (world == null || SelectedFluidGraphId == Guid.Empty || string.IsNullOrEmpty(SelectedFluidType))
         {
             blockedReason = "Missing/Invalid Fluid Output";
+            DevLog($"FLUID INJECT BLOCKED -> {blockedReason} graph={SelectedFluidGraphId} fluid={SelectedFluidType} requestMg={requestedMg}");
             return false;
         }
 
@@ -956,6 +979,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         {
             injectedMg = requestedMg;
             blockedReason = string.Empty;
+            DevLog($"FLUID INJECT SUCCESS -> graph={SelectedFluidGraphId} fluid={SelectedFluidType} injectedMg={injectedMg}");
             return true;
         }
 
@@ -964,7 +988,10 @@ public class TileEntityFluidDecanter : TileEntityMachine
             string.Equals(blockedReason, "No storage room", StringComparison.Ordinal);
 
         if (!retryWithSmallerAmount || requestedMg <= 1)
+        {
+            DevLog($"FLUID INJECT BLOCKED -> graph={SelectedFluidGraphId} fluid={SelectedFluidType} requestMg={requestedMg} reason={blockedReason}");
             return false;
+        }
 
         int attempt = requestedMg / 2;
         while (attempt > 0)
@@ -973,6 +1000,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
             {
                 injectedMg = attempt;
                 blockedReason = string.Empty;
+                DevLog($"FLUID INJECT PARTIAL -> graph={SelectedFluidGraphId} fluid={SelectedFluidType} injectedMg={injectedMg} requestedMg={requestedMg}");
                 return true;
             }
 
@@ -983,12 +1011,14 @@ public class TileEntityFluidDecanter : TileEntityMachine
             if (!canContinue)
             {
                 blockedReason = smallerReason;
+                DevLog($"FLUID INJECT BLOCKED -> graph={SelectedFluidGraphId} fluid={SelectedFluidType} requestMg={attempt} reason={blockedReason}");
                 return false;
             }
 
             attempt /= 2;
         }
 
+        DevLog($"FLUID INJECT BLOCKED -> graph={SelectedFluidGraphId} fluid={SelectedFluidType} requestMg={requestedMg} reason={blockedReason}");
         return false;
     }
 
@@ -1001,7 +1031,10 @@ public class TileEntityFluidDecanter : TileEntityMachine
             return true;
 
         if (!TryInjectFluidPartial(world, pendingFluidOutput, out int injectedMg, out blockedReason))
+        {
+            DevLog($"FLUID FLUSH BLOCKED -> pendingMg={pendingFluidOutput} reason={blockedReason}");
             return false;
+        }
 
         if (injectedMg <= 0)
             return false;
@@ -1011,10 +1044,12 @@ public class TileEntityFluidDecanter : TileEntityMachine
             pendingFluidOutput = 0;
 
         changed = true;
+        DevLog($"FLUID FLUSH SUCCESS -> injectedMg={injectedMg} remainingMg={pendingFluidOutput}");
 
         if (pendingFluidOutput > 0)
         {
             blockedReason = "Graph throughput full";
+            DevLog($"FLUID FLUSH PARTIAL -> remainingMg={pendingFluidOutput} reason={blockedReason}");
             return false;
         }
 
@@ -1030,6 +1065,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         if (world == null)
         {
             blockedReason = "World unavailable";
+            DevLog($"CYCLE BLOCKED -> {blockedReason}");
             return false;
         }
 
@@ -1038,6 +1074,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
             if (pendingItemOutput > 0)
             {
                 blockedReason = "Pending item output full";
+                DevLog($"CYCLE BLOCKED -> {blockedReason}");
                 return false;
             }
 
@@ -1048,6 +1085,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
                 pendingItemInputFluidAmountMg = 0;
                 pendingItemInputReturnItemName = string.Empty;
                 blockedReason = "Pending input invalid";
+                DevLog($"CYCLE RESET -> {blockedReason}");
                 return true;
             }
 
@@ -1055,6 +1093,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
             if (freeCapacity < pendingItemInputFluidAmountMg)
             {
                 blockedReason = "Pending fluid output full";
+                DevLog($"CYCLE BLOCKED -> {blockedReason} freeMg={freeCapacity} requiredMg={pendingItemInputFluidAmountMg}");
                 return false;
             }
 
@@ -1079,18 +1118,21 @@ public class TileEntityFluidDecanter : TileEntityMachine
             }
 
             cycleAction = "Converted";
+            DevLog($"CYCLE CONVERTED -> fluidMg={convertedFluidMg} returnItem={returnItem} pendingFluidOutMg={pendingFluidOutput} pendingItemOut={pendingItemOutput}");
             return true;
         }
 
         if (pendingItemOutput > 0)
         {
             blockedReason = "Pending item output full";
+            DevLog($"CYCLE BLOCKED -> {blockedReason}");
             return false;
         }
 
         if (pendingFluidOutput >= pendingFluidOutputCapacityMg)
         {
             blockedReason = "Pending fluid output full";
+            DevLog($"CYCLE BLOCKED -> {blockedReason} currentMg={pendingFluidOutput} capacityMg={pendingFluidOutputCapacityMg}");
             return false;
         }
 
@@ -1098,6 +1140,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         {
             if (string.IsNullOrEmpty(blockedReason))
                 blockedReason = "No matching input item";
+            DevLog($"CYCLE BLOCKED -> {blockedReason} fluid={SelectedFluidType}");
             return false;
         }
 
@@ -1106,14 +1149,18 @@ public class TileEntityFluidDecanter : TileEntityMachine
             { matchedItemName, 1 }
         };
 
+        DevLog($"PIPE CONSUME ATTEMPT -> graph={SelectedInputPipeGraphId} pos={SelectedInputChestPos} request={matchedItemName}:1");
         if (!PipeGraphManager.TryConsumeStorageItems(world, 0, SelectedInputPipeGraphId, SelectedInputChestPos, request, out Dictionary<string, int> consumed) ||
             consumed == null ||
             !consumed.TryGetValue(matchedItemName, out int consumedCount) ||
             consumedCount <= 0)
         {
             blockedReason = "Input item unavailable";
+            DevLog($"PIPE CONSUME BLOCKED -> graph={SelectedInputPipeGraphId} pos={SelectedInputChestPos} item={matchedItemName} reason={blockedReason}");
             return false;
         }
+
+        DevLog($"PIPE CONSUME SUCCESS -> graph={SelectedInputPipeGraphId} pos={SelectedInputChestPos} item={matchedItemName} consumed={consumedCount}");
 
         pendingItemInput = 1;
         pendingItemInputName = matchedItemName;

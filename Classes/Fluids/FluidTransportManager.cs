@@ -28,6 +28,13 @@ public static class FluidTransportManager
         public int AllocatedDrainMg;
     }
 
+    private sealed class PumpResolution
+    {
+        public readonly List<TileEntityFluidPump> LivePumps = new List<TileEntityFluidPump>();
+        public int ActivePumpCount;
+        public int TotalPumpCapMgPerTick;
+    }
+
     public static void Process(WorldBase world)
     {
         if (world == null || world.IsRemote())
@@ -54,22 +61,22 @@ public static class FluidTransportManager
         if (graph == null || graph.PipePositions.Count == 0)
             return;
 
-        List<TileEntityFluidPump> activePumps = ResolveActivePumps(world, clrIdx, graph.PumpEndpoints);
-        if (activePumps.Count == 0)
+        PumpResolution pumpState = ResolveActivePumps(world, clrIdx, graph);
+        if (pumpState.ActivePumpCount == 0)
         {
-            RecordBlocked(graph, activePumps, now, ReasonNoPump, "No enabled pump connected to graph");
+            RecordBlocked(graph, pumpState.LivePumps, now, ReasonNoPump, "No enabled pump connected to graph");
             return;
         }
 
         List<StorageRuntime> storage = ResolveStorage(world, clrIdx, graph.StorageEndpoints);
         if (storage.Count == 0)
         {
-            RecordBlocked(graph, activePumps, now, ReasonNoStorage, "No fluid storage connected to graph");
+            RecordBlocked(graph, pumpState.LivePumps, now, ReasonNoStorage, "No fluid storage connected to graph");
             return;
         }
 
         int pipeCap = GetGraphPipeCapMgPerTick(world, clrIdx, graph);
-        int pumpCap = GetPumpCapMgPerTick(activePumps);
+        int pumpCap = pumpState.TotalPumpCapMgPerTick;
         int flowBudget = Math.Min(pipeCap, pumpCap);
 
         if (flowBudget <= 0)
@@ -89,7 +96,7 @@ public static class FluidTransportManager
         bool hasMismatchedSource = HasMismatchedSourceType(storage, graphFluidType);
         if (hasMismatchedSource)
         {
-            RecordBlocked(graph, activePumps, now, ReasonTypeMismatch, $"Graph fluid={graphFluidType} has mismatched stored fluid");
+            RecordBlocked(graph, pumpState.LivePumps, now, ReasonTypeMismatch, $"Graph fluid={graphFluidType} has mismatched stored fluid");
             return;
         }
 
@@ -117,14 +124,14 @@ public static class FluidTransportManager
 
         if (sinkNodes.Count == 0)
         {
-            RecordBlocked(graph, activePumps, now, ReasonStorageFull, "All storage is full or input-capped");
+            RecordBlocked(graph, pumpState.LivePumps, now, ReasonStorageFull, "All storage is full or input-capped");
             return;
         }
 
         int sourceAvailable = sourceAvailableFromIntakes;
         if (sourceAvailable <= 0)
         {
-            RecordBlocked(graph, activePumps, now, ReasonNoSource, "No intake has available fluid");
+            RecordBlocked(graph, pumpState.LivePumps, now, ReasonNoSource, "No intake has available fluid");
             return;
         }
 
@@ -134,7 +141,7 @@ public static class FluidTransportManager
         int acceptedTotal = AllocateAcrossSinks(flowBudget, sinkNodes);
         if (acceptedTotal <= 0)
         {
-            RecordBlocked(graph, activePumps, now, ReasonStorageFull, "Storage could not accept flow this tick");
+            RecordBlocked(graph, pumpState.LivePumps, now, ReasonStorageFull, "Storage could not accept flow this tick");
             return;
         }
 
@@ -152,22 +159,40 @@ public static class FluidTransportManager
         ApplySinkIntake(graphFluidType, sinkNodes);
     }
 
-    private static List<TileEntityFluidPump> ResolveActivePumps(WorldBase world, int clrIdx, HashSet<Vector3i> pumpPositions)
+    private static PumpResolution ResolveActivePumps(WorldBase world, int clrIdx, FluidGraphData graph)
     {
-        List<TileEntityFluidPump> pumps = new List<TileEntityFluidPump>();
+        PumpResolution state = new PumpResolution();
+        if (graph == null || graph.PumpEndpoints == null || graph.PumpEndpoints.Count == 0)
+            return state;
 
-        foreach (Vector3i pos in pumpPositions)
+        foreach (Vector3i pos in graph.PumpEndpoints)
         {
-            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out TileEntity te) || !(te is TileEntityFluidPump pump))
+            if (SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out TileEntity te) && te is TileEntityFluidPump pump)
+            {
+                if (!pump.IsActivePump())
+                    continue;
+
+                int cap = pump.GetOutputCapMgPerTick();
+                if (cap <= 0)
+                    continue;
+
+                state.LivePumps.Add(pump);
+                state.ActivePumpCount++;
+                state.TotalPumpCapMgPerTick += cap;
+                continue;
+            }
+
+            if (!graph.TryGetPumpSnapshot(pos, out FluidGraphData.PumpSnapshot snapshot) || snapshot == null)
                 continue;
 
-            if (!pump.IsActivePump())
+            if (!snapshot.PumpEnabled || snapshot.OutputCapMgPerTick <= 0)
                 continue;
 
-            pumps.Add(pump);
+            state.ActivePumpCount++;
+            state.TotalPumpCapMgPerTick += snapshot.OutputCapMgPerTick;
         }
 
-        return pumps;
+        return state;
     }
 
     private static List<StorageRuntime> ResolveStorage(WorldBase world, int clrIdx, HashSet<Vector3i> storagePositions)
@@ -381,15 +406,6 @@ public static class FluidTransportManager
             return 0;
 
         return lowest;
-    }
-
-    private static int GetPumpCapMgPerTick(List<TileEntityFluidPump> activePumps)
-    {
-        int total = 0;
-        for (int i = 0; i < activePumps.Count; i++)
-            total += activePumps[i].GetOutputCapMgPerTick();
-
-        return total;
     }
 
     private static int AllocateAcrossSinks(int flowBudgetMg, List<StorageRuntime> sinks)

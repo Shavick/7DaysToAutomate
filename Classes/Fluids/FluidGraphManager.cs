@@ -227,19 +227,8 @@ public static class FluidGraphManager
             return false;
         }
 
-        List<TileEntityFluidPump> activePumps = new List<TileEntityFluidPump>();
-        foreach (Vector3i pumpPos in graph.PumpEndpoints)
-        {
-            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pumpPos, out TileEntity pumpTe) || !(pumpTe is TileEntityFluidPump pump))
-                continue;
-
-            if (!pump.IsActivePump())
-                continue;
-
-            activePumps.Add(pump);
-        }
-
-        if (activePumps.Count == 0)
+        int pumpCap = ResolveActivePumpCapacityMgPerTick(world, clrIdx, graph, out int activePumpCount);
+        if (activePumpCount == 0)
         {
             blockedReason = "No active pump";
             graph.RecordBlocked("NoActivePump");
@@ -301,9 +290,6 @@ public static class FluidGraphManager
         }
 
         int pipeCap = GetGraphPipeCapMgPerTick(world, clrIdx, graph);
-        int pumpCap = 0;
-        for (int i = 0; i < activePumps.Count; i++)
-            pumpCap += activePumps[i].GetOutputCapMgPerTick();
 
         int flowBudget = Math.Min(pipeCap, pumpCap);
         if (flowBudget <= 0)
@@ -452,6 +438,172 @@ public static class FluidGraphManager
         return graphsById.TryGetValue(refreshed.FluidGraphId, out graph) && graph != null;
     }
 
+    public static void CapturePumpSnapshotForPosition(WorldBase world, int clrIdx, Vector3i pumpPos)
+    {
+        if (world == null || world.IsRemote() || pumpPos == Vector3i.zero)
+            return;
+
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pumpPos, out TileEntity pumpTe) || !(pumpTe is TileEntityFluidPump pump))
+            return;
+
+        FluidGraphData.PumpSnapshot snapshot = new FluidGraphData.PumpSnapshot
+        {
+            PumpEnabled = pump.IsActivePump(),
+            OutputCapMgPerTick = Math.Max(0, pump.GetOutputCapMgPerTick())
+        };
+
+        List<Guid> targetGraphIds = CollectGraphsContainingPumpPosition(pumpPos);
+        List<Guid> adjacentGraphIds = GetAdjacentFluidGraphIdsForPosition(world, clrIdx, pumpPos);
+        for (int i = 0; i < adjacentGraphIds.Count; i++)
+        {
+            Guid graphId = adjacentGraphIds[i];
+            if (!targetGraphIds.Contains(graphId))
+                targetGraphIds.Add(graphId);
+        }
+
+        if (targetGraphIds.Count == 0)
+            return;
+
+        for (int i = 0; i < targetGraphIds.Count; i++)
+        {
+            Guid graphId = targetGraphIds[i];
+            if (!graphsById.TryGetValue(graphId, out FluidGraphData graph) || graph == null)
+                continue;
+
+            if (!graph.ContainsPumpEndpoint(pumpPos))
+                graph.AddPumpEndpoint(pumpPos);
+
+            graph.SetPumpSnapshot(pumpPos, snapshot);
+        }
+    }
+
+    public static void TryApplyPumpSnapshotForPosition(WorldBase world, int clrIdx, Vector3i pumpPos)
+    {
+        if (world == null || world.IsRemote() || pumpPos == Vector3i.zero)
+            return;
+
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pumpPos, out TileEntity pumpTe) || !(pumpTe is TileEntityFluidPump pump))
+        {
+            RemovePumpSnapshotAtPosition(pumpPos, true);
+            return;
+        }
+
+        List<Guid> targetGraphIds = CollectGraphsContainingPumpPosition(pumpPos);
+        List<Guid> adjacentGraphIds = GetAdjacentFluidGraphIdsForPosition(world, clrIdx, pumpPos);
+        for (int i = 0; i < adjacentGraphIds.Count; i++)
+        {
+            Guid graphId = adjacentGraphIds[i];
+            if (!targetGraphIds.Contains(graphId))
+                targetGraphIds.Add(graphId);
+        }
+
+        if (targetGraphIds.Count == 0)
+            return;
+
+        FluidGraphData.PumpSnapshot snapshot = new FluidGraphData.PumpSnapshot
+        {
+            PumpEnabled = pump.IsActivePump(),
+            OutputCapMgPerTick = Math.Max(0, pump.GetOutputCapMgPerTick())
+        };
+
+        for (int i = 0; i < targetGraphIds.Count; i++)
+        {
+            Guid graphId = targetGraphIds[i];
+            if (!graphsById.TryGetValue(graphId, out FluidGraphData graph) || graph == null)
+                continue;
+
+            if (!graph.ContainsPumpEndpoint(pumpPos))
+                graph.AddPumpEndpoint(pumpPos);
+
+            graph.SetPumpSnapshot(pumpPos, snapshot);
+        }
+    }
+
+    public static int RemovePumpSnapshotAtPosition(Vector3i pumpPos, bool removeEndpoint = true)
+    {
+        if (pumpPos == Vector3i.zero || graphsById.Count == 0)
+            return 0;
+
+        int changedGraphs = 0;
+
+        foreach (var kvp in graphsById)
+        {
+            FluidGraphData graph = kvp.Value;
+            if (graph == null)
+                continue;
+
+            bool changed = false;
+
+            if (graph.UnloadedPumpSnapshots.ContainsKey(pumpPos))
+            {
+                graph.RemovePumpSnapshot(pumpPos);
+                changed = true;
+            }
+
+            if (removeEndpoint && graph.PumpEndpoints.Contains(pumpPos))
+            {
+                graph.PumpEndpoints.Remove(pumpPos);
+                changed = true;
+            }
+
+            if (changed)
+                changedGraphs++;
+        }
+
+        return changedGraphs;
+    }
+
+    private static List<Guid> CollectGraphsContainingPumpPosition(Vector3i pumpPos)
+    {
+        List<Guid> graphIds = new List<Guid>();
+
+        if (pumpPos == Vector3i.zero || graphsById.Count == 0)
+            return graphIds;
+
+        foreach (var kvp in graphsById)
+        {
+            FluidGraphData graph = kvp.Value;
+            if (graph == null || graph.PumpEndpoints == null)
+                continue;
+
+            if (!graph.PumpEndpoints.Contains(pumpPos))
+                continue;
+
+            graphIds.Add(kvp.Key);
+        }
+
+        return graphIds;
+    }
+
+    private static List<Guid> GetAdjacentFluidGraphIdsForPosition(WorldBase world, int clrIdx, Vector3i pos)
+    {
+        List<Guid> graphIds = new List<Guid>();
+
+        if (world == null || pos == Vector3i.zero)
+            return graphIds;
+
+        for (int i = 0; i < NeighborOffsets.Length; i++)
+        {
+            Vector3i neighborPos = pos + NeighborOffsets[i];
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out TileEntity te) || !(te is TileEntityLiquidPipe pipe))
+                continue;
+
+            Guid graphId = pipe.FluidGraphId;
+            if (graphId == Guid.Empty)
+            {
+                if (TryEnsureGraphForPipe(world, clrIdx, neighborPos, out FluidGraphData ensuredGraph) && ensuredGraph != null)
+                    graphId = ensuredGraph.FluidGraphId;
+            }
+
+            if (graphId == Guid.Empty || graphIds.Contains(graphId))
+                continue;
+
+            graphIds.Add(graphId);
+        }
+
+        return graphIds;
+    }
+
 
     public static void RebuildAllGraphs(WorldBase world)
     {
@@ -553,6 +705,8 @@ public static class FluidGraphManager
         }
 
         HashSet<Guid> oldGraphIds = new HashSet<Guid>();
+        Dictionary<Vector3i, FluidGraphData.PumpSnapshot> carriedPumpSnapshots =
+            new Dictionary<Vector3i, FluidGraphData.PumpSnapshot>();
 
         foreach (Vector3i pipePos in connectedPipes)
         {
@@ -574,6 +728,17 @@ public static class FluidGraphManager
             if (string.IsNullOrEmpty(retainedFluidType) && !string.IsNullOrEmpty(oldGraph.FluidType))
                 retainedFluidType = oldGraph.FluidType;
 
+            if (oldGraph.UnloadedPumpSnapshots != null)
+            {
+                foreach (var kvp in oldGraph.UnloadedPumpSnapshots)
+                {
+                    if (kvp.Value == null || kvp.Key == Vector3i.zero)
+                        continue;
+
+                    carriedPumpSnapshots[kvp.Key] = ClonePumpSnapshot(kvp.Value);
+                }
+            }
+
             graphsById.Remove(oldGraphId);
         }
 
@@ -594,6 +759,21 @@ public static class FluidGraphManager
         }
 
         PopulateGraphEndpoints(world, clrIdx, newGraph);
+
+        RestorePumpSnapshotEndpoints(world, clrIdx, newGraph, carriedPumpSnapshots);
+
+        if (carriedPumpSnapshots.Count > 0)
+        {
+            foreach (Vector3i endpointPos in newGraph.PumpEndpoints)
+            {
+                if (!carriedPumpSnapshots.TryGetValue(endpointPos, out FluidGraphData.PumpSnapshot snapshot) || snapshot == null)
+                    continue;
+
+                newGraph.SetPumpSnapshot(endpointPos, snapshot);
+            }
+        }
+
+        newGraph.PrunePumpSnapshotsToEndpoints();
 
         graphsById[newGraph.FluidGraphId] = newGraph;
         lastGraphRebuildWorldTime[newGraph.FluidGraphId] = worldTime;
@@ -677,6 +857,56 @@ public static class FluidGraphManager
         }
     }
 
+    private static void RestorePumpSnapshotEndpoints(
+        WorldBase world,
+        int clrIdx,
+        FluidGraphData graph,
+        Dictionary<Vector3i, FluidGraphData.PumpSnapshot> carriedPumpSnapshots)
+    {
+        if (graph == null || carriedPumpSnapshots == null || carriedPumpSnapshots.Count == 0)
+            return;
+
+        foreach (var kvp in carriedPumpSnapshots)
+        {
+            Vector3i pumpPos = kvp.Key;
+            FluidGraphData.PumpSnapshot snapshot = kvp.Value;
+            if (pumpPos == Vector3i.zero || snapshot == null)
+                continue;
+
+            if (!IsPositionConnectedToGraphPipe(world, clrIdx, graph, pumpPos))
+                continue;
+
+            if (!graph.ContainsPumpEndpoint(pumpPos))
+                graph.AddPumpEndpoint(pumpPos);
+        }
+    }
+
+    private static bool IsPositionConnectedToGraphPipe(WorldBase world, int clrIdx, FluidGraphData graph, Vector3i targetPos)
+    {
+        if (world == null || graph == null || targetPos == Vector3i.zero)
+            return false;
+
+        for (int i = 0; i < NeighborOffsets.Length; i++)
+        {
+            Vector3i neighborPos = targetPos + NeighborOffsets[i];
+            if (!graph.ContainsPipe(neighborPos))
+                continue;
+
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, neighborPos, out BlockValue pipeValue))
+                continue;
+
+            if (!(pipeValue.Block is LiquidPipeBlock))
+                continue;
+
+            HashSet<Vector3i> openSides = LiquidPipeBlock.GetOpenSides(pipeValue);
+            Vector3i delta = targetPos - neighborPos;
+            if (openSides.Contains(delta))
+                return true;
+        }
+
+        return false;
+    }
+
     private static bool IsFluidIntakePipe(WorldBase world, int clrIdx, Vector3i pos)
     {
         if (!SafeWorldRead.TryGetBlock(world, clrIdx, pos, out BlockValue blockValue))
@@ -684,6 +914,44 @@ public static class FluidGraphManager
 
         string value = blockValue.Block?.Properties?.GetString("IsFluidIntake");
         return bool.TryParse(value, out bool isIntake) && isIntake;
+    }
+
+    private static int ResolveActivePumpCapacityMgPerTick(WorldBase world, int clrIdx, FluidGraphData graph, out int activePumpCount)
+    {
+        activePumpCount = 0;
+
+        if (world == null || graph == null || graph.PumpEndpoints == null || graph.PumpEndpoints.Count == 0)
+            return 0;
+
+        int totalCap = 0;
+
+        foreach (Vector3i pumpPos in graph.PumpEndpoints)
+        {
+            if (SafeWorldRead.TryGetTileEntity(world, clrIdx, pumpPos, out TileEntity pumpTe) && pumpTe is TileEntityFluidPump livePump)
+            {
+                if (!livePump.IsActivePump())
+                    continue;
+
+                int liveCap = livePump.GetOutputCapMgPerTick();
+                if (liveCap <= 0)
+                    continue;
+
+                activePumpCount++;
+                totalCap += liveCap;
+                continue;
+            }
+
+            if (!graph.TryGetPumpSnapshot(pumpPos, out FluidGraphData.PumpSnapshot snapshot) || snapshot == null)
+                continue;
+
+            if (!snapshot.PumpEnabled || snapshot.OutputCapMgPerTick <= 0)
+                continue;
+
+            activePumpCount++;
+            totalCap += snapshot.OutputCapMgPerTick;
+        }
+
+        return totalCap;
     }
 
     private static int GetGraphPipeCapMgPerTick(WorldBase world, int clrIdx, FluidGraphData graph)
@@ -718,6 +986,19 @@ public static class FluidGraphManager
 
         return value;
     }
+
+    private static FluidGraphData.PumpSnapshot ClonePumpSnapshot(FluidGraphData.PumpSnapshot source)
+    {
+        if (source == null)
+            return null;
+
+        return new FluidGraphData.PumpSnapshot
+        {
+            PumpEnabled = source.PumpEnabled,
+            OutputCapMgPerTick = source.OutputCapMgPerTick
+        };
+    }
+
     private static int ComparePos(Vector3i a, Vector3i b)
     {
         int cmp = a.x.CompareTo(b.x);

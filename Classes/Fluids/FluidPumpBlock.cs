@@ -33,6 +33,7 @@ public class FluidPumpBlock : MachineBlock<TileEntityFluidPump>
         if (world.IsRemote() || blockValue.ischild)
             return;
 
+        FluidGraphManager.TryApplyPumpSnapshotForPosition(world, clrIdx, blockPos);
         MarkAdjacentPipesDirty(world, clrIdx, blockPos);
     }
 
@@ -43,7 +44,10 @@ public class FluidPumpBlock : MachineBlock<TileEntityFluidPump>
         BlockValue blockValue)
     {
         if (!world.IsRemote() && !blockValue.ischild)
+        {
+            FluidGraphManager.CapturePumpSnapshotForPosition(world, clrIdx, blockPos);
             MarkAdjacentPipesDirty(world, clrIdx, blockPos);
+        }
 
         base.OnBlockUnloaded(world, clrIdx, blockPos, blockValue);
     }
@@ -69,7 +73,10 @@ public class FluidPumpBlock : MachineBlock<TileEntityFluidPump>
         BlockValue blockValue)
     {
         if (!world.IsRemote())
+        {
+            FluidGraphManager.RemovePumpSnapshotAtPosition(blockPos, true);
             MarkAdjacentPipesDirty(world, 0, blockPos);
+        }
 
         base.OnBlockRemoved(world, chunk, blockPos, blockValue);
     }
