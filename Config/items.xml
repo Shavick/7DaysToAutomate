@@ -9,6 +9,8 @@
     <append xpath="/items/item[@name='ammoGasCan']">
         <property name="FluidConvertType" value="gas"/>
         <property name="FluidConvertAmountGallons" value="2"/>
+        <property name="FluidConvertReturnItem" value="resourceScrapPolymers"/>
+        <property name="FluidConvertReturnItemAmount" value="10"/>
     </append>
 
 </configs>

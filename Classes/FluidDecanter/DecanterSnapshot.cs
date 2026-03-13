@@ -3,7 +3,7 @@
 public class DecanterSnapshot : IHLRSnapshot
 {
     public string SnapshotKind => "Decanter";
-    public int SnapshotVersion => 2;
+    public int SnapshotVersion => 3;
 
     public Guid MachineId { get; set; }
     public Vector3i Position { get; set; }
@@ -30,6 +30,7 @@ public class DecanterSnapshot : IHLRSnapshot
     public string PendingItemInputName;
     public int PendingItemInputFluidAmountMg;
     public string PendingItemInputReturnItemName;
+    public int PendingItemInputReturnItemAmount = 1;
     public string PendingItemOutputName;
 
     public int CycleTickCounter;

@@ -621,7 +621,7 @@ public class HigherLogicRegistry
                 return "Input item unavailable";
             }
 
-            if (!TryFindDecanterInputCandidate(availableCounts, decanter.SelectedFluidType, out _, out _, out _))
+            if (!TryFindDecanterInputCandidate(availableCounts, decanter.SelectedFluidType, out _, out _, out _, out _))
                 return "No matching input item";
         }
 
@@ -645,7 +645,10 @@ public class HigherLogicRegistry
             return false;
         }
 
-        if (decanter.SelectedFluidGraphId != Guid.Empty && IsDecanterFluidGraphCompatible(decanter.SelectedFluidGraphId, normalizedFluid))
+        bool selectedIsCompatible = decanter.SelectedFluidGraphId != Guid.Empty &&
+            IsDecanterFluidGraphCompatible(decanter.SelectedFluidGraphId, normalizedFluid);
+
+        if (selectedIsCompatible && DoesDecanterGraphHaveActivePump(decanter.SelectedFluidGraphId))
         {
             graphId = decanter.SelectedFluidGraphId;
             HLRDevLog($"[HLR][Decanter][FluidGraph] RESOLVED - using selected graph={graphId} fluid={normalizedFluid}");
@@ -653,14 +656,35 @@ public class HigherLogicRegistry
         }
 
         List<Guid> candidates = GetDecanterAdjacentFluidGraphCandidates(decanter.Position);
+        Guid firstCompatible = Guid.Empty;
         for (int i = 0; i < candidates.Count; i++)
         {
             Guid candidate = candidates[i];
             if (!IsDecanterFluidGraphCompatible(candidate, normalizedFluid))
                 continue;
 
+            if (firstCompatible == Guid.Empty)
+                firstCompatible = candidate;
+
+            if (!DoesDecanterGraphHaveActivePump(candidate))
+                continue;
+
             graphId = candidate;
             HLRDevLog($"[HLR][Decanter][FluidGraph] RESOLVED - discovered graph={graphId} fluid={normalizedFluid}");
+            return true;
+        }
+
+        if (selectedIsCompatible)
+        {
+            graphId = decanter.SelectedFluidGraphId;
+            HLRDevLog($"[HLR][Decanter][FluidGraph] RESOLVED - fallback selected graph={graphId} fluid={normalizedFluid} (no active pump found)");
+            return true;
+        }
+
+        if (firstCompatible != Guid.Empty)
+        {
+            graphId = firstCompatible;
+            HLRDevLog($"[HLR][Decanter][FluidGraph] RESOLVED - fallback compatible graph={graphId} fluid={normalizedFluid} (no active pump found)");
             return true;
         }
 
@@ -718,16 +742,49 @@ public class HigherLogicRegistry
         return string.Equals(graph.FluidType, fluidType, StringComparison.Ordinal);
     }
 
+    private bool DoesDecanterGraphHaveActivePump(Guid graphId)
+    {
+        if (graphId == Guid.Empty)
+            return false;
+
+        if (!FluidGraphManager.TryGetGraph(graphId, out FluidGraphData graph) || graph == null)
+            return false;
+
+        if (graph.PumpEndpoints == null || graph.PumpEndpoints.Count == 0)
+            return false;
+
+        foreach (Vector3i pumpPos in graph.PumpEndpoints)
+        {
+            if (SafeWorldRead.TryGetTileEntity(world, 0, pumpPos, out TileEntity te) && te is TileEntityFluidPump livePump)
+            {
+                if (livePump.IsActivePump() && livePump.GetOutputCapMgPerTick() > 0)
+                    return true;
+            }
+
+            if (graph.TryGetPumpSnapshot(pumpPos, out FluidGraphData.PumpSnapshot snapshot) &&
+                snapshot != null &&
+                snapshot.PumpEnabled &&
+                snapshot.OutputCapMgPerTick > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private bool TryFindDecanterInputCandidate(
         Dictionary<string, int> availableCounts,
         string selectedFluidType,
         out string matchedItemName,
         out int fluidAmountMg,
-        out string returnItemName)
+        out string returnItemName,
+        out int returnItemAmount)
     {
         matchedItemName = string.Empty;
         fluidAmountMg = 0;
         returnItemName = string.Empty;
+        returnItemAmount = 1;
 
         if (availableCounts == null || availableCounts.Count == 0 || string.IsNullOrEmpty(selectedFluidType))
             return false;
@@ -749,7 +806,7 @@ public class HigherLogicRegistry
             if (count <= 0)
                 continue;
 
-            if (!TileEntityFluidDecanter.TryGetConversionRuleForItem(itemName, out string fluidType, out int amountMg, out string returnItem))
+            if (!TileEntityFluidDecanter.TryGetConversionRuleForItem(itemName, out string fluidType, out int amountMg, out string returnItem, out int ruleReturnItemAmount))
                 continue;
 
             if (!string.Equals(fluidType, normalizedFluid, StringComparison.Ordinal))
@@ -761,6 +818,7 @@ public class HigherLogicRegistry
             matchedItemName = itemName;
             fluidAmountMg = amountMg;
             returnItemName = returnItem ?? string.Empty;
+            returnItemAmount = Math.Max(1, ruleReturnItemAmount);
             return true;
         }
 
@@ -830,7 +888,7 @@ public class HigherLogicRegistry
         return true;
     }
 
-    private bool TryInjectDecanterFluidPartial(Guid fluidGraphId, string fluidType, int requestedMg, out int injectedMg, out string blockedReason)
+    private bool TryInjectDecanterFluidPartial(DecanterSnapshot decanter, ref Guid fluidGraphId, string fluidType, int requestedMg, out int injectedMg, out string blockedReason)
     {
         injectedMg = 0;
         blockedReason = string.Empty;
@@ -838,7 +896,7 @@ public class HigherLogicRegistry
         if (requestedMg <= 0)
             return true;
 
-        if (fluidGraphId == Guid.Empty || string.IsNullOrEmpty(fluidType))
+        if (decanter == null || fluidGraphId == Guid.Empty || string.IsNullOrEmpty(fluidType))
         {
             blockedReason = "Missing/Invalid Fluid Output";
             HLRDevLog($"[HLR][Decanter][FluidFlush] BLOCKED - {blockedReason} graph={fluidGraphId} fluid={fluidType} requestMg={requestedMg}");
@@ -851,6 +909,25 @@ public class HigherLogicRegistry
             blockedReason = string.Empty;
             HLRDevLog($"[HLR][Decanter][FluidFlush] INJECT OK graph={fluidGraphId} fluid={fluidType} injectedMg={injectedMg}");
             return true;
+        }
+
+        if ((string.Equals(blockedReason, "Fluid graph unavailable", StringComparison.Ordinal) ||
+             string.Equals(blockedReason, "No active pump", StringComparison.Ordinal)) &&
+            TryResolveDecanterFluidGraph(decanter, out Guid reboundGraphId) &&
+            reboundGraphId != Guid.Empty)
+        {
+            Guid staleGraphId = fluidGraphId;
+            fluidGraphId = reboundGraphId;
+            decanter.SelectedFluidGraphId = reboundGraphId;
+            HLRDevLog($"[HLR][Decanter][FluidFlush] RETRY RESOLVE graph {staleGraphId} -> {reboundGraphId} fluid={fluidType}");
+
+            if (FluidGraphManager.TryInjectFluid(world, 0, fluidGraphId, fluidType, requestedMg, out blockedReason))
+            {
+                injectedMg = requestedMg;
+                blockedReason = string.Empty;
+                HLRDevLog($"[HLR][Decanter][FluidFlush] INJECT OK graph={fluidGraphId} fluid={fluidType} injectedMg={injectedMg}");
+                return true;
+            }
         }
 
         bool retryWithSmallerAmount =
@@ -909,7 +986,7 @@ public class HigherLogicRegistry
 
         decanter.SelectedFluidGraphId = resolvedGraphId;
 
-        if (!TryInjectDecanterFluidPartial(resolvedGraphId, decanter.SelectedFluidType, decanter.PendingFluidOutput, out int injectedMg, out blockedReason))
+        if (!TryInjectDecanterFluidPartial(decanter, ref resolvedGraphId, decanter.SelectedFluidType, decanter.PendingFluidOutput, out int injectedMg, out blockedReason))
         {
             HLRDevLog($"[HLR][Decanter][FluidFlush] BLOCKED graph={resolvedGraphId} fluid={decanter.SelectedFluidType} requestMg={decanter.PendingFluidOutput} reason={blockedReason}");
             return false;
@@ -960,6 +1037,7 @@ public class HigherLogicRegistry
                 decanter.PendingItemInputName = string.Empty;
                 decanter.PendingItemInputFluidAmountMg = 0;
                 decanter.PendingItemInputReturnItemName = string.Empty;
+                decanter.PendingItemInputReturnItemAmount = 1;
                 blockedReason = "Pending input invalid";
                 HLRDevLog($"[HLR][Decanter][Cycle] RESET - {blockedReason}");
                 return true;
@@ -975,11 +1053,13 @@ public class HigherLogicRegistry
 
             int convertedFluidMg = decanter.PendingItemInputFluidAmountMg;
             string returnItem = decanter.PendingItemInputReturnItemName;
+            int pendingReturnItemAmount = Math.Max(1, decanter.PendingItemInputReturnItemAmount);
 
             decanter.PendingItemInput = 0;
             decanter.PendingItemInputName = string.Empty;
             decanter.PendingItemInputFluidAmountMg = 0;
             decanter.PendingItemInputReturnItemName = string.Empty;
+            decanter.PendingItemInputReturnItemAmount = 1;
 
             decanter.PendingFluidOutput += Math.Max(0, convertedFluidMg);
 
@@ -988,13 +1068,13 @@ public class HigherLogicRegistry
                 ItemValue returnValue = ItemClass.GetItem(returnItem, false);
                 if (returnValue != null && returnValue.type != ItemValue.None.type)
                 {
-                    decanter.PendingItemOutput = 1;
+                    decanter.PendingItemOutput = pendingReturnItemAmount;
                     decanter.PendingItemOutputName = returnItem;
                 }
             }
 
             cycleAction = "Converted";
-            HLRDevLog($"[HLR][Decanter][Cycle] CONVERTED fluidMg={convertedFluidMg} returnItem={returnItem} pendingFluidOutMg={decanter.PendingFluidOutput} pendingItemOut={decanter.PendingItemOutput}");
+            HLRDevLog($"[HLR][Decanter][Cycle] CONVERTED fluidMg={convertedFluidMg} returnItem={returnItem} returnItemAmount={pendingReturnItemAmount} pendingFluidOutMg={decanter.PendingFluidOutput} pendingItemOut={decanter.PendingItemOutput}");
             return true;
         }
 
@@ -1020,10 +1100,17 @@ public class HigherLogicRegistry
             return false;
         }
 
-        if (!TryFindDecanterInputCandidate(availableCounts, decanter.SelectedFluidType, out string matchedItemName, out int fluidAmountMg, out string returnItemName))
+        if (!TryFindDecanterInputCandidate(availableCounts, decanter.SelectedFluidType, out string matchedItemName, out int fluidAmountMg, out string returnItemName, out int returnItemAmount))
         {
             blockedReason = "No matching input item";
             HLRDevLog($"[HLR][Decanter][Cycle] BLOCKED - {blockedReason} fluid={decanter.SelectedFluidType}");
+            return false;
+        }
+
+        if (decanter.PendingItemOutput > 0)
+        {
+            blockedReason = "Pending item output full";
+            HLRDevLog($"[HLR][Decanter][Cycle] BLOCKED - {blockedReason}");
             return false;
         }
 
@@ -1047,9 +1134,10 @@ public class HigherLogicRegistry
         decanter.PendingItemInputName = matchedItemName;
         decanter.PendingItemInputFluidAmountMg = Math.Max(0, fluidAmountMg);
         decanter.PendingItemInputReturnItemName = returnItemName ?? string.Empty;
+        decanter.PendingItemInputReturnItemAmount = Math.Max(1, returnItemAmount);
 
         cycleAction = "Requested Input";
-        HLRDevLog($"[HLR][Decanter][Cycle] CONSUME SUCCESS item={matchedItemName} consumed={consumedCount} fluidMg={decanter.PendingItemInputFluidAmountMg} returnItem={decanter.PendingItemInputReturnItemName}");
+        HLRDevLog($"[HLR][Decanter][Cycle] CONSUME SUCCESS item={matchedItemName} consumed={consumedCount} fluidMg={decanter.PendingItemInputFluidAmountMg} returnItem={decanter.PendingItemInputReturnItemName} returnItemAmount={decanter.PendingItemInputReturnItemAmount}");
         return true;
     }
 
@@ -1442,6 +1530,7 @@ public class HigherLogicRegistry
             PendingItemInputName = source.PendingItemInputName,
             PendingItemInputFluidAmountMg = source.PendingItemInputFluidAmountMg,
             PendingItemInputReturnItemName = source.PendingItemInputReturnItemName,
+            PendingItemInputReturnItemAmount = source.PendingItemInputReturnItemAmount,
             PendingItemOutputName = source.PendingItemOutputName,
             CycleTickCounter = source.CycleTickCounter,
             CycleTickLength = source.CycleTickLength,
@@ -1661,7 +1750,7 @@ public class HigherLogicRegistry
                 return null;
 
             case "Decanter":
-                if (version == 1 || version == 2)
+                if (version == 1 || version == 2 || version == 3)
                 {
                     return new DecanterSnapshot();
                 }
@@ -1935,6 +2024,7 @@ public class HigherLogicRegistry
         bw.Write(decanter.PendingItemInputName ?? string.Empty);
         bw.Write(decanter.PendingItemInputFluidAmountMg);
         bw.Write(decanter.PendingItemInputReturnItemName ?? string.Empty);
+        bw.Write(decanter.PendingItemInputReturnItemAmount);
         bw.Write(decanter.PendingItemOutputName ?? string.Empty);
 
         bw.Write(decanter.CycleTickCounter);
@@ -2239,6 +2329,10 @@ public class HigherLogicRegistry
         decanter.PendingItemInputName = br.ReadString() ?? string.Empty;
         decanter.PendingItemInputFluidAmountMg = Math.Max(0, br.ReadInt32());
         decanter.PendingItemInputReturnItemName = br.ReadString() ?? string.Empty;
+        if (snapshotVersion >= 3)
+            decanter.PendingItemInputReturnItemAmount = Math.Max(1, br.ReadInt32());
+        else
+            decanter.PendingItemInputReturnItemAmount = 1;
         decanter.PendingItemOutputName = br.ReadString() ?? string.Empty;
 
         decanter.CycleTickCounter = Math.Max(0, br.ReadInt32());
@@ -2253,6 +2347,7 @@ public class HigherLogicRegistry
             decanter.PendingItemInputName = string.Empty;
             decanter.PendingItemInputFluidAmountMg = 0;
             decanter.PendingItemInputReturnItemName = string.Empty;
+            decanter.PendingItemInputReturnItemAmount = 1;
         }
 
         if (decanter.PendingItemOutput <= 0)

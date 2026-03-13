@@ -8,7 +8,7 @@ using UnityEngine;
 
 public class TileEntityFluidDecanter : TileEntityMachine
 {
-    private const int PersistVersion = 102;
+    private const int PersistVersion = 103;
     private const int ClientSyncVersion = 2;
     private const int MaxSerializedInputTargets = 64;
     private const int MaxSerializedOutputTargets = 64;
@@ -30,6 +30,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         public string FluidType;
         public int FluidAmountMg;
         public string ReturnItemName;
+        public int ReturnItemAmount;
     }
 
     private static readonly object ConversionCacheLock = new object();
@@ -57,6 +58,13 @@ public class TileEntityFluidDecanter : TileEntityMachine
         "FluidConvertReturnItem",
         "FuelConvertReturnItem",
         "FluidDecanterReturnItem"
+    };
+
+    private static readonly string[] ItemReturnItemAmountPropertyKeys =
+    {
+        "FluidConvertReturnItemAmount",
+        "FuelConvertReturnItemAmount",
+        "FluidDecanterReturnItemAmount"
     };
 
     public List<InputTargetInfo> availableInputTargets = new List<InputTargetInfo>();
@@ -98,6 +106,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
     private string pendingItemInputName = string.Empty;
     private int pendingItemInputFluidAmountMg;
     private string pendingItemInputReturnItemName = string.Empty;
+    private int pendingItemInputReturnItemAmount = 1;
 
     private string pendingItemOutputName = string.Empty;
 
@@ -153,6 +162,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
             PendingItemInputName = pendingItemInputName ?? string.Empty,
             PendingItemInputFluidAmountMg = pendingItemInputFluidAmountMg,
             PendingItemInputReturnItemName = pendingItemInputReturnItemName ?? string.Empty,
+            PendingItemInputReturnItemAmount = pendingItemInputReturnItemAmount,
             PendingItemOutputName = pendingItemOutputName ?? string.Empty,
             CycleTickCounter = cycleTickCounter,
             CycleTickLength = cycleTickLength,
@@ -189,6 +199,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         pendingItemInputName = snapshot.PendingItemInputName ?? string.Empty;
         pendingItemInputFluidAmountMg = Math.Max(0, snapshot.PendingItemInputFluidAmountMg);
         pendingItemInputReturnItemName = snapshot.PendingItemInputReturnItemName ?? string.Empty;
+        pendingItemInputReturnItemAmount = Math.Max(1, snapshot.PendingItemInputReturnItemAmount);
         pendingItemOutputName = snapshot.PendingItemOutputName ?? string.Empty;
 
         cycleTickCounter = Math.Max(0, snapshot.CycleTickCounter);
@@ -725,6 +736,12 @@ public class TileEntityFluidDecanter : TileEntityMachine
                 pendingItemInputReturnItemName = string.Empty;
                 changed = true;
             }
+
+            if (pendingItemInputReturnItemAmount != 1)
+            {
+                pendingItemInputReturnItemAmount = 1;
+                changed = true;
+            }
         }
         else
         {
@@ -740,6 +757,12 @@ public class TileEntityFluidDecanter : TileEntityMachine
                 pendingItemInputName = string.Empty;
                 pendingItemInputFluidAmountMg = 0;
                 pendingItemInputReturnItemName = string.Empty;
+                pendingItemInputReturnItemAmount = 1;
+                changed = true;
+            }
+            else if (pendingItemInputReturnItemAmount <= 0)
+            {
+                pendingItemInputReturnItemAmount = 1;
                 changed = true;
             }
         }
@@ -983,6 +1006,23 @@ public class TileEntityFluidDecanter : TileEntityMachine
             return true;
         }
 
+        if (string.Equals(blockedReason, "Fluid graph unavailable", StringComparison.Ordinal) ||
+            string.Equals(blockedReason, "No active pump", StringComparison.Ordinal))
+        {
+            Guid staleGraphId = SelectedFluidGraphId;
+            ResolveFluidOutputGraph(world);
+            DevLog($"FLUID INJECT RETRY RESOLVE -> staleGraph={staleGraphId} resolvedGraph={SelectedFluidGraphId} fluid={SelectedFluidType}");
+
+            if (SelectedFluidGraphId != Guid.Empty &&
+                FluidGraphManager.TryInjectFluid(world, 0, SelectedFluidGraphId, SelectedFluidType, requestedMg, out blockedReason))
+            {
+                injectedMg = requestedMg;
+                blockedReason = string.Empty;
+                DevLog($"FLUID INJECT SUCCESS -> graph={SelectedFluidGraphId} fluid={SelectedFluidType} injectedMg={injectedMg}");
+                return true;
+            }
+        }
+
         bool retryWithSmallerAmount =
             string.Equals(blockedReason, "Graph throughput full", StringComparison.Ordinal) ||
             string.Equals(blockedReason, "No storage room", StringComparison.Ordinal);
@@ -1084,6 +1124,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
                 pendingItemInputName = string.Empty;
                 pendingItemInputFluidAmountMg = 0;
                 pendingItemInputReturnItemName = string.Empty;
+                pendingItemInputReturnItemAmount = 1;
                 blockedReason = "Pending input invalid";
                 DevLog($"CYCLE RESET -> {blockedReason}");
                 return true;
@@ -1099,11 +1140,13 @@ public class TileEntityFluidDecanter : TileEntityMachine
 
             int convertedFluidMg = pendingItemInputFluidAmountMg;
             string returnItem = pendingItemInputReturnItemName;
+            int returnItemAmount = Math.Max(1, pendingItemInputReturnItemAmount);
 
             pendingItemInput = 0;
             pendingItemInputName = string.Empty;
             pendingItemInputFluidAmountMg = 0;
             pendingItemInputReturnItemName = string.Empty;
+            pendingItemInputReturnItemAmount = 1;
 
             pendingFluidOutput += Math.Max(0, convertedFluidMg);
 
@@ -1112,13 +1155,13 @@ public class TileEntityFluidDecanter : TileEntityMachine
                 ItemValue returnValue = ItemClass.GetItem(returnItem, false);
                 if (returnValue != null && returnValue.type != ItemValue.None.type)
                 {
-                    pendingItemOutput = 1;
+                    pendingItemOutput = returnItemAmount;
                     pendingItemOutputName = returnItem;
                 }
             }
 
             cycleAction = "Converted";
-            DevLog($"CYCLE CONVERTED -> fluidMg={convertedFluidMg} returnItem={returnItem} pendingFluidOutMg={pendingFluidOutput} pendingItemOut={pendingItemOutput}");
+            DevLog($"CYCLE CONVERTED -> fluidMg={convertedFluidMg} returnItem={returnItem} returnItemAmount={returnItemAmount} pendingFluidOutMg={pendingFluidOutput} pendingItemOut={pendingItemOutput}");
             return true;
         }
 
@@ -1144,6 +1187,13 @@ public class TileEntityFluidDecanter : TileEntityMachine
             return false;
         }
 
+        if (pendingItemOutput > 0)
+        {
+            blockedReason = "Pending item output full";
+            DevLog($"CYCLE BLOCKED -> {blockedReason}");
+            return false;
+        }
+
         Dictionary<string, int> request = new Dictionary<string, int>(StringComparer.Ordinal)
         {
             { matchedItemName, 1 }
@@ -1166,6 +1216,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         pendingItemInputName = matchedItemName;
         pendingItemInputFluidAmountMg = Math.Max(0, rule.FluidAmountMg);
         pendingItemInputReturnItemName = rule.ReturnItemName ?? string.Empty;
+        pendingItemInputReturnItemAmount = Math.Max(1, rule.ReturnItemAmount);
 
         cycleAction = "Requested Input";
         blockedReason = string.Empty;
@@ -1394,6 +1445,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         bw.Write(pendingItemInputName ?? string.Empty);
         bw.Write(pendingItemInputFluidAmountMg);
         bw.Write(pendingItemInputReturnItemName ?? string.Empty);
+        bw.Write(pendingItemInputReturnItemAmount);
         bw.Write(pendingItemOutputName ?? string.Empty);
 
         bw.Write(cycleTickCounter);
@@ -1516,6 +1568,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
 
                 pendingItemInputFluidAmountMg = 0;
                 pendingItemInputReturnItemName = string.Empty;
+                pendingItemInputReturnItemAmount = 1;
 
                 cycleTickCounter = Math.Max(0, br.ReadInt32());
                 cycleTickLength = Math.Max(1, br.ReadInt32());
@@ -1569,6 +1622,10 @@ public class TileEntityFluidDecanter : TileEntityMachine
                     pendingItemInputName = br.ReadString() ?? string.Empty;
                     pendingItemInputFluidAmountMg = Math.Max(0, br.ReadInt32());
                     pendingItemInputReturnItemName = br.ReadString() ?? string.Empty;
+                    if (version >= 103)
+                        pendingItemInputReturnItemAmount = Math.Max(1, br.ReadInt32());
+                    else
+                        pendingItemInputReturnItemAmount = 1;
                     pendingItemOutputName = br.ReadString() ?? string.Empty;
                 }
                 else
@@ -1576,6 +1633,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
                     pendingItemInputName = string.Empty;
                     pendingItemInputFluidAmountMg = 0;
                     pendingItemInputReturnItemName = string.Empty;
+                    pendingItemInputReturnItemAmount = 1;
                     pendingItemOutputName = string.Empty;
 
                     // v101 did not persist pending item metadata needed to continue processing safely.
@@ -1638,6 +1696,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         pendingItemInputName = string.Empty;
         pendingItemInputFluidAmountMg = 0;
         pendingItemInputReturnItemName = string.Empty;
+        pendingItemInputReturnItemAmount = 1;
         pendingItemOutputName = string.Empty;
 
         cycleTickCounter = 0;
@@ -1705,11 +1764,12 @@ public class TileEntityFluidDecanter : TileEntityMachine
         }
     }
 
-    public static bool TryGetConversionRuleForItem(string itemName, out string fluidType, out int fluidAmountMg, out string returnItemName)
+    public static bool TryGetConversionRuleForItem(string itemName, out string fluidType, out int fluidAmountMg, out string returnItemName, out int returnItemAmount)
     {
         fluidType = string.Empty;
         fluidAmountMg = 0;
         returnItemName = string.Empty;
+        returnItemAmount = 1;
 
         if (string.IsNullOrEmpty(itemName))
             return false;
@@ -1724,6 +1784,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
             fluidType = rule.FluidType ?? string.Empty;
             fluidAmountMg = Math.Max(0, rule.FluidAmountMg);
             returnItemName = rule.ReturnItemName ?? string.Empty;
+            returnItemAmount = Math.Max(1, rule.ReturnItemAmount);
             return true;
         }
     }
@@ -1849,12 +1910,15 @@ public class TileEntityFluidDecanter : TileEntityMachine
         else
             returnItemName = string.Empty;
 
+        int returnItemAmount = ParsePositiveIntProperty(itemClass, ItemReturnItemAmountPropertyKeys, 1);
+
         rule = new FuelConversionRule
         {
             InputItemName = itemName,
             FluidType = fluidType,
             FluidAmountMg = fluidAmountMg,
-            ReturnItemName = returnItemName
+            ReturnItemName = returnItemName,
+            ReturnItemAmount = returnItemAmount
         };
 
         return true;
@@ -1983,6 +2047,23 @@ public class TileEntityFluidDecanter : TileEntityMachine
         amountMg = (int)Math.Round(mgDouble, MidpointRounding.AwayFromZero);
         return true;
     }
+
+    private static int ParsePositiveIntProperty(ItemClass itemClass, string[] propertyKeys, int defaultValue)
+    {
+        int fallback = Math.Max(1, defaultValue);
+        string rawValue = GetItemPropertyString(itemClass, propertyKeys);
+        if (string.IsNullOrWhiteSpace(rawValue))
+            return fallback;
+
+        string trimmed = rawValue.Trim();
+        if (!long.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed) || parsed <= 0)
+            return fallback;
+
+        if (parsed > int.MaxValue)
+            return int.MaxValue;
+
+        return (int)parsed;
+    }
     private int ReadIntProperty(string propertyName, int fallback, int min, int max)
     {
         string raw = blockValue.Block?.Properties?.GetString(propertyName);
@@ -2051,22 +2132,42 @@ public class TileEntityFluidDecanter : TileEntityMachine
         if (candidates.Count == 0)
             return false;
 
+        bool selectedIsCompatible = false;
         if (SelectedFluidGraphId != Guid.Empty && candidates.Contains(SelectedFluidGraphId))
+            selectedIsCompatible = IsGraphCompatible(SelectedFluidGraphId, normalizedFluid);
+
+        if (selectedIsCompatible && GraphHasActivePump(world, SelectedFluidGraphId))
         {
-            if (IsGraphCompatible(SelectedFluidGraphId, normalizedFluid))
-            {
-                graphId = SelectedFluidGraphId;
-                return true;
-            }
+            graphId = SelectedFluidGraphId;
+            return true;
         }
 
+        Guid firstCompatible = Guid.Empty;
         for (int i = 0; i < candidates.Count; i++)
         {
             Guid candidate = candidates[i];
             if (!IsGraphCompatible(candidate, normalizedFluid))
                 continue;
 
+            if (firstCompatible == Guid.Empty)
+                firstCompatible = candidate;
+
+            if (!GraphHasActivePump(world, candidate))
+                continue;
+
             graphId = candidate;
+            return true;
+        }
+
+        if (selectedIsCompatible)
+        {
+            graphId = SelectedFluidGraphId;
+            return true;
+        }
+
+        if (firstCompatible != Guid.Empty)
+        {
+            graphId = firstCompatible;
             return true;
         }
 
@@ -2119,6 +2220,37 @@ public class TileEntityFluidDecanter : TileEntityMachine
             return true;
 
         return string.Equals(graphFluid, fluidType, StringComparison.Ordinal);
+    }
+
+    private static bool GraphHasActivePump(WorldBase world, Guid graphId)
+    {
+        if (world == null || graphId == Guid.Empty)
+            return false;
+
+        if (!FluidGraphManager.TryGetGraph(graphId, out FluidGraphData graph) || graph == null)
+            return false;
+
+        if (graph.PumpEndpoints == null || graph.PumpEndpoints.Count == 0)
+            return false;
+
+        foreach (Vector3i pumpPos in graph.PumpEndpoints)
+        {
+            if (SafeWorldRead.TryGetTileEntity(world, 0, pumpPos, out TileEntity pumpTe) && pumpTe is TileEntityFluidPump livePump)
+            {
+                if (livePump.IsActivePump() && livePump.GetOutputCapMgPerTick() > 0)
+                    return true;
+            }
+
+            if (graph.TryGetPumpSnapshot(pumpPos, out FluidGraphData.PumpSnapshot snapshot) &&
+                snapshot != null &&
+                snapshot.PumpEnabled &&
+                snapshot.OutputCapMgPerTick > 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private string GetFluidOutputRequirementFailureReason(WorldBase world)
@@ -2209,6 +2341,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
             hash = (hash * 31) + (pendingItemInputName?.GetHashCode() ?? 0);
             hash = (hash * 31) + pendingItemInputFluidAmountMg;
             hash = (hash * 31) + (pendingItemInputReturnItemName?.GetHashCode() ?? 0);
+            hash = (hash * 31) + pendingItemInputReturnItemAmount;
             hash = (hash * 31) + (pendingItemOutputName?.GetHashCode() ?? 0);
             hash = (hash * 31) + (LastAction?.GetHashCode() ?? 0);
             hash = (hash * 31) + (LastBlockReason?.GetHashCode() ?? 0);
