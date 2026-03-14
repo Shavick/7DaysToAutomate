@@ -16,7 +16,7 @@ public static class MachineOutputDiscovery
     public static List<OutputTargetInfo> GetAvailableOutputs(WorldBase world, int clrIdx, Vector3i machinePos, int maxResults = 8)
     {
         var results = new List<OutputTargetInfo>();
-        var seenTargets = new HashSet<string>(StringComparer.Ordinal);
+        var targetIndexByPos = new Dictionary<Vector3i, int>();
 
         if (world == null || maxResults <= 0)
             return results;
@@ -26,11 +26,11 @@ public static class MachineOutputDiscovery
             Vector3i neighborPos = machinePos + NeighborOffsets[i];
 
             // Adjacent storage
-            if (TryAddAdjacentStorage(world, clrIdx, neighborPos, results, seenTargets, maxResults))
+            if (TryAddAdjacentStorage(world, clrIdx, neighborPos, results, targetIndexByPos, maxResults))
                 continue;
 
             // Adjacent pipe -> graph endpoints
-            TryAddPipeEndpoints(world, clrIdx, neighborPos, results, seenTargets, maxResults);
+            TryAddPipeEndpoints(world, clrIdx, neighborPos, results, targetIndexByPos, maxResults);
         }
 
         return results;
@@ -41,12 +41,9 @@ public static class MachineOutputDiscovery
         int clrIdx,
         Vector3i pos,
         List<OutputTargetInfo> results,
-        HashSet<string> seenTargets,
+        Dictionary<Vector3i, int> targetIndexByPos,
         int maxResults)
     {
-        if (results.Count >= maxResults)
-            return false;
-
         if (!(world.GetTileEntity(clrIdx, pos) is TileEntityComposite composite))
             return false;
 
@@ -54,10 +51,23 @@ public static class MachineOutputDiscovery
         if (storage == null || storage.items == null)
             return false;
 
-        string key = BuildTargetKey(pos, OutputTransportMode.Adjacent, Guid.Empty);
-        if (!seenTargets.Add(key))
+        if (targetIndexByPos.TryGetValue(pos, out int existingIndex))
+        {
+            if (existingIndex >= 0 &&
+                existingIndex < results.Count &&
+                results[existingIndex] != null &&
+                results[existingIndex].TransportMode != OutputTransportMode.Adjacent)
+            {
+                results[existingIndex] = new OutputTargetInfo(pos, OutputTransportMode.Adjacent);
+            }
+
+            return true;
+        }
+
+        if (results.Count >= maxResults)
             return true;
 
+        targetIndexByPos[pos] = results.Count;
         results.Add(new OutputTargetInfo(pos, OutputTransportMode.Adjacent));
         return true;
     }
@@ -67,7 +77,7 @@ public static class MachineOutputDiscovery
     int clrIdx,
     Vector3i pipePos,
     List<OutputTargetInfo> results,
-    HashSet<string> seenTargets,
+    Dictionary<Vector3i, int> targetIndexByPos,
     int maxResults)
     {
         if (results.Count >= maxResults)
@@ -88,21 +98,19 @@ public static class MachineOutputDiscovery
         for (int i = 0; i < endpoints.Count && results.Count < maxResults; i++)
         {
             Vector3i endpointPos = endpoints[i];
-
-
-            string key = BuildTargetKey(endpointPos, OutputTransportMode.Pipe, pipeGraphId);
-            if (!seenTargets.Add(key))
-            {
+            if (targetIndexByPos.ContainsKey(endpointPos))
                 continue;
-            }
 
+            if (!(world.GetTileEntity(clrIdx, endpointPos) is TileEntityComposite endpointComposite))
+                continue;
+
+            TEFeatureStorage endpointStorage = endpointComposite.GetFeature<TEFeatureStorage>();
+            if (endpointStorage == null || endpointStorage.items == null)
+                continue;
+
+            targetIndexByPos[endpointPos] = results.Count;
             results.Add(new OutputTargetInfo(endpointPos, OutputTransportMode.Pipe, pipeGraphId));
         }
-    }
-
-    private static string BuildTargetKey(Vector3i pos, OutputTransportMode mode, Guid pipeGraphId)
-    {
-        return $"{pos.x},{pos.y},{pos.z}|{(int)mode}|{pipeGraphId}";
     }
 }
 

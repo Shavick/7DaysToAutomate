@@ -416,6 +416,7 @@ public static class PipeGraphManager
             return false;
 
         storageEndpoints = new List<Vector3i>(graph.StorageEndpoints);
+        storageEndpoints.Sort(ComparePositions);
         return true;
     }
 
@@ -1406,6 +1407,19 @@ public static class PipeGraphManager
         }
 
         return graphIds;
+    }
+
+    private static int ComparePositions(Vector3i a, Vector3i b)
+    {
+        int x = a.x.CompareTo(b.x);
+        if (x != 0)
+            return x;
+
+        int y = a.y.CompareTo(b.y);
+        if (y != 0)
+            return y;
+
+        return a.z.CompareTo(b.z);
     }
 
     private static IEnumerable<Vector3i> GetNeighborPositions(Vector3i center)

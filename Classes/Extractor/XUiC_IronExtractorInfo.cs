@@ -451,8 +451,12 @@ public class XUiC_IronExtractorInfo : XUiController
                 return true;
             }
 
-            int current = (extractor.FluidFuelBufferAmountMg + (FluidConstants.MilliGallonsPerGallon / 2)) / FluidConstants.MilliGallonsPerGallon;
-            int cap = (extractor.FluidFuelBufferCapacityMg + (FluidConstants.MilliGallonsPerGallon / 2)) / FluidConstants.MilliGallonsPerGallon;
+            int current = extractor.FluidFuelBufferAmountMg <= 0
+                ? 0
+                : extractor.FluidFuelBufferAmountMg / FluidConstants.MilliGallonsPerGallon;
+            int cap = extractor.FluidFuelBufferCapacityMg <= 0
+                ? 0
+                : extractor.FluidFuelBufferCapacityMg / FluidConstants.MilliGallonsPerGallon;
             value = $"{current}/{cap}g";
             return true;
         }

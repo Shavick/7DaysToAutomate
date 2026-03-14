@@ -279,7 +279,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         if (world.IsRemote())
             return availableOutputTargets ?? new List<OutputTargetInfo>();
 
-        availableOutputTargets = MachineOutputDiscovery.GetAvailableOutputs(world, 0, ToWorldPos(), 8);
+        RefreshAvailableOutputTargets(world);
         return availableOutputTargets;
     }
 
@@ -288,8 +288,45 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         if (world == null || world.IsRemote())
             return;
 
-        availableOutputTargets = MachineOutputDiscovery.GetAvailableOutputs(world, 0, ToWorldPos(), 8);
+        List<OutputTargetInfo> discovered = MachineOutputDiscovery.GetAvailableOutputs(world, 0, ToWorldPos(), 8);
+        if (AreOutputTargetsEqual(availableOutputTargets, discovered))
+            return;
+
+        availableOutputTargets = discovered;
+        SetModified();
+        NeedsUiRefresh = true;
         DevLog($"RefreshAvailableOutputTargets — count={availableOutputTargets?.Count ?? 0}");
+    }
+
+    private static bool AreOutputTargetsEqual(List<OutputTargetInfo> left, List<OutputTargetInfo> right)
+    {
+        int leftCount = left?.Count ?? 0;
+        int rightCount = right?.Count ?? 0;
+        if (leftCount != rightCount)
+            return false;
+
+        for (int i = 0; i < leftCount; i++)
+        {
+            OutputTargetInfo leftTarget = left[i];
+            OutputTargetInfo rightTarget = right[i];
+
+            if (leftTarget == null || rightTarget == null)
+            {
+                if (!ReferenceEquals(leftTarget, rightTarget))
+                    return false;
+
+                continue;
+            }
+
+            if (leftTarget.BlockPos != rightTarget.BlockPos ||
+                leftTarget.TransportMode != rightTarget.TransportMode ||
+                leftTarget.PipeGraphId != rightTarget.PipeGraphId)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     protected override void OnPowerStateChanged(bool state)
@@ -589,7 +626,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
         if (fluidFuelBufferMg < required)
         {
-            LastFluidFuelStatus = $"Blocked: Need {ToWholeGallons(required)}g {fluidFuelType}";
+            LastFluidFuelStatus = $"Blocked: Need {ToRequiredGallons(required)}g {fluidFuelType}";
             return false;
         }
 
@@ -633,9 +670,24 @@ public class TileEntityUniversalExtractor : TileEntityMachine
 
         if (!FluidGraphManager.TryConsumeFluid(world, 0, SelectedFluidFuelGraphId, fluidFuelType, requestMg, out int consumedMg))
         {
-            LastFluidFuelStatus = "Blocked: Fuel graph unavailable";
+            Guid staleGraphId = SelectedFluidFuelGraphId;
             SelectedFluidFuelGraphId = Guid.Empty;
-            return;
+
+            if (TryResolveFluidFuelGraph(world))
+            {
+                DevLog($"Fuel graph retry resolve -> stale={staleGraphId} resolved={SelectedFluidFuelGraphId}");
+                if (!FluidGraphManager.TryConsumeFluid(world, 0, SelectedFluidFuelGraphId, fluidFuelType, requestMg, out consumedMg))
+                {
+                    LastFluidFuelStatus = "Blocked: Fuel graph unavailable";
+                    SelectedFluidFuelGraphId = Guid.Empty;
+                    return;
+                }
+            }
+            else
+            {
+                LastFluidFuelStatus = "Blocked: Fuel graph unavailable";
+                return;
+            }
         }
 
         if (consumedMg <= 0)
@@ -648,12 +700,23 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         if (fluidFuelBufferMg > fluidFuelBufferCapacityMg)
             fluidFuelBufferMg = fluidFuelBufferCapacityMg;
 
-        LastFluidFuelStatus = $"Fuel {ToWholeGallons(fluidFuelBufferMg)}/{ToWholeGallons(fluidFuelBufferCapacityMg)}g";
+        LastFluidFuelStatus = $"Fuel {ToDisplayGallons(fluidFuelBufferMg)}/{ToDisplayGallons(fluidFuelBufferCapacityMg)}g";
     }
 
-    private static int ToWholeGallons(int mg)
+    private static int ToDisplayGallons(int mg)
     {
-        return (mg + (FluidConstants.MilliGallonsPerGallon / 2)) / FluidConstants.MilliGallonsPerGallon;
+        if (mg <= 0)
+            return 0;
+
+        return mg / FluidConstants.MilliGallonsPerGallon;
+    }
+
+    private static int ToRequiredGallons(int mg)
+    {
+        if (mg <= 0)
+            return 0;
+
+        return (mg + FluidConstants.MilliGallonsPerGallon - 1) / FluidConstants.MilliGallonsPerGallon;
     }
 
 
@@ -1483,12 +1546,6 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
     }
 }
-
-
-
-
-
-
 
 
 

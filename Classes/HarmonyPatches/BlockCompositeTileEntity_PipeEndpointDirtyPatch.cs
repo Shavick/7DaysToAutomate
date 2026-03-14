@@ -25,10 +25,11 @@ public static class BlockCompositeTileEntity_PipeEndpointDirtyPatch
         if (_world == null || _world.IsRemote() || _blockValue.ischild)
             return;
 
-        if (!HasStorageFeature(_world, _chunk.ClrIdx, _blockPos))
+        int clrIdx = _chunk != null ? _chunk.ClrIdx : 0;
+        if (!HasAdjacentItemPipe(_world, clrIdx, _blockPos))
             return;
 
-        MarkAdjacentPipesDirty(_world, _chunk.ClrIdx, _blockPos);
+        MarkAdjacentPipesDirty(_world, clrIdx, _blockPos);
     }
 
     [HarmonyPrefix]
@@ -42,11 +43,13 @@ public static class BlockCompositeTileEntity_PipeEndpointDirtyPatch
         if (_world == null || _world.IsRemote() || _blockValue.ischild)
             return;
 
-        if (!HasStorageFeature(_world, _chunk.ClrIdx, _blockPos))
+        int clrIdx = _chunk != null ? _chunk.ClrIdx : 0;
+        PipeGraphManager.RemoveStorageSnapshotAtPosition(_blockPos, true);
+
+        if (!HasAdjacentItemPipe(_world, clrIdx, _blockPos))
             return;
 
-        PipeGraphManager.RemoveStorageSnapshotAtPosition(_blockPos, true);
-        MarkAdjacentPipesDirty(_world, _chunk.ClrIdx, _blockPos);
+        MarkAdjacentPipesDirty(_world, clrIdx, _blockPos);
     }
 
     [HarmonyPostfix]
@@ -102,6 +105,18 @@ public static class BlockCompositeTileEntity_PipeEndpointDirtyPatch
 
         TEFeatureStorage storage = composite.GetFeature<TEFeatureStorage>();
         return storage != null && storage.items != null;
+    }
+
+    private static bool HasAdjacentItemPipe(WorldBase world, int clrIdx, Vector3i centerPos)
+    {
+        for (int i = 0; i < NeighborOffsets.Length; i++)
+        {
+            Vector3i neighborPos = centerPos + NeighborOffsets[i];
+            if (world.GetTileEntity(clrIdx, neighborPos) is TileEntityItemPipe)
+                return true;
+        }
+
+        return false;
     }
 
     private static void MarkAdjacentPipesDirty(WorldBase world, int clrIdx, Vector3i centerPos)

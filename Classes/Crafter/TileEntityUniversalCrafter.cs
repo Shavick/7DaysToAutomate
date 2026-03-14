@@ -443,7 +443,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (world.IsRemote())
             return availableInputTargets ?? new List<InputTargetInfo>();
 
-        availableInputTargets = DiscoverAvailableInputTargets(world);
+        RefreshAvailableInputTargets(world);
         return availableInputTargets;
     }
 
@@ -452,7 +452,12 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (world == null || world.IsRemote())
             return;
 
-        availableInputTargets = DiscoverAvailableInputTargets(world);
+        List<InputTargetInfo> discovered = DiscoverAvailableInputTargets(world);
+        if (AreInputTargetsEqual(availableInputTargets, discovered))
+            return;
+
+        availableInputTargets = discovered;
+        setModified();
     }
 
     private List<InputTargetInfo> DiscoverAvailableInputTargets(WorldBase world)
@@ -510,7 +515,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (world.IsRemote())
             return availableOutputTargets ?? new List<OutputTargetInfo>();
 
-        availableOutputTargets = MachineOutputDiscovery.GetAvailableOutputs(world, 0, ToWorldPos(), 8);
+        RefreshAvailableOutputTargets(world);
         return availableOutputTargets;
     }
 
@@ -519,7 +524,73 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (world == null || world.IsRemote())
             return;
 
-        availableOutputTargets = MachineOutputDiscovery.GetAvailableOutputs(world, 0, ToWorldPos(), 8);
+        List<OutputTargetInfo> discovered = MachineOutputDiscovery.GetAvailableOutputs(world, 0, ToWorldPos(), 8);
+        if (AreOutputTargetsEqual(availableOutputTargets, discovered))
+            return;
+
+        availableOutputTargets = discovered;
+        setModified();
+    }
+
+    private static bool AreInputTargetsEqual(List<InputTargetInfo> left, List<InputTargetInfo> right)
+    {
+        int leftCount = left?.Count ?? 0;
+        int rightCount = right?.Count ?? 0;
+        if (leftCount != rightCount)
+            return false;
+
+        for (int i = 0; i < leftCount; i++)
+        {
+            InputTargetInfo leftTarget = left[i];
+            InputTargetInfo rightTarget = right[i];
+
+            if (leftTarget == null || rightTarget == null)
+            {
+                if (!ReferenceEquals(leftTarget, rightTarget))
+                    return false;
+
+                continue;
+            }
+
+            if (leftTarget.BlockPos != rightTarget.BlockPos ||
+                leftTarget.PipeGraphId != rightTarget.PipeGraphId)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool AreOutputTargetsEqual(List<OutputTargetInfo> left, List<OutputTargetInfo> right)
+    {
+        int leftCount = left?.Count ?? 0;
+        int rightCount = right?.Count ?? 0;
+        if (leftCount != rightCount)
+            return false;
+
+        for (int i = 0; i < leftCount; i++)
+        {
+            OutputTargetInfo leftTarget = left[i];
+            OutputTargetInfo rightTarget = right[i];
+
+            if (leftTarget == null || rightTarget == null)
+            {
+                if (!ReferenceEquals(leftTarget, rightTarget))
+                    return false;
+
+                continue;
+            }
+
+            if (leftTarget.BlockPos != rightTarget.BlockPos ||
+                leftTarget.TransportMode != rightTarget.TransportMode ||
+                leftTarget.PipeGraphId != rightTarget.PipeGraphId)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private bool HasValidSelectedOutput(WorldBase world)
