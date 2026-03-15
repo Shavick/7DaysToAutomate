@@ -67,6 +67,10 @@
             // =========================
             if (ConnectionManager.Instance.IsServer && type == MessageType.RequestOpen)
             {
+                if (!NetPackageMachineAuthority.TryValidateRequester(_world, this, EntityIdThatOpenedIt, BlockPos, "MachineUI", out EntityPlayer requester))
+                    return;
+
+                int requesterId = requester.entityId;
 
                 TileEntity te = _world.GetTileEntity(ClrIdx, BlockPos);
 
@@ -89,24 +93,22 @@
                     return;
                 }
 
-                EntityPlayer player = _world.GetEntity(EntityIdThatOpenedIt) as EntityPlayer;
-
-                if (player == null)
+                if (CustomUi != "ExtractorInfo" && CustomUi != "CrafterInfo" && CustomUi != "FluidDecanterInfo")
                 {
-                    Log.Error($"[NetPkg][MachineUI][SERVER] Could not resolve player entity for ID {EntityIdThatOpenedIt}");
+                    Log.Error($"[NetPkg][MachineUI][SERVER] Unknown UI key '{CustomUi}'");
                     return;
                 }
 
-                Log.Out($"[NetPkg][MachineUI][SERVER] Player validated: {player.entityName} ({player.entityId})");
+                Log.Out($"[NetPkg][MachineUI][SERVER] Player validated: {requester.entityName} ({requester.entityId})");
                 var response = NetPackageManager.GetPackage<NetPackageOpenMachineUi>()
-                    .Setup(ClrIdx, BlockPos, EntityIdThatOpenedIt, MessageType.OpenClient, CustomUi);
+                    .Setup(ClrIdx, BlockPos, requesterId, MessageType.OpenClient, CustomUi);
 
-                Log.Out($"[NetPkg][MachineUI][SERVER] Sending OpenClient packet to player {player.entityName}");
+                Log.Out($"[NetPkg][MachineUI][SERVER] Sending OpenClient packet to player {requester.entityName}");
 
                 ConnectionManager.Instance.SendPackage(
                     response,
                     false,
-                    EntityIdThatOpenedIt,
+                    requesterId,
                     -1,
                     -1,
                     null,
@@ -162,7 +164,7 @@
                         if (!(te is TileEntityUniversalExtractor))
                         {
                             Log.Error($"[NetPkg][MachineUI][CLIENT] TileEntity is not the correct type 'TileEntityUniversalExtractor' for given customUI {CustomUi}");
-                            //return;
+                            return;
                         }
 
                         Log.Out($"[NetPkg][MachineUI][CLIENT] Opening Extractor UI at {BlockPos}");

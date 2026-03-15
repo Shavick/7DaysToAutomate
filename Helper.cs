@@ -473,9 +473,39 @@ public static class Helper
             return;
         }
 
+        // Host/singleplayer local path: build and apply snapshot immediately.
+        EntityPlayerLocal localPlayer = world.GetPrimaryPlayer() as EntityPlayerLocal;
+        if (localPlayer != null && localPlayer.entityId == entityPlayerId)
+        {
+            if (!PipeProbeHudManager.TryBuildSnapshotServer(world, clrIdx, blockPos, out string targetType, out string title, out string[] lines))
+            {
+                PipeProbeHudManager.Close(localPlayer);
+                return;
+            }
+
+            PipeProbeHudManager.ApplyServerSnapshot(localPlayer, targetType, blockPos, title, lines);
+            return;
+        }
+
+        if (!PipeProbeHudManager.TryBuildSnapshotServer(world, clrIdx, blockPos, out string responseTargetType, out string responseTitle, out string[] responseLines))
+        {
+            cm.SendPackage(
+                NetPackageManager.GetPackage<NetPackagePipeProbe>()
+                    .SetupCloseResponse(entityPlayerId),
+                false,
+                entityPlayerId,
+                -1,
+                -1,
+                null,
+                192,
+                false
+            );
+            return;
+        }
+
         cm.SendPackage(
             NetPackageManager.GetPackage<NetPackagePipeProbe>()
-                .SetupRequest(entityPlayerId, clrIdx, blockPos),
+                .SetupSnapshotResponse(entityPlayerId, clrIdx, blockPos, responseTargetType, responseTitle, responseLines),
             false,
             entityPlayerId,
             -1,

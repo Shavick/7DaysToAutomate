@@ -101,16 +101,21 @@ namespace _7DaysToAutomate.Classes.Net_Packages
 
             if (cm.IsServer && _messageType == MessageType.RequestSnapshot)
             {
-                Log.Out($"[PipeProbe][Net][SERVER] Request entity={_entityId} clrIdx={_clrIdx} pos={_blockPos}");
+                if (!NetPackageMachineAuthority.TryValidateRequester(world, this, _entityId, _blockPos, "PipeProbe", out EntityPlayer requester))
+                    return;
+
+                int requesterId = requester.entityId;
+
+                Log.Out($"[PipeProbe][Net][SERVER] Request entity={requesterId} clrIdx={_clrIdx} pos={_blockPos}");
 
                 if (!PipeProbeHudManager.TryBuildSnapshotServer(world, _clrIdx, _blockPos, out string targetType, out string title, out string[] lines))
                 {
                     Log.Out($"[PipeProbe][Net][SERVER] No probe target at {_blockPos}; sending close");
 
                     cm.SendPackage(
-                        NetPackageManager.GetPackage<NetPackagePipeProbe>().SetupCloseResponse(_entityId),
+                        NetPackageManager.GetPackage<NetPackagePipeProbe>().SetupCloseResponse(requesterId),
                         false,
-                        _entityId,
+                        requesterId,
                         -1,
                         -1,
                         null,
@@ -121,9 +126,9 @@ namespace _7DaysToAutomate.Classes.Net_Packages
                 }
 
                 cm.SendPackage(
-                    NetPackageManager.GetPackage<NetPackagePipeProbe>().SetupSnapshotResponse(_entityId, _clrIdx, _blockPos, targetType, title, lines),
+                    NetPackageManager.GetPackage<NetPackagePipeProbe>().SetupSnapshotResponse(requesterId, _clrIdx, _blockPos, targetType, title, lines),
                     false,
-                    _entityId,
+                    requesterId,
                     -1,
                     -1,
                     null,

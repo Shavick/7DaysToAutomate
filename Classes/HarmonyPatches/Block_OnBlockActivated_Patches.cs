@@ -14,25 +14,26 @@ public class Patch_Block_OnBlockActivated
     static bool Prefix(Block __instance, WorldBase _world, int _clrIdx, Vector3i _blockPos,
                        BlockValue _blockValue, EntityPlayerLocal _player, ref bool __result)
     {
-        if (_world.IsRemote()) return true;
+        if (_world == null || _world.IsRemote() || _player == null)
+            return true;
 
-        var te = _world.GetTileEntity(_blockPos);
+        var te = _world.GetTileEntity(_clrIdx, _blockPos);
 
         if (te == null)
             return true; // Not our block → run vanilla
 
-        if (te is TileEntityUniversalExtractor extractor)
+        if (te is TileEntityUniversalExtractor)
         {
             Log.Out("[ExtractorHarmony] Activation → EXTRACTOR");
-            XUiC_IronExtractorInfo.Open(_player, _blockPos);
+            Helper.RequestMachineUIOpen(_clrIdx, _blockPos, _player.entityId, "ExtractorInfo");
             __result = true;
             return false;
         }
 
-        if (te is TileEntityUniversalCrafter crafter)
+        if (te is TileEntityUniversalCrafter)
         {
             Log.Out("[ExtractorHarmony] Activation → CRAFTER");
-            XUiC_UniversalCrafter.Open(_player, _blockPos);
+            Helper.RequestMachineUIOpen(_clrIdx, _blockPos, _player.entityId, "CrafterInfo");
             __result = true;
             return false;
         }
