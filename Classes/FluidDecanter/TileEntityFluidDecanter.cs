@@ -1,18 +1,16 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
-using System.Reflection;
 using UnityEngine;
 
 public class TileEntityFluidDecanter : TileEntityMachine
 {
-    private const int PersistVersion = 103;
-    private const int ClientSyncVersion = 2;
+    private const int PersistVersion = 105;
+    private const int ClientSyncVersion = 4;
     private const int MaxSerializedInputTargets = 64;
     private const int MaxSerializedOutputTargets = 64;
     private const int MaxSerializedFluidOptions = 64;
+    private const string DefaultMachineRecipeGroup = "fluiddecanter";
 
     private static readonly Vector3i[] NeighborOffsets =
     {
@@ -24,48 +22,20 @@ public class TileEntityFluidDecanter : TileEntityMachine
         Vector3i.down
     };
 
+    private static readonly object InvalidRecipeWarnSync = new object();
+    private static readonly HashSet<string> warnedInvalidRecipeKeys = new HashSet<string>(StringComparer.Ordinal);
+
     private sealed class FuelConversionRule
     {
+        public string RecipeKey;
         public string InputItemName;
+        public int InputItemCount;
         public string FluidType;
         public int FluidAmountMg;
         public string ReturnItemName;
         public int ReturnItemAmount;
+        public int CraftTimeTicks;
     }
-
-    private static readonly object ConversionCacheLock = new object();
-    private static bool conversionCacheLoaded;
-    private static readonly Dictionary<string, FuelConversionRule> conversionRulesByItemCache = new Dictionary<string, FuelConversionRule>(StringComparer.Ordinal);
-    private static readonly List<string> fluidOptionsCache = new List<string>();
-    private static readonly string[] ItemFluidTypePropertyKeys =
-    {
-        "FluidConvertType",
-        "FuelConvertFluidType",
-        "FluidDecanterFluidType",
-        "FuelConvertFluid"
-    };
-
-    private static readonly string[] ItemFluidAmountGallonsPropertyKeys =
-    {
-        "FluidConvertAmountGallons",
-        "FuelConvertAmountGallons",
-        "FluidDecanterAmountGallons",
-        "FuelConvertGallons"
-    };
-
-    private static readonly string[] ItemReturnItemPropertyKeys =
-    {
-        "FluidConvertReturnItem",
-        "FuelConvertReturnItem",
-        "FluidDecanterReturnItem"
-    };
-
-    private static readonly string[] ItemReturnItemAmountPropertyKeys =
-    {
-        "FluidConvertReturnItemAmount",
-        "FuelConvertReturnItemAmount",
-        "FluidDecanterReturnItemAmount"
-    };
 
     public List<InputTargetInfo> availableInputTargets = new List<InputTargetInfo>();
     public List<OutputTargetInfo> availableOutputTargets = new List<OutputTargetInfo>();
@@ -78,6 +48,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
     public Guid SelectedOutputPipeGraphId = Guid.Empty;
 
     public string SelectedFluidType = string.Empty;
+    public string SelectedRecipeKey = string.Empty;
     public Guid SelectedFluidGraphId = Guid.Empty;
 
     public int pendingItemInput;
@@ -94,6 +65,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
 
     private readonly List<FuelConversionRule> conversionRules = new List<FuelConversionRule>();
     private readonly List<string> fluidOptions = new List<string>();
+    private string machineRecipeGroupsCsv = DefaultMachineRecipeGroup;
 
     private bool configLoaded;
     private int refreshTicker;
@@ -154,6 +126,8 @@ public class TileEntityFluidDecanter : TileEntityMachine
             SelectedOutputMode = SelectedOutputMode,
             SelectedOutputPipeGraphId = SelectedOutputPipeGraphId,
             SelectedFluidType = SelectedFluidType ?? string.Empty,
+            SelectedRecipeKey = SelectedRecipeKey ?? string.Empty,
+            MachineRecipeGroupsCsv = machineRecipeGroupsCsv ?? DefaultMachineRecipeGroup,
             SelectedFluidGraphId = SelectedFluidGraphId,
             PendingItemInput = pendingItemInput,
             PendingItemOutput = pendingItemOutput,
@@ -189,6 +163,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         SelectedOutputPipeGraphId = snapshot.SelectedOutputPipeGraphId;
 
         SelectedFluidType = (snapshot.SelectedFluidType ?? string.Empty).Trim().ToLowerInvariant();
+        SelectedRecipeKey = snapshot.SelectedRecipeKey ?? string.Empty;
         SelectedFluidGraphId = snapshot.SelectedFluidGraphId;
 
         pendingItemInput = Math.Max(0, snapshot.PendingItemInput);
@@ -237,7 +212,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
 
         // Client only has replicated selections/targets; do availability checks on server.
         if (world.IsRemote())
-            return true;
+            return !string.IsNullOrEmpty(SelectedRecipeKey);
 
         if (pendingItemInput > 0)
             return true;
@@ -374,28 +349,30 @@ public class TileEntityFluidDecanter : TileEntityMachine
             return false;
         }
 
-        if (string.IsNullOrEmpty(SelectedFluidType))
+        if (string.IsNullOrEmpty(SelectedRecipeKey))
         {
-            blockedReason = "No fluid selected";
+            blockedReason = "No recipe selected";
+            return false;
+        }
+
+        if (!TryGetConversionRule(SelectedRecipeKey, out rule) || rule == null)
+        {
+            blockedReason = "Selected recipe unavailable";
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(rule.InputItemName) || rule.InputItemCount <= 0)
+        {
+            blockedReason = "Selected recipe invalid";
             return false;
         }
 
         HashSet<string> candidates = new HashSet<string>(StringComparer.Ordinal);
-        for (int i = 0; i < conversionRules.Count; i++)
-        {
-            FuelConversionRule candidateRule = conversionRules[i];
-            if (candidateRule == null || string.IsNullOrEmpty(candidateRule.InputItemName))
-                continue;
-
-            if (!string.Equals(candidateRule.FluidType, SelectedFluidType, StringComparison.Ordinal))
-                continue;
-
-            candidates.Add(candidateRule.InputItemName);
-        }
+        candidates.Add(rule.InputItemName);
 
         if (candidates.Count == 0)
         {
-            blockedReason = "No conversion rules for selected fluid";
+            blockedReason = "Selected recipe has no valid inputs";
             return false;
         }
 
@@ -406,7 +383,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
                 SelectedInputChestPos,
                 candidates,
                 out matchedItemName,
-                out _,
+                out int availableCount,
                 out blockedReason))
         {
             if (string.IsNullOrEmpty(blockedReason))
@@ -414,13 +391,19 @@ public class TileEntityFluidDecanter : TileEntityMachine
             return false;
         }
 
-        if (!TryGetConversionRule(matchedItemName, out rule) || rule == null)
+        if (!string.Equals(matchedItemName, rule.InputItemName, StringComparison.Ordinal))
         {
-            blockedReason = "Missing conversion rule";
+            blockedReason = "Input does not match selected recipe";
             return false;
         }
 
-        if (!string.Equals(rule.FluidType, SelectedFluidType, StringComparison.Ordinal) || rule.FluidAmountMg <= 0)
+        if (availableCount < rule.InputItemCount)
+        {
+            blockedReason = $"Need {rule.InputItemCount}x {rule.InputItemName}";
+            return false;
+        }
+
+        if (rule.FluidAmountMg <= 0)
         {
             blockedReason = "Invalid conversion rule";
             return false;
@@ -430,10 +413,10 @@ public class TileEntityFluidDecanter : TileEntityMachine
         return true;
     }
 
-    private bool TryGetConversionRule(string itemName, out FuelConversionRule rule)
+    private bool TryGetConversionRule(string recipeKey, out FuelConversionRule rule)
     {
         rule = null;
-        if (string.IsNullOrEmpty(itemName))
+        if (string.IsNullOrEmpty(recipeKey))
             return false;
 
         for (int i = 0; i < conversionRules.Count; i++)
@@ -442,7 +425,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
             if (candidate == null)
                 continue;
 
-            if (!string.Equals(candidate.InputItemName, itemName, StringComparison.Ordinal))
+            if (!string.Equals(candidate.RecipeKey, recipeKey, StringComparison.Ordinal))
                 continue;
 
             rule = candidate;
@@ -588,21 +571,42 @@ public class TileEntityFluidDecanter : TileEntityMachine
 
         EnsureConfigLoaded();
 
-        if (fluidOptions.Count == 0)
+        if (conversionRules.Count == 0)
             return false;
 
-        int index = fluidOptions.IndexOf(SelectedFluidType);
+        int index = -1;
+        for (int i = 0; i < conversionRules.Count; i++)
+        {
+            FuelConversionRule candidate = conversionRules[i];
+            if (candidate == null)
+                continue;
+
+            if (string.Equals(candidate.RecipeKey, SelectedRecipeKey, StringComparison.Ordinal))
+            {
+                index = i;
+                break;
+            }
+        }
+
         if (index < 0)
             index = 0;
 
         int step = direction < 0 ? -1 : 1;
-        int next = (index + step + fluidOptions.Count) % fluidOptions.Count;
-        string nextFluid = fluidOptions[next];
-
-        if (string.Equals(nextFluid, SelectedFluidType, StringComparison.Ordinal))
+        int next = (index + step + conversionRules.Count) % conversionRules.Count;
+        FuelConversionRule nextRule = conversionRules[next];
+        if (nextRule == null)
             return false;
 
-        SelectedFluidType = nextFluid;
+        if (string.Equals(nextRule.RecipeKey, SelectedRecipeKey, StringComparison.Ordinal))
+            return false;
+
+        bool hasPendingBuffers = pendingItemInput > 0 || pendingItemOutput > 0 || pendingFluidOutput > 0;
+        if (hasPendingBuffers)
+            return false;
+
+        SelectedRecipeKey = nextRule.RecipeKey ?? string.Empty;
+        SelectedFluidType = nextRule.FluidType ?? string.Empty;
+        cycleTickLength = Math.Max(1, nextRule.CraftTimeTicks);
 
         WorldBase world = GameManager.Instance?.World;
         if (world != null)
@@ -816,12 +820,6 @@ public class TileEntityFluidDecanter : TileEntityMachine
         }
         else
         {
-            if (pendingItemInput > 1)
-            {
-                pendingItemInput = 1;
-                changed = true;
-            }
-
             if (string.IsNullOrEmpty(pendingItemInputName) || pendingItemInputFluidAmountMg <= 0)
             {
                 pendingItemInput = 0;
@@ -1267,10 +1265,10 @@ public class TileEntityFluidDecanter : TileEntityMachine
 
         Dictionary<string, int> request = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            { matchedItemName, 1 }
+            { matchedItemName, rule.InputItemCount }
         };
 
-        DevLog($"PIPE CONSUME ATTEMPT -> graph={SelectedInputPipeGraphId} pos={SelectedInputChestPos} request={matchedItemName}:1");
+        DevLog($"PIPE CONSUME ATTEMPT -> graph={SelectedInputPipeGraphId} pos={SelectedInputChestPos} request={matchedItemName}:{rule.InputItemCount}");
         if (!PipeGraphManager.TryConsumeStorageItems(world, 0, SelectedInputPipeGraphId, SelectedInputChestPos, request, out Dictionary<string, int> consumed) ||
             consumed == null ||
             !consumed.TryGetValue(matchedItemName, out int consumedCount) ||
@@ -1283,7 +1281,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
 
         DevLog($"PIPE CONSUME SUCCESS -> graph={SelectedInputPipeGraphId} pos={SelectedInputChestPos} item={matchedItemName} consumed={consumedCount}");
 
-        pendingItemInput = 1;
+        pendingItemInput = Math.Max(1, consumedCount);
         pendingItemInputName = matchedItemName;
         pendingItemInputFluidAmountMg = Math.Max(0, rule.FluidAmountMg);
         pendingItemInputReturnItemName = rule.ReturnItemName ?? string.Empty;
@@ -1441,6 +1439,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
             bw.Write(SelectedOutputPipeGraphId.ToString());
 
             bw.Write(SelectedFluidType ?? string.Empty);
+            bw.Write(SelectedRecipeKey ?? string.Empty);
             bw.Write(SelectedFluidGraphId.ToString());
 
             int inputCount = Math.Min(MaxSerializedInputTargets, availableInputTargets?.Count ?? 0);
@@ -1506,6 +1505,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
         bw.Write(SelectedOutputPipeGraphId.ToString());
 
         bw.Write(SelectedFluidType ?? string.Empty);
+        bw.Write(SelectedRecipeKey ?? string.Empty);
         bw.Write(SelectedFluidGraphId.ToString());
 
         bw.Write(pendingItemInput);
@@ -1559,6 +1559,10 @@ public class TileEntityFluidDecanter : TileEntityMachine
                     SelectedOutputPipeGraphId = Guid.Empty;
 
                 SelectedFluidType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
+                if (clientSyncVersion >= 4)
+                    SelectedRecipeKey = br.ReadString() ?? string.Empty;
+                else
+                    SelectedRecipeKey = string.Empty;
 
                 string fluidGraphId = br.ReadString();
                 if (!Guid.TryParse(fluidGraphId, out SelectedFluidGraphId))
@@ -1679,6 +1683,10 @@ public class TileEntityFluidDecanter : TileEntityMachine
                     SelectedOutputPipeGraphId = Guid.Empty;
 
                 SelectedFluidType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
+                if (version >= 105)
+                    SelectedRecipeKey = br.ReadString() ?? string.Empty;
+                else
+                    SelectedRecipeKey = string.Empty;
                 string fluidGraph = br.ReadString();
                 if (!Guid.TryParse(fluidGraph, out SelectedFluidGraphId))
                     SelectedFluidGraphId = Guid.Empty;
@@ -1754,6 +1762,8 @@ public class TileEntityFluidDecanter : TileEntityMachine
         SelectedOutputMode = OutputTransportMode.Adjacent;
         SelectedOutputPipeGraphId = Guid.Empty;
         SelectedFluidType = string.Empty;
+        SelectedRecipeKey = string.Empty;
+        machineRecipeGroupsCsv = DefaultMachineRecipeGroup;
         SelectedFluidGraphId = Guid.Empty;
 
         availableInputTargets = new List<InputTargetInfo>();
@@ -1785,356 +1795,243 @@ public class TileEntityFluidDecanter : TileEntityMachine
 
         configLoaded = true;
 
-        cycleTickLength = ReadIntProperty("InputSpeed", 20, 1, 2000);
+        int defaultCycleTickLength = ReadIntProperty("InputSpeed", 20, 1, 2000);
         int capGallons = ReadIntProperty("PendingFluidOutputCapacityGallons", 5, 1, 1000000);
         pendingFluidOutputCapacityMg = capGallons * FluidConstants.MilliGallonsPerGallon;
+
+        machineRecipeGroupsCsv = GetMachineRecipeGroupsCsv();
 
         conversionRules.Clear();
         fluidOptions.Clear();
 
-        EnsureItemConversionCacheLoaded();
-
-        foreach (KeyValuePair<string, FuelConversionRule> pair in conversionRulesByItemCache)
-            conversionRules.Add(pair.Value);
-
-        fluidOptions.AddRange(fluidOptionsCache);
-
-        if (string.IsNullOrEmpty(SelectedFluidType) && fluidOptions.Count > 0)
-            SelectedFluidType = fluidOptions[0];
-    }
-
-
-    private static void EnsureItemConversionCacheLoaded()
-    {
-        if (conversionCacheLoaded)
-            return;
-
-        lock (ConversionCacheLock)
+        List<MachineRecipe> machineRecipes = MachineRecipeRegistry.GetRecipesForMachineGroups(machineRecipeGroupsCsv, true);
+        for (int i = 0; i < machineRecipes.Count; i++)
         {
-            if (conversionCacheLoaded)
-                return;
-
-            conversionRulesByItemCache.Clear();
-            fluidOptionsCache.Clear();
-
-            foreach (ItemClass itemClass in EnumerateAllItemClasses())
+            MachineRecipe machineRecipe = machineRecipes[i];
+            if (!TryReadMachineRecipeAsDecanterRule(
+                    machineRecipe,
+                    defaultCycleTickLength,
+                    out string inputItemName,
+                    out int inputItemCount,
+                    out string fluidType,
+                    out int fluidAmountMg,
+                    out string returnItemName,
+                    out int returnItemAmount,
+                    out int craftTimeTicks,
+                    out string error))
             {
-                if (!TryReadConversionRuleFromItem(itemClass, out FuelConversionRule rule))
-                    continue;
-
-                conversionRulesByItemCache[rule.InputItemName] = rule;
-
-                if (!fluidOptionsCache.Contains(rule.FluidType))
-                    fluidOptionsCache.Add(rule.FluidType);
+                WarnInvalidRecipeOnce(machineRecipe, error);
+                continue;
             }
 
-            if (fluidOptionsCache.Count > 1)
-                fluidOptionsCache.Sort(StringComparer.Ordinal);
+            conversionRules.Add(
+                new FuelConversionRule
+                {
+                    RecipeKey = machineRecipe.NormalizedKey,
+                    InputItemName = inputItemName,
+                    InputItemCount = inputItemCount,
+                    FluidType = fluidType,
+                    FluidAmountMg = fluidAmountMg,
+                    ReturnItemName = returnItemName,
+                    ReturnItemAmount = returnItemAmount,
+                    CraftTimeTicks = craftTimeTicks
+                });
+        }
 
-            conversionCacheLoaded = true;
+        for (int i = 0; i < conversionRules.Count; i++)
+        {
+            FuelConversionRule rule = conversionRules[i];
+            if (rule == null || string.IsNullOrEmpty(rule.FluidType))
+                continue;
+
+            if (!fluidOptions.Contains(rule.FluidType))
+                fluidOptions.Add(rule.FluidType);
+        }
+
+        FuelConversionRule selectedRule = null;
+        if (!TryGetConversionRule(SelectedRecipeKey, out selectedRule) || selectedRule == null)
+        {
+            if (!string.IsNullOrEmpty(SelectedFluidType))
+            {
+                string normalizedSelectedFluid = SelectedFluidType.Trim().ToLowerInvariant();
+                for (int i = 0; i < conversionRules.Count; i++)
+                {
+                    FuelConversionRule candidate = conversionRules[i];
+                    if (candidate == null)
+                        continue;
+
+                    if (!string.Equals(candidate.FluidType, normalizedSelectedFluid, StringComparison.Ordinal))
+                        continue;
+
+                    selectedRule = candidate;
+                    break;
+                }
+            }
+
+            if (selectedRule == null && conversionRules.Count > 0)
+                selectedRule = conversionRules[0];
+        }
+
+        if (selectedRule != null)
+        {
+            SelectedRecipeKey = selectedRule.RecipeKey ?? string.Empty;
+            SelectedFluidType = selectedRule.FluidType ?? string.Empty;
+            cycleTickLength = Math.Max(1, selectedRule.CraftTimeTicks);
+        }
+        else
+        {
+            SelectedRecipeKey = string.Empty;
+            SelectedFluidType = string.Empty;
+            cycleTickLength = defaultCycleTickLength;
         }
     }
 
-    public static bool TryGetConversionRuleForItem(string itemName, out string fluidType, out int fluidAmountMg, out string returnItemName, out int returnItemAmount)
+    private static void WarnInvalidRecipeOnce(MachineRecipe recipe, string error)
     {
+        string key = recipe?.NormalizedKey ?? string.Empty;
+        if (string.IsNullOrEmpty(key))
+            key = $"{recipe?.Machine}|{recipe?.SourceContext}";
+
+        lock (InvalidRecipeWarnSync)
+        {
+            if (!warnedInvalidRecipeKeys.Add(key))
+                return;
+        }
+
+        Log.Warning($"[FluidDecanter] Skipped machineRecipe key='{recipe?.NormalizedKey}' machine='{recipe?.Machine}': {error}");
+    }
+
+    private string GetMachineRecipeGroupsCsv()
+    {
+        string configured = blockValue.Block?.Properties?.GetString("MachineRecipes");
+        if (string.IsNullOrWhiteSpace(configured))
+            return DefaultMachineRecipeGroup;
+
+        return configured.Trim();
+    }
+
+    public static bool TryReadMachineRecipeAsDecanterRule(
+        MachineRecipe recipe,
+        int defaultCraftTimeTicks,
+        out string inputItemName,
+        out int inputItemCount,
+        out string fluidType,
+        out int fluidAmountMg,
+        out string returnItemName,
+        out int returnItemAmount,
+        out int craftTimeTicks,
+        out string error)
+    {
+        inputItemName = string.Empty;
+        inputItemCount = 0;
         fluidType = string.Empty;
         fluidAmountMg = 0;
         returnItemName = string.Empty;
-        returnItemAmount = 1;
+        returnItemAmount = 0;
+        craftTimeTicks = Math.Max(1, defaultCraftTimeTicks);
+        error = string.Empty;
 
-        if (string.IsNullOrEmpty(itemName))
+        if (recipe == null)
+        {
+            error = "Recipe is null";
             return false;
-
-        EnsureItemConversionCacheLoaded();
-
-        lock (ConversionCacheLock)
-        {
-            if (!conversionRulesByItemCache.TryGetValue(itemName, out FuelConversionRule rule) || rule == null)
-                return false;
-
-            fluidType = rule.FluidType ?? string.Empty;
-            fluidAmountMg = Math.Max(0, rule.FluidAmountMg);
-            returnItemName = rule.ReturnItemName ?? string.Empty;
-            returnItemAmount = Math.Max(1, rule.ReturnItemAmount);
-            return true;
-        }
-    }
-
-    private static IEnumerable<ItemClass> EnumerateAllItemClasses()
-    {
-        HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);
-        BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
-
-        FieldInfo[] fields = typeof(ItemClass).GetFields(flags);
-        for (int i = 0; i < fields.Length; i++)
-        {
-            object candidate;
-            try
-            {
-                candidate = fields[i].GetValue(null);
-            }
-            catch
-            {
-                continue;
-            }
-
-            foreach (ItemClass itemClass in EnumerateItemClassesFromCandidate(candidate))
-            {
-                string itemName = itemClass?.GetItemName();
-                if (string.IsNullOrEmpty(itemName) || !seen.Add(itemName))
-                    continue;
-
-                yield return itemClass;
-            }
         }
 
-        PropertyInfo[] properties = typeof(ItemClass).GetProperties(flags);
-        for (int i = 0; i < properties.Length; i++)
+        if (recipe.Inputs == null || recipe.Inputs.Count != 1)
         {
-            PropertyInfo property = properties[i];
-            if (!property.CanRead || property.GetIndexParameters().Length != 0)
-                continue;
-
-            object candidate;
-            try
-            {
-                candidate = property.GetValue(null, null);
-            }
-            catch
-            {
-                continue;
-            }
-
-            foreach (ItemClass itemClass in EnumerateItemClassesFromCandidate(candidate))
-            {
-                string itemName = itemClass?.GetItemName();
-                if (string.IsNullOrEmpty(itemName) || !seen.Add(itemName))
-                    continue;
-
-                yield return itemClass;
-            }
-        }
-    }
-
-    private static IEnumerable<ItemClass> EnumerateItemClassesFromCandidate(object candidate)
-    {
-        if (candidate == null)
-            yield break;
-
-        if (candidate is ItemClass itemClass)
-        {
-            yield return itemClass;
-            yield break;
-        }
-
-        if (candidate is IDictionary dictionary)
-        {
-            foreach (DictionaryEntry entry in dictionary)
-            {
-                if (entry.Value is ItemClass valueClass)
-                    yield return valueClass;
-                else if (entry.Key is ItemClass keyClass)
-                    yield return keyClass;
-            }
-
-            yield break;
-        }
-
-        if (candidate is string)
-            yield break;
-
-        if (candidate is IEnumerable enumerable)
-        {
-            foreach (object value in enumerable)
-            {
-                if (value is ItemClass enumerableClass)
-                    yield return enumerableClass;
-            }
-        }
-    }
-
-    private static bool TryReadConversionRuleFromItem(ItemClass itemClass, out FuelConversionRule rule)
-    {
-        rule = null;
-        if (itemClass == null)
+            error = "Decanter recipe requires exactly one <input>";
             return false;
+        }
 
-        string itemName = itemClass.GetItemName();
-        if (string.IsNullOrEmpty(itemName))
+        if (recipe.FluidOutputs == null || recipe.FluidOutputs.Count != 1)
+        {
+            error = "Decanter recipe requires exactly one <fluid_output>";
             return false;
+        }
 
-        string fluidType = GetItemPropertyString(itemClass, ItemFluidTypePropertyKeys);
+        if (recipe.GasOutputs != null && recipe.GasOutputs.Count > 0)
+        {
+            error = "Decanter recipe does not support <gas_output>";
+            return false;
+        }
+
+        if (recipe.ItemOutputs != null && recipe.ItemOutputs.Count > 1)
+        {
+            error = "Decanter recipe supports at most one distinct <output>";
+            return false;
+        }
+
+        MachineRecipeInput input = recipe.Inputs[0];
+        MachineRecipeFluidOutput fluidOutput = recipe.FluidOutputs[0];
+        if (input == null || fluidOutput == null)
+        {
+            error = "Decanter recipe input/output invalid";
+            return false;
+        }
+
+        inputItemName = (input.ItemName ?? string.Empty).Trim();
+        inputItemCount = Math.Max(1, input.Count);
+        fluidType = (fluidOutput.Type ?? string.Empty).Trim().ToLowerInvariant();
+        fluidAmountMg = Math.Max(0, fluidOutput.AmountMg);
+        craftTimeTicks = recipe.CraftTimeTicks.HasValue
+            ? Math.Max(1, recipe.CraftTimeTicks.Value)
+            : Math.Max(1, defaultCraftTimeTicks);
+
+        if (string.IsNullOrEmpty(inputItemName))
+        {
+            error = "Decanter input item is empty";
+            return false;
+        }
+
         if (string.IsNullOrEmpty(fluidType))
+        {
+            error = "Decanter fluid type is empty";
             return false;
+        }
 
-        fluidType = fluidType.Trim().ToLowerInvariant();
-        if (string.IsNullOrEmpty(fluidType))
+        if (fluidAmountMg <= 0)
+        {
+            error = "Decanter fluid output amount is invalid";
             return false;
+        }
 
-        string amountRaw = GetItemPropertyString(itemClass, ItemFluidAmountGallonsPropertyKeys);
-        if (!TryParseGallonsToMg(amountRaw, out int fluidAmountMg))
+        if (craftTimeTicks <= 0)
+        {
+            error = "Decanter craft time is invalid";
             return false;
+        }
 
-        string returnItemName = GetItemPropertyString(itemClass, ItemReturnItemPropertyKeys);
-        if (!string.IsNullOrEmpty(returnItemName))
-            returnItemName = returnItemName.Trim();
+        if (recipe.ItemOutputs != null && recipe.ItemOutputs.Count > 0)
+        {
+            MachineRecipeItemOutput itemOutput = recipe.ItemOutputs[0];
+            returnItemName = (itemOutput?.ItemName ?? string.Empty).Trim();
+            returnItemAmount = Math.Max(1, itemOutput?.Count ?? 1);
+        }
         else
+        {
             returnItemName = string.Empty;
+            returnItemAmount = 0;
+        }
 
-        int returnItemAmount = ParsePositiveIntProperty(itemClass, ItemReturnItemAmountPropertyKeys, 1);
-
-        rule = new FuelConversionRule
-        {
-            InputItemName = itemName,
-            FluidType = fluidType,
-            FluidAmountMg = fluidAmountMg,
-            ReturnItemName = returnItemName,
-            ReturnItemAmount = returnItemAmount
-        };
-
+        error = string.Empty;
         return true;
     }
 
-    private static string GetItemPropertyString(ItemClass itemClass, string[] propertyKeys)
+    public static bool IsRecipeAllowedForMachineGroups(MachineRecipe recipe, string machineGroupsCsv)
     {
-        if (itemClass == null || propertyKeys == null || propertyKeys.Length == 0)
-            return string.Empty;
-
-        for (int i = 0; i < propertyKeys.Length; i++)
-        {
-            string value = GetItemPropertyString(itemClass, propertyKeys[i]);
-            if (!string.IsNullOrEmpty(value))
-                return value;
-        }
-
-        return string.Empty;
-    }
-
-    private static string GetItemPropertyString(ItemClass itemClass, string propertyKey)
-    {
-        if (itemClass == null || string.IsNullOrEmpty(propertyKey))
-            return string.Empty;
-
-        BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-
-        object dynamicProperties = null;
-
-        PropertyInfo propertiesProperty = itemClass.GetType().GetProperty("Properties", flags);
-        if (propertiesProperty != null)
-        {
-            try
-            {
-                dynamicProperties = propertiesProperty.GetValue(itemClass, null);
-            }
-            catch
-            {
-                dynamicProperties = null;
-            }
-        }
-
-        if (dynamicProperties == null)
-        {
-            FieldInfo propertiesField = itemClass.GetType().GetField("Properties", flags);
-            if (propertiesField != null)
-            {
-                try
-                {
-                    dynamicProperties = propertiesField.GetValue(itemClass);
-                }
-                catch
-                {
-                    dynamicProperties = null;
-                }
-            }
-        }
-
-        return ReadDynamicPropertiesString(dynamicProperties, propertyKey);
-    }
-
-    private static string ReadDynamicPropertiesString(object dynamicProperties, string propertyKey)
-    {
-        if (dynamicProperties == null || string.IsNullOrEmpty(propertyKey))
-            return string.Empty;
-
-        Type type = dynamicProperties.GetType();
-        BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-
-        MethodInfo getStringOneArg = type.GetMethod("GetString", flags, null, new[] { typeof(string) }, null);
-        if (getStringOneArg != null)
-        {
-            try
-            {
-                return (getStringOneArg.Invoke(dynamicProperties, new object[] { propertyKey }) as string) ?? string.Empty;
-            }
-            catch
-            {
-            }
-        }
-
-        MethodInfo getStringTwoArg = type.GetMethod("GetString", flags, null, new[] { typeof(string), typeof(string) }, null);
-        if (getStringTwoArg != null)
-        {
-            try
-            {
-                return (getStringTwoArg.Invoke(dynamicProperties, new object[] { propertyKey, string.Empty }) as string) ?? string.Empty;
-            }
-            catch
-            {
-            }
-        }
-
-        return string.Empty;
-    }
-
-    private static bool TryParseGallonsToMg(string rawAmount, out int amountMg)
-    {
-        amountMg = 0;
-
-        if (string.IsNullOrWhiteSpace(rawAmount))
+        if (recipe == null || string.IsNullOrEmpty(recipe.Machine))
             return false;
 
-        string trimmed = rawAmount.Trim();
-
-        if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out int gallonsInt) && gallonsInt > 0)
+        List<string> groups = MachineRecipeRegistry.ParseMachineGroups(machineGroupsCsv);
+        for (int i = 0; i < groups.Count; i++)
         {
-            long mg = (long)gallonsInt * FluidConstants.MilliGallonsPerGallon;
-            if (mg > int.MaxValue)
-                mg = int.MaxValue;
-
-            amountMg = (int)mg;
-            return true;
+            if (string.Equals(groups[i], recipe.Machine, StringComparison.Ordinal))
+                return true;
         }
 
-        if (!double.TryParse(trimmed, NumberStyles.Float, CultureInfo.InvariantCulture, out double gallonsDouble) || gallonsDouble <= 0d)
-            return false;
-
-        double mgDouble = gallonsDouble * FluidConstants.MilliGallonsPerGallon;
-        if (mgDouble > int.MaxValue)
-            mgDouble = int.MaxValue;
-
-        if (mgDouble < 1d)
-            mgDouble = 1d;
-
-        amountMg = (int)Math.Round(mgDouble, MidpointRounding.AwayFromZero);
-        return true;
+        return false;
     }
 
-    private static int ParsePositiveIntProperty(ItemClass itemClass, string[] propertyKeys, int defaultValue)
-    {
-        int fallback = Math.Max(1, defaultValue);
-        string rawValue = GetItemPropertyString(itemClass, propertyKeys);
-        if (string.IsNullOrWhiteSpace(rawValue))
-            return fallback;
-
-        string trimmed = rawValue.Trim();
-        if (!long.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out long parsed) || parsed <= 0)
-            return fallback;
-
-        if (parsed > int.MaxValue)
-            return int.MaxValue;
-
-        return (int)parsed;
-    }
     private int ReadIntProperty(string propertyName, int fallback, int min, int max)
     {
         string raw = blockValue.Block?.Properties?.GetString(propertyName);
@@ -2370,6 +2267,9 @@ public class TileEntityFluidDecanter : TileEntityMachine
         if (!HasSelectedInputTarget(world))
             return "Missing Item Input";
 
+        if (string.IsNullOrEmpty(SelectedRecipeKey))
+            return "No recipe selected";
+
         if (string.IsNullOrEmpty(SelectedFluidType))
             return "No fluid selected";
 
@@ -2404,6 +2304,8 @@ public class TileEntityFluidDecanter : TileEntityMachine
             hash = (hash * 31) + (int)SelectedOutputMode;
             hash = (hash * 31) + SelectedOutputPipeGraphId.GetHashCode();
             hash = (hash * 31) + (SelectedFluidType?.GetHashCode() ?? 0);
+            hash = (hash * 31) + (SelectedRecipeKey?.GetHashCode() ?? 0);
+            hash = (hash * 31) + (machineRecipeGroupsCsv?.GetHashCode() ?? 0);
             hash = (hash * 31) + SelectedFluidGraphId.GetHashCode();
             hash = (hash * 31) + pendingItemInput;
             hash = (hash * 31) + pendingItemOutput;

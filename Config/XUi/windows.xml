@@ -1,368 +1,299 @@
 ﻿<configs>
+	<append xpath="/windows">
+		<!-- MACHINE WINDOW: EXTRACTOR -->
 
-    <append xpath="/windows">
+		<window name="windowIronExtractorInfo" controller="IronExtractorInfo, 7DaysToAutomate" width="760" height="380" panel="Center">
+			<rect pos="0,-100">
+				<!-- LEFT: EXTRACTOR WINDOW -->
+				<rect pos="0,0">
+					<panel name="header" width="450" height="50" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="0,-6" width="450" height="40" text="{extractorname}" font_size="36" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<rect name="content" pos="0,-50" height="330">
+						<sprite depth="1" name="bg" width="450" height="500" type="sliced" color="[black]" alpha="0.8" />
+						<label depth="5" pos="0,-30" width="450" height="50" text="PRODUCTION" justify="center" font_size="40" upper_case="true" color="[limeGreen]" effect="outline" effect_distance="2,2" effect_color="[black]" />
+						<label depth="6" pos="30,-90" width="390" text="{production}" multiline="true" font_size="30" color="[white]" line_spacing="42" />
+						<rect pos="355,-110" visible="{fluidfuelvisible}">
+							<label depth="6" pos="-17,10" width="70" height="24" text="Fuel" justify="center" font_size="20" color="[limeGreen]" effect="outline" />
+							<sprite depth="5" pos="0,-2" width="36" height="130" sprite="menu_empty3px" type="sliced" color="[black]" fillcenter="false" />
+							<sprite depth="5" pos="2,-2" width="32" height="126" type="sliced" color="[darkGrey]" visible="{fluidfueldisabled}" />
+							<filledsprite depth="6" pos="2,14" width="32" height="142" type="filled" fill="{fluidfuelfill}" color="0,180,90,200" visible="{fluidfuelenabled}" filldirection="vertical" />
+							<!-- <label depth="7" pos="-24,-56" width="84" height="28" text="{fluidfueltext}" justify="center" font_size="18" color="[white]" effect="outline"/> -->
+							<label depth="6" pos="-45,34" width="130" height="24" text="{fluidfuelstatus}" justify="center" font_size="16" color="[white]" />
+						</rect>
+					</rect>
+					<!-- REQUIREMENTS -->
+					<rect pos="0,-285">
+						<label depth="5" pos="0,0" width="450" height="50" text="REQUIREMENTS" justify="center" font_size="40" upper_case="true" color="[limeGreen]" effect="outline" effect_distance="2,2" effect_color="[black]" />
+						<label depth="6" pos="30,-70" width="400" height="30" text="Valid Output Target" color="[green]" visible="{hasstorage}" />
+						<label depth="6" pos="30,-70" width="400" height="30" text="Valid Output Target" color="[red]" visible="{nothasstorage}" />
+					</rect>
+					<!-- POWER BUTTON -->
+					<rect pos="225,-500">
+						<label depth="4" pos="5,0" pivot="center" width="100" height="30" text="{powerbutton}" font_size="32" color="[limeGreen]" effect="outline" />
+						<button depth="3" name="powerbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="130" height="30" />
+					</rect>
+					<!-- PIPE PRIORITY -->
+					<rect pos="225,-425">
+						<label depth="4" pos="-45,0" width="90" height="30" text="Priority" font_size="26" justify="center" color="[limeGreen]" effect="outline" />
+						<button depth="4" name="prioritydownbutton" pos="-56,-24" width="20" height="30" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Decrease pipe priority (0-9). Higher number = higher priority." />
+						<textfield name="extractorPriorityInput" pos="-30,-25" width="60" height="28" text="{pipepriority}" tooltip="Set pipe priority from 0 to 9. Higher number = higher priority." />
+						<button depth="4" name="priorityupbutton" pos="36,-24" width="20" height="30" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Increase pipe priority (0-9). Higher number = higher priority." />
+					</rect>
+					<!-- CLOSE BUTTON -->
+					<button depth="10" name="closeButton" pos="415,-25" width="35" height="35" pivot="center" sprite="ui_game_symbol_x" defaultcolor="[white]" hovercolor="[red]" type="sliced" sound="[paging_click]" on_press="true" />
+				</rect>
+				<!-- RIGHT: OUTPUT CONTAINERS -->
+				<rect pos="460,0">
+					<panel name="containerPanel" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Output Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<grid name="outputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="ExtractorOutputContainerList, 7DaysToAutomate">
+						<extractor_output_container_entry name="0" />
+					</grid>
+				</rect>
+			</rect>
+		</window>
 
-        <window name="windowIronExtractorInfo" controller="IronExtractorInfo, 7DaysToAutomate" width="760" height="380" panel="Center">
-            <rect pos="0,-100">
+		<!-- MACHINE WINDOW: CRAFTER -->
 
-                <!-- LEFT: EXTRACTOR WINDOW -->
-                <rect pos="0,0">
-
-                    <panel name="header" width="450" height="50" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]"/>
-                        <label depth="6" pos="0,-6" width="450" height="40" text="{extractorname}" font_size="36" justify="center" color="[limeGreen]" effect="outline"/>
-                    </panel>
-
-                    <rect name="content" pos="0,-50" height="330">
-                        <sprite depth="1" name="bg" width="450" height="500" type="sliced" color="[black]" alpha="0.8"/>
-
-                        <label depth="5" pos="0,-30" width="450" height="50" text="PRODUCTION" justify="center" font_size="40" upper_case="true" color="[limeGreen]" effect="outline" effect_distance="2,2" effect_color="[black]"/>
-
-                        <label depth="6" pos="30,-90" width="390" text="{production}" multiline="true" font_size="30" color="[white]" line_spacing="42"/>
-                        <rect pos="355,-110" visible="{fluidfuelvisible}">
-                            <label depth="6" pos="-17,10" width="70" height="24" text="Fuel" justify="center" font_size="20" color="[limeGreen]" effect="outline"/>
-                            <sprite depth="5" pos="0,-2" width="36" height="130" sprite="menu_empty3px" type="sliced" color="[black]" fillcenter="false"/>
-                            <sprite depth="5" pos="2,-2" width="32" height="126" type="sliced" color="[darkGrey]" visible="{fluidfueldisabled}"/>
-                            <filledsprite depth="6" pos="2,14" width="32" height="142" type="filled" fill="{fluidfuelfill}" color="0,180,90,200" visible="{fluidfuelenabled}" filldirection="vertical"/>
-                            <!-- <label depth="7" pos="-24,-56" width="84" height="28" text="{fluidfueltext}" justify="center" font_size="18" color="[white]" effect="outline"/> -->
-                            <label depth="6" pos="-45,34" width="130" height="24" text="{fluidfuelstatus}" justify="center" font_size="16" color="[white]"/>
-                        </rect>
-                    </rect>
-
-                    <!-- REQUIREMENTS -->
-                    <rect pos="0,-285">
-                        <label depth="5" pos="0,0" width="450" height="50" text="REQUIREMENTS" justify="center" font_size="40" upper_case="true" color="[limeGreen]" effect="outline" effect_distance="2,2" effect_color="[black]"/>
-
-                        <label depth="6" pos="30,-70" width="400" height="30" text="Valid Output Target" color="[green]" visible="{hasstorage}"/>
-                        <label depth="6" pos="30,-70" width="400" height="30" text="Valid Output Target" color="[red]" visible="{nothasstorage}"/>
-                    </rect>
-
-                    <!-- POWER BUTTON -->
-                    <rect pos="225,-500">
-                        <label depth="4" pos="5,0" pivot="center" width="100" height="30" text="{powerbutton}" font_size="32" color="[limeGreen]" effect="outline"/>
-                        <button depth="3" name="powerbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="130" height="30"/>
-                    </rect>
-
-                    <!-- PIPE PRIORITY -->
-                    <rect pos="225,-425">
-                        <label depth="4" pos="-45,0" width="90" height="30" text="Priority" font_size="26" justify="center" color="[limeGreen]" effect="outline"/>
-                        <button depth="4" name="prioritydownbutton" pos="-56,-24" width="20" height="30" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Decrease pipe priority (0-9). Higher number = higher priority."/>
-                        <textfield name="extractorPriorityInput" pos="-30,-25" width="60" height="28" text="{pipepriority}" tooltip="Set pipe priority from 0 to 9. Higher number = higher priority." />
-                        <button depth="4" name="priorityupbutton" pos="36,-24" width="20" height="30" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Increase pipe priority (0-9). Higher number = higher priority."/>
-                    </rect>
-
-                    <!-- CLOSE BUTTON -->
-                    <button depth="10" name="closeButton" pos="415,-25" width="35" height="35" pivot="center" sprite="ui_game_symbol_x" defaultcolor="[white]" hovercolor="[red]" type="sliced" sound="[paging_click]" on_press="true"/>
-
-                </rect>
-
-                <!-- RIGHT: OUTPUT CONTAINERS -->
-                <rect pos="460,0">
-                    <panel name="containerPanel" pos="-2,0" width="300" height="40" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]"/>
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Output Container" font_size="32" justify="center" color="[limeGreen]" effect="outline"/>
-                    </panel>
-
-                    <grid name="outputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="ExtractorOutputContainerList, 7DaysToAutomate">
-                        <extractor_output_container_entry name="0"/>
-                    </grid>
-                </rect>
-
-            </rect>
-        </window>
-
-        <window name="windowUniversalCrafterInfo" controller="UniversalCrafter, 7DaysToAutomate" width="450" height="380" panel="Center">
-            <rect pos="-125,-100">
-
-                <!-- HEADER -->
-                <panel name="header" height="50" depth="1">
-                    <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                    <label depth="6" pos="0,-6" width="450" height="40" text="{craftername}" font_size="36" justify="center" color="[limeGreen]" effect="outline" />
-                </panel>
-
-                <!-- BACKGROUND -->
-                <rect name="content" pos="0,-50" height="330">
-                    <sprite depth="1" name="bg" width="450" height="500" type="sliced" color="[black]" alpha="0.8" />
-                </rect>
-
-                <!-- CLOSE BUTTON -->
-                <button depth="10" name="closebutton" pos="415,-25" width="35" height="35" pivot="center" sprite="ui_game_symbol_x" defaultcolor="[white]" hovercolor="[red]" type="sliced" sound="[paging_click]" on_press="true" />
-
-                <rect pos="80, -75">
-                    
-                    <panel name="searchControls" width="292" height="44" pos="3,-6">
-                        <sprite color="[darkGrey]" type="sliced" />
-                        <sprite sprite="menu_empty3px" pos="-3,3" width="298" height="49" color="[black]" type="sliced" fillcenter="false" />
-
-                        <!-- <sprite name="searchIcon" sprite="ui_game_symbol_search" pos="18,-22" pivot="center" /> -->
-                        <textfield name="searchInput" pos="8,-7" width="275" height="30" search_field="true" clear_button="true" />
-                    </panel>
-
-                </rect>
-
-                <rect pos="82, -75">
-
-                    <!-- <rect depth="2" name="categorySelector" width="390" height="44" pos="3,-6">
+		<window name="windowUniversalCrafterInfo" controller="UniversalCrafter, 7DaysToAutomate" width="450" height="380" panel="Center">
+			<rect pos="-125,-100">
+				<!-- HEADER -->
+				<panel name="header" height="50" depth="1">
+					<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+					<label depth="6" pos="0,-6" width="450" height="40" text="{craftername}" font_size="36" justify="center" color="[limeGreen]" effect="outline" />
+				</panel>
+				<!-- BACKGROUND -->
+				<rect name="content" pos="0,-50" height="330">
+					<sprite depth="1" name="bg" width="450" height="500" type="sliced" color="[black]" alpha="0.8" />
+				</rect>
+				<!-- CLOSE BUTTON -->
+				<button depth="10" name="closebutton" pos="415,-25" width="35" height="35" pivot="center" sprite="ui_game_symbol_x" defaultcolor="[white]" hovercolor="[red]" type="sliced" sound="[paging_click]" on_press="true" />
+				<rect pos="80, -75">
+					<panel name="searchControls" width="292" height="44" pos="3,-6">
+						<sprite color="[darkGrey]" type="sliced" />
+						<sprite sprite="menu_empty3px" pos="-3,3" width="298" height="49" color="[black]" type="sliced" fillcenter="false" />
+						<!-- <sprite name="searchIcon" sprite="ui_game_symbol_search" pos="18,-22" pivot="center" /> -->
+						<textfield name="searchInput" pos="8,-7" width="275" height="30" search_field="true" clear_button="true" />
+					</panel>
+				</rect>
+				<rect pos="82, -75">
+					<!-- <rect depth="2" name="categorySelector" width="390" height="44" pos="3,-6">
                         <grid name="categories" rows="1" cols="6" width="400" height="120" cell_height="50" cell_width="50" repeat_content="true" controller="CrafterCategoryList, 7DaysToAutomate">
                             <crafter_category_icon name="0"/>
                         </grid>
                     </rect> -->
+					<grid name="recipes" rows="6" cols="4" pos="0,-54" width="50" height="552" cell_width="50" cell_height="50" controller="CrafterRecipeList, 7DaysToAutomate" repeat_content="true" arrangement="horizontal">
+						<crafter_recipe_entry name="0" />
+					</grid>
+				</rect>
+				<rect pos="80,-520">
+					<filledsprite depth="5" pos="5,-2" width="290" height="14" name="BarContent" color="255,0,0,160" globalopacity="false" type="filled" fill="{craftprogress}" />
+					<sprite depth="9" pos="3,-1" width="294" height="18" color="[black]" sprite="menu_empty3px" globalopacity="false" type="sliced" fillcenter="false" />
+				</rect>
+				<!-- PIPE PRIORITY -->
+				<rect pos="225,-425">
+					<label depth="4" pos="-45,0" width="90" height="30" text="Priority" font_size="26" justify="center" color="[limeGreen]" effect="outline" />
+					<button depth="4" name="prioritydownbutton" pos="-56,-24" width="20" height="30" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Decrease pipe priority (0-9). Higher number = higher priority." />
+					<textfield name="priorityInput" pos="-30,-25" width="60" height="28" text="{pipepriority}" tooltip="Set pipe priority from 0 to 9. Higher number = higher priority." />
+					<button depth="4" name="priorityupbutton" pos="36,-24" width="20" height="30" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Increase pipe priority (0-9). Higher number = higher priority." />
+				</rect>
+				<!-- CRAFT BUTTON -->
+				<rect pos="225,-500">
+					<label depth="4" pos="5,0" pivot="center" width="100" height="30" text="{craft}" font_size="32" color="[limeGreen]" effect="outline" />
+					<button depth="3" name="craftbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="130" height="30" />
+				</rect>
+				<!-- RESET BUTTON -->
+				<rect pos="58,-24">
+					<label depth="4" pos="-27,15" width="100" height="30" text="RESET" font_size="32" color="[red]" effect="outline" />
+					<button depth="3" name="resetbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="100" height="30" />
+				</rect>
+				<rect pos="0,-285">
+					<!-- INGREDIENT NAME -->
+					<label depth="6" pos="0,-42" width="450" height="40" text="{recipename}" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					<!-- BOTTOM: INGREDIENTS -->
+					<grid name="ingredients" rows="2" cols="5" pos="80,-84" width="290" height="116" cell_width="58" cell_height="58" controller="CrafterIngredientsList, 7DaysToAutomate" repeat_content="true" arrangement="horizontal">
+						<crafter_ingredient_entry name="0" />
+					</grid>
+				</rect>
+				<!-- LEFT: INPUT BUFFER -->
+				<rect pos="-320,0">
+					<panel name="containerPanel" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Input Buffer" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<grid name="inputBufferItems" rows="4" cols="5" pos="0,-50" width="300" height="240" cell_width="60" cell_height="60" repeat_content="true" arrangement="horizontal" controller="InputBufferList, 7DaysToAutomate">
+						<machine_input_buffer_entry name="0" />
+					</grid>
+				</rect>
+				<!-- RIGHT: INPUT CONTAINERS HEADDER-->
+				<rect pos="460,0">
+					<panel name="containerPanel" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Input Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<grid name="inputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="InputContainerList, 7DaysToAutomate">
+						<crafter_input_container_entry name="0" />
+					</grid>
+				</rect>
+				<!-- RIGHT: OUTPUT CONTAINERS HEADDER-->
+				<rect pos="460,-175">
+					<panel name="containerPanel" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Output Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<grid name="outputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="OutputContainerList, 7DaysToAutomate">
+						<crafter_output_container_entry name="0" />
+					</grid>
+				</rect>
+				<!-- RIGHT: REQUIREMENTS-->
+				<rect pos="0,0">
+					<!-- HEADDER -->
+					<panel name="containerPanel" pos="460,-356" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[black]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Reqirements" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<!-- CONTENT -->
+					<panel name="containerPanel" pos="460,-400" width="300" height="150" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<label depth="6" pos="55,-10" text="Recipe Selected" color="[green]" visible="{req_recipe_selected}" />
+						<label depth="6" pos="55,-10" text="No Recipe Selected" color="[red]" visible="{req_not_recipe_selected}" />
+						<label depth="6" pos="55,-40" text="Has Ingredients" color="[green]" visible="{req_has_ingredients}" />
+						<label depth="6" pos="55,-40" text="Has Ingredients" color="[red]" visible="{req_not_has_ingredients}" />
+						<label depth="6" pos="55,-70" text="Input Container" color="[green]" visible="{input_chest_selected}" />
+						<label depth="6" pos="55,-70" text="Input Container" color="[red]" visible="{input_chest_not_selected}" />
+						<label depth="6" pos="55,-100" text="Output Container" color="[green]" visible="{output_chest_selected}" />
+						<label depth="6" pos="55,-100" text="Output Container" color="[red]" visible="{output_chest_not_selected}" />
+					</panel>
+				</rect>
+			</rect>
+		</window>
 
-                    <grid name="recipes" rows="6" cols="4" pos="0,-54" width="50" height="552" cell_width="50" cell_height="50" controller="CrafterRecipeList, 7DaysToAutomate" repeat_content="true" arrangement="horizontal">
-                        <crafter_recipe_entry name="0" />
-                    </grid>
+		<!-- MACHINE WINDOW: FLUID DECANTER -->
 
-                </rect>
-
-
-                <rect pos="80,-520">
-                    <filledsprite depth="5" pos="5,-2" width="290" height="14" name="BarContent" color="255,0,0,160" globalopacity="false" type="filled" fill="{craftprogress}"  />
-                    <sprite depth="9" pos="3,-1" width="294" height="18" color="[black]" sprite="menu_empty3px" globalopacity="false" type="sliced" fillcenter="false" />
-                </rect>
-
-
-                <!-- PIPE PRIORITY -->
-                <rect pos="225,-425">
-                    <label depth="4" pos="-45,0" width="90" height="30" text="Priority" font_size="26" justify="center" color="[limeGreen]" effect="outline" />
-
-                    <button depth="4" name="prioritydownbutton" pos="-56,-24" width="20" height="30" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Decrease pipe priority (0-9). Higher number = higher priority."/>
-
-                    <textfield name="priorityInput" pos="-30,-25" width="60" height="28" text="{pipepriority}" tooltip="Set pipe priority from 0 to 9. Higher number = higher priority." />
-
-
-                    <button depth="4" name="priorityupbutton" pos="36,-24" width="20" height="30" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" tooltip="Increase pipe priority (0-9). Higher number = higher priority."/>
-                </rect>
-                <!-- CRAFT BUTTON -->
-                <rect pos="225,-500">
-                    <label depth="4" pos="5,0" pivot="center" width="100" height="30" text="{craft}" font_size="32" color="[limeGreen]" effect="outline" />
-                    <button depth="3" name="craftbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="130" height="30"/>
-                </rect>
-
-                <!-- RESET BUTTON -->
-                <rect pos="58,-24">
-                    <label depth="4" pos="-27,15" width="100" height="30" text="RESET" font_size="32" color="[red]" effect="outline" />
-                    <button depth="3" name="resetbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="100" height="30"/>
-                </rect>
-                <rect pos="0,-285">
-                    <!-- INGREDIENT NAME -->
-                    <label depth="6" pos="0,-42" width="450" height="40" text="{recipename}" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
-                    <!-- BOTTOM: INGREDIENTS -->
-                    <grid name="ingredients" rows="2" cols="5" pos="80,-84" width="290" height="116" cell_width="58" cell_height="58" controller="CrafterIngredientsList, 7DaysToAutomate" repeat_content="true" arrangement="horizontal">
-                        <crafter_ingredient_entry name="0" />
-                    </grid>
-                </rect>
-                <!-- LEFT: INPUT BUFFER -->
-                <rect pos="-320,0">
-                    <panel name="containerPanel" pos="-2,0" width="300" height="40" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Input Buffer" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
-                    </panel>
-
-                    <grid name="inputBufferItems" rows="4" cols="5" pos="0,-50" width="300" height="240" cell_width="60" cell_height="60" repeat_content="true" arrangement="horizontal" controller="InputBufferList, 7DaysToAutomate">
-                        <machine_input_buffer_entry name="0"/>
-                    </grid>
-                </rect>
-                <!-- RIGHT: INPUT CONTAINERS HEADDER-->
-                <rect pos="460,0">
-                    <panel name="containerPanel" pos="-2,0" width="300" height="40" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Input Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
-                    </panel>
-
-                    <grid name="inputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="InputContainerList, 7DaysToAutomate">
-                        <crafter_input_container_entry name="0"/>
-                    </grid>
-                </rect>
-
-                <!-- RIGHT: OUTPUT CONTAINERS HEADDER-->
-                <rect pos="460,-175">
-                    <panel name="containerPanel" pos="-2,0" width="300" height="40" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Output Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
-                    </panel>
-
-                    <grid name="outputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="OutputContainerList, 7DaysToAutomate">
-                        <crafter_output_container_entry name="0"/>
-                    </grid>
-                </rect>
-
-                <!-- RIGHT: REQUIREMENTS-->
-                <rect pos="0,0">
-                    <!-- HEADDER -->
-                    <panel name="containerPanel" pos="460,-356" width="300" height="40" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[black]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Reqirements" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
-                    </panel>
-                    <!-- CONTENT -->
-                    <panel name="containerPanel" pos="460,-400" width="300" height="150" depth="1">
-                        <sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8"/>
-                        <label depth="6" pos="55,-10" text="Recipe Selected" color="[green]" visible="{req_recipe_selected}"/>
-                        <label depth="6" pos="55,-10" text="No Recipe Selected" color="[red]" visible="{req_not_recipe_selected}"/>
-
-                        <label depth="6" pos="55,-40" text="Has Ingredients" color="[green]" visible="{req_has_ingredients}"/>
-                        <label depth="6" pos="55,-40" text="Has Ingredients" color="[red]" visible="{req_not_has_ingredients}"/>
-
-                        <label depth="6" pos="55,-70" text="Input Container" color="[green]" visible="{input_chest_selected}"/>
-                        <label depth="6" pos="55,-70" text="Input Container" color="[red]" visible="{input_chest_not_selected}"/>
-
-                        <label depth="6" pos="55,-100" text="Output Container" color="[green]" visible="{output_chest_selected}"/>
-                        <label depth="6" pos="55,-100" text="Output Container" color="[red]" visible="{output_chest_not_selected}"/>
-                    </panel>
-                </rect>
-
-            </rect>
-        </window>
-
-        <window name="windowFluidDecanterInfo" controller="FluidDecanterInfo, 7DaysToAutomate" width="450" height="380" panel="Center" cursor_area="true">
-            <rect pos="0,-100">
-
-                <panel name="header" height="50" depth="1">
-                    <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                    <label depth="6" pos="0,-6" width="450" height="40" text="{machinename}" font_size="36" justify="center" color="[limeGreen]" effect="outline" />
-                </panel>
-
-                <rect name="content" pos="0,-50" height="330">
-                    <sprite depth="1" name="bg" width="450" height="500" type="sliced" color="[black]" alpha="0.8" />
-                </rect>
-
-                <button depth="10" name="closeButton" pos="415,-25" width="35" height="35" pivot="center" sprite="ui_game_symbol_x" defaultcolor="[white]" hovercolor="[red]" type="sliced" sound="[paging_click]" on_press="true" />
-
-                <rect pos="0,-78">
-                    <label depth="6" pos="0,-6" width="450" height="34" text="FLUID SELECTION" font_size="30" justify="center" color="[limeGreen]" effect="outline" />
-                    <button depth="6" name="fluidprevbutton" pos="150,-38" width="28" height="28" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
-                    <label depth="6" name="fluidSelectedValue" pos="180,-36" width="90" height="28" text="{selectedfluid}" justify="center" font_size="30" color="[white]" />
-                    <button depth="6" name="fluidnextbutton" pos="272,-38" width="28" height="28" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
-                </rect>
-
-                <rect pos="22,-160">
-                    <label depth="6" pos="0,0" width="420" height="26" text="State: {machine_state}" font_size="24" color="[white]" />
-                    <label depth="6" pos="0,-26" width="420" height="26" text="Cycle: {cycle_timer}" font_size="22" color="[white]" />
-                    <label depth="6" pos="0,-52" width="420" height="26" text="Selected Input: {selected_input}" font_size="20" color="[white]" />
-                    <label depth="6" pos="0,-76" width="420" height="26" text="Selected Output: {selected_output}" font_size="20" color="[white]" />
-                    <label depth="6" pos="0,-100" width="420" height="26" text="Fluid Graph: {selected_fluid_graph}" font_size="20" color="[white]" />
-                    <label depth="6" pos="0,-124" width="420" height="26" text="Last Action: {last_action}" font_size="20" color="[white]" />
-                    <label depth="6" pos="0,-148" width="420" height="26" text="Block Reason: {block_reason}" font_size="20" color="[white]" />
-                </rect>
-
-                <rect pos="225,-500">
-                    <label depth="4" pos="5,0" pivot="center" width="120" height="30" text="{powerbutton}" font_size="32" color="[limeGreen]" effect="outline" />
-                    <button depth="3" name="powerbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="150" height="30"/>
-                </rect>
-
-                <rect pos="-310,0">
-                    <panel name="pendingItemsHeader" pos="-2,0" width="300" height="40" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Items" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
-                    </panel>
-
-                    <panel name="pendingItemsPanel" pos="-2,-45" width="300" height="120" depth="1">
-                        <sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8"/>
-
-                        <label depth="6" pos="27,-14" width="110" height="28" text="Pending Input" font_size="22" justify="center" color="[white]" />
-                        <label depth="6" pos="164,-14" width="110" height="28" text="Pending Output" font_size="22" justify="center" color="[white]" />
-
-                        <sprite depth="2" name="pendingInputItemFrame" sprite="menu_empty3px" pos="51,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
-                        <sprite depth="3" name="pendingInputItemBg" pos="54,-43" width="56" height="56" color="[mediumGrey]" type="sliced" />
-                        <sprite depth="4" name="pendingInputItemIcon" atlas="ItemIconAtlas" sprite="{pending_item_input_icon}" pos="54,-43" width="56" height="56" foregroundlayer="true" visible="{pending_item_input_has_item}" />
-                        <label depth="5" name="pendingInputItemCount" pos="82,-90" width="26" height="18" text="{pending_item_input}" font_size="20" justify="right" color="[white]" effect="outline" visible="{pending_item_input_has_item}" />
-                        <label depth="5" name="pendingInputItemName" pos="27,-102" width="110" height="18" text="{pending_item_input_name}" font_size="16" justify="center" color="[white]" visible="{pending_item_input_has_item}" />
-
-                        <sprite depth="2" name="pendingOutputItemFrame" sprite="menu_empty3px" pos="188,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
-                        <sprite depth="3" name="pendingOutputItemBg" pos="191,-43" width="56" height="56" color="[mediumGrey]" type="sliced" />
-                        <sprite depth="4" name="pendingOutputItemIcon" atlas="ItemIconAtlas" sprite="{pending_item_output_icon}" pos="191,-43" width="56" height="56" foregroundlayer="true" visible="{pending_item_output_has_item}" />
-                        <label depth="5" name="pendingOutputItemCount" pos="219,-90" width="26" height="18" text="{pending_item_output}" font_size="20" justify="right" color="[white]" effect="outline" visible="{pending_item_output_has_item}" />
-                        <label depth="5" name="pendingOutputItemName" pos="164,-102" width="110" height="18" text="{pending_item_output_name}" font_size="16" justify="center" color="[white]" visible="{pending_item_output_has_item}" />
-                    </panel>
-                </rect>
-
-                <rect pos="-310,-175">
-                    <panel name="pendingFluidHeader" pos="-2,0" width="300" height="40" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Fluid" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
-                    </panel>
-
-                    <panel name="pendingFluidPanel" pos="-2,-45" width="300" height="120" depth="1">
-                        <sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8"/>
-
-                        <label depth="6" pos="27,-12" width="110" height="28" text="Pending Input" font_size="22" justify="center" color="[white]" />
-                        <label depth="6" pos="164,-12" width="110" height="28" text="Pending Output" font_size="22" justify="center" color="[white]" />
-
-                        <!-- <sprite depth="2" name="pendingInputFluidFrame" sprite="menu_empty3px" pos="51,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+		<window name="windowFluidDecanterInfo" controller="FluidDecanterInfo, 7DaysToAutomate" width="450" height="380" panel="Center" cursor_area="true">
+			<rect pos="0,-100">
+				<panel name="header" height="50" depth="1">
+					<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+					<label depth="6" pos="0,-6" width="450" height="40" text="{machinename}" font_size="36" justify="center" color="[limeGreen]" effect="outline" />
+				</panel>
+				<rect name="content" pos="0,-50" height="330">
+					<sprite depth="1" name="bg" width="450" height="500" type="sliced" color="[black]" alpha="0.8" />
+				</rect>
+				<button depth="10" name="closeButton" pos="415,-25" width="35" height="35" pivot="center" sprite="ui_game_symbol_x" defaultcolor="[white]" hovercolor="[red]" type="sliced" sound="[paging_click]" on_press="true" />
+				<rect pos="0,-78">
+					<label depth="6" pos="0,-6" width="450" height="34" text="FLUID SELECTION" font_size="30" justify="center" color="[limeGreen]" effect="outline" />
+					<button depth="6" name="fluidprevbutton" pos="150,-38" width="28" height="28" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
+					<label depth="6" name="fluidSelectedValue" pos="180,-36" width="90" height="28" text="{selectedfluid}" justify="center" font_size="30" color="[white]" />
+					<button depth="6" name="fluidnextbutton" pos="272,-38" width="28" height="28" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
+				</rect>
+				<rect pos="22,-160">
+					<label depth="6" pos="0,0" width="420" height="26" text="State: {machine_state}" font_size="24" color="[white]" />
+					<label depth="6" pos="0,-26" width="420" height="26" text="Cycle: {cycle_timer}" font_size="22" color="[white]" />
+					<label depth="6" pos="0,-52" width="420" height="26" text="Selected Input: {selected_input}" font_size="20" color="[white]" />
+					<label depth="6" pos="0,-76" width="420" height="26" text="Selected Output: {selected_output}" font_size="20" color="[white]" />
+					<label depth="6" pos="0,-100" width="420" height="26" text="Fluid Graph: {selected_fluid_graph}" font_size="20" color="[white]" />
+					<label depth="6" pos="0,-124" width="420" height="26" text="Last Action: {last_action}" font_size="20" color="[white]" />
+					<label depth="6" pos="0,-148" width="420" height="26" text="Block Reason: {block_reason}" font_size="20" color="[white]" />
+				</rect>
+				<rect pos="225,-500">
+					<label depth="4" pos="5,0" pivot="center" width="120" height="30" text="{powerbutton}" font_size="32" color="[limeGreen]" effect="outline" />
+					<button depth="3" name="powerbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="150" height="30" />
+				</rect>
+				<rect pos="-310,0">
+					<panel name="pendingItemsHeader" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Items" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<panel name="pendingItemsPanel" pos="-2,-45" width="300" height="120" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<label depth="6" pos="27,-14" width="110" height="28" text="Pending Input" font_size="22" justify="center" color="[white]" />
+						<label depth="6" pos="164,-14" width="110" height="28" text="Pending Output" font_size="22" justify="center" color="[white]" />
+						<sprite depth="2" name="pendingInputItemFrame" sprite="menu_empty3px" pos="51,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+						<sprite depth="3" name="pendingInputItemBg" pos="54,-43" width="56" height="56" color="[mediumGrey]" type="sliced" />
+						<sprite depth="4" name="pendingInputItemIcon" atlas="ItemIconAtlas" sprite="{pending_item_input_icon}" pos="54,-43" width="56" height="56" foregroundlayer="true" visible="{pending_item_input_has_item}" />
+						<label depth="5" name="pendingInputItemCount" pos="82,-90" width="26" height="18" text="{pending_item_input}" font_size="20" justify="right" color="[white]" effect="outline" visible="{pending_item_input_has_item}" />
+						<label depth="5" name="pendingInputItemName" pos="27,-102" width="110" height="18" text="{pending_item_input_name}" font_size="16" justify="center" color="[white]" visible="{pending_item_input_has_item}" />
+						<sprite depth="2" name="pendingOutputItemFrame" sprite="menu_empty3px" pos="188,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+						<sprite depth="3" name="pendingOutputItemBg" pos="191,-43" width="56" height="56" color="[mediumGrey]" type="sliced" />
+						<sprite depth="4" name="pendingOutputItemIcon" atlas="ItemIconAtlas" sprite="{pending_item_output_icon}" pos="191,-43" width="56" height="56" foregroundlayer="true" visible="{pending_item_output_has_item}" />
+						<label depth="5" name="pendingOutputItemCount" pos="219,-90" width="26" height="18" text="{pending_item_output}" font_size="20" justify="right" color="[white]" effect="outline" visible="{pending_item_output_has_item}" />
+						<label depth="5" name="pendingOutputItemName" pos="164,-102" width="110" height="18" text="{pending_item_output_name}" font_size="16" justify="center" color="[white]" visible="{pending_item_output_has_item}" />
+					</panel>
+				</rect>
+				<rect pos="-310,-175">
+					<panel name="pendingFluidHeader" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Fluid" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<panel name="pendingFluidPanel" pos="-2,-45" width="300" height="120" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<label depth="6" pos="27,-12" width="110" height="28" text="Pending Input" font_size="22" justify="center" color="[white]" />
+						<label depth="6" pos="164,-12" width="110" height="28" text="Pending Output" font_size="22" justify="center" color="[white]" />
+						<!-- <sprite depth="2" name="pendingInputFluidFrame" sprite="menu_empty3px" pos="51,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
                         <sprite depth="3" name="pendingInputFluidBg" pos="54,-43" width="56" height="56" color="[mediumGrey]" type="sliced" /> -->
-                        <sprite depth="4" name="pendingInputFluidIcon" sprite="ui_game_symbol_water" pos="54,-36" width="56" height="56" foregroundlayer="true" />
-                        <label depth="5" name="pendingInputFluidAmount" pos="48,-90" width="60" height="18" text="{pending_fluid_input}" font_size="16" justify="right" color="[white]" effect="outline" />
-                        <label depth="5" name="pendingInputFluidName" pos="27,-102" width="110" height="18" text="{pending_fluid_input_name}" font_size="16" justify="center" color="[white]" />
-
-                        <!-- <sprite depth="2" name="pendingOutputFluidFrame" sprite="menu_empty3px" pos="188,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+						<sprite depth="4" name="pendingInputFluidIcon" sprite="ui_game_symbol_water" pos="54,-36" width="56" height="56" foregroundlayer="true" />
+						<label depth="5" name="pendingInputFluidAmount" pos="48,-90" width="60" height="18" text="{pending_fluid_input}" font_size="16" justify="right" color="[white]" effect="outline" />
+						<label depth="5" name="pendingInputFluidName" pos="27,-102" width="110" height="18" text="{pending_fluid_input_name}" font_size="16" justify="center" color="[white]" />
+						<!-- <sprite depth="2" name="pendingOutputFluidFrame" sprite="menu_empty3px" pos="188,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
                         <sprite depth="3" name="pendingOutputFluidBg" pos="191,-43" width="56" height="56" color="[mediumGrey]" type="sliced" /> -->
-                        <sprite depth="4" name="pendingOutputFluidIcon" sprite="ui_game_symbol_water" pos="191,-36" width="56" height="56" foregroundlayer="true" />
-                        <label depth="5" name="pendingOutputFluidAmount" pos="185,-90" width="60" height="18" text="{pending_fluid_output}" font_size="16" justify="right" color="[white]" effect="outline" />
-                        <label depth="5" name="pendingOutputFluidName" pos="164,-102" width="110" height="18" text="{pending_fluid_output_name}" font_size="16" justify="center" color="[white]" />
-                    </panel>
-                </rect>
+						<sprite depth="4" name="pendingOutputFluidIcon" sprite="ui_game_symbol_water" pos="191,-36" width="56" height="56" foregroundlayer="true" />
+						<label depth="5" name="pendingOutputFluidAmount" pos="185,-90" width="60" height="18" text="{pending_fluid_output}" font_size="16" justify="right" color="[white]" effect="outline" />
+						<label depth="5" name="pendingOutputFluidName" pos="164,-102" width="110" height="18" text="{pending_fluid_output_name}" font_size="16" justify="center" color="[white]" />
+					</panel>
+				</rect>
+				<rect pos="460,0">
+					<panel name="inputContainerPanel" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Input Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<grid name="fuelInputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="FluidDecanterInputContainerList, 7DaysToAutomate">
+						<fuel_converter_input_container_entry name="0" />
+					</grid>
+				</rect>
+				<rect pos="460,-175">
+					<panel name="outputContainerPanel" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Output Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<grid name="fuelOutputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="FluidDecanterOutputContainerList, 7DaysToAutomate">
+						<fuel_converter_output_container_entry name="0" />
+					</grid>
+				</rect>
+				<rect pos="0,0">
+					<panel name="requirementsHeader" pos="460,-356" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[black]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Requirements" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<panel name="requirementsPanel" pos="460,-400" width="300" height="150" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<label depth="6" pos="55,-10" text="Item Input" color="[green]" visible="{req_item_input}" />
+						<label depth="6" pos="55,-10" text="Item Input" color="[red]" visible="{req_not_item_input}" />
+						<label depth="6" pos="55,-40" text="Item Output" color="[green]" visible="{req_item_output}" />
+						<label depth="6" pos="55,-40" text="Item Output" color="[red]" visible="{req_not_item_output}" />
+						<label depth="6" pos="55,-70" text="Fluid Output" color="[green]" visible="{req_fluid_output}" />
+						<label depth="6" pos="55,-70" text="Fluid Output" color="[red]" visible="{req_not_fluid_output}" />
+					</panel>
+				</rect>
+			</rect>
+		</window>
 
-                <rect pos="460,0">
-                    <panel name="inputContainerPanel" pos="-2,0" width="300" height="40" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Input Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
-                    </panel>
+		<!-- HUD WINDOW: PIPE PROBE -->
 
-                    <grid name="fuelInputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="FluidDecanterInputContainerList, 7DaysToAutomate">
-                        <fuel_converter_input_container_entry name="0"/>
-                    </grid>
-                </rect>
-
-                <rect pos="460,-175">
-                    <panel name="outputContainerPanel" pos="-2,0" width="300" height="40" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Output Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
-                    </panel>
-
-                    <grid name="fuelOutputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="FluidDecanterOutputContainerList, 7DaysToAutomate">
-                        <fuel_converter_output_container_entry name="0"/>
-                    </grid>
-                </rect>
-
-                <rect pos="0,0">
-                    <panel name="requirementsHeader" pos="460,-356" width="300" height="40" depth="1">
-                        <sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[black]" />
-                        <label depth="6" pos="-75,-4" width="450" height="40" text="Requirements" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
-                    </panel>
-
-                    <panel name="requirementsPanel" pos="460,-400" width="300" height="150" depth="1">
-                        <sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8"/>
-
-                        <label depth="6" pos="55,-10" text="Item Input" color="[green]" visible="{req_item_input}"/>
-                        <label depth="6" pos="55,-10" text="Item Input" color="[red]" visible="{req_not_item_input}"/>
-
-                        <label depth="6" pos="55,-40" text="Item Output" color="[green]" visible="{req_item_output}"/>
-                        <label depth="6" pos="55,-40" text="Item Output" color="[red]" visible="{req_not_item_output}"/>
-
-                        <label depth="6" pos="55,-70" text="Fluid Output" color="[green]" visible="{req_fluid_output}"/>
-                        <label depth="6" pos="55,-70" text="Fluid Output" color="[red]" visible="{req_not_fluid_output}"/>
-                    </panel>
-                </rect>
-
-            </rect>
-        </window>
-
-        <window name="windowPipeProbeHud" controller="PipeProbeHud, 7DaysToAutomate" width="460" height="200" panel="TopCenter" dynamic_position="true" open_sound="" close_sound="">
-            <rect pos="0,120">
-                <sprite depth="1" name="bg" width="460" height="200" type="sliced" color="0,0,0,210"/>
-                <label depth="2" pos="20,-12" width="420" height="32" text="{probe_title}" font_size="28" color="[limeGreen]" effect="outline"/>
-                <label depth="2" pos="20,-42" width="420" height="24" text="{probe_line1}" font_size="22" color="[white]"/>
-                <label depth="2" pos="20,-66" width="420" height="24" text="{probe_line2}" font_size="22" color="[white]"/>
-                <label depth="2" pos="20,-90" width="420" height="24" text="{probe_line3}" font_size="22" color="[white]"/>
-                <label depth="2" pos="20,-114" width="420" height="24" text="{probe_line4}" font_size="22" color="[white]"/>
-                <label depth="2" pos="20,-138" width="420" height="24" text="{probe_line5}" font_size="22" color="[white]"/>
-                <label depth="2" pos="20,-162" width="420" height="24" text="{probe_line6}" font_size="22" color="[white]"/>
-            </rect>
-        </window>
-
-
-    </append>
-
+		<window name="windowPipeProbeHud" controller="PipeProbeHud, 7DaysToAutomate" width="460" height="200" panel="TopCenter" dynamic_position="true" open_sound="" close_sound="">
+			<rect pos="0,120">
+				<sprite depth="1" name="bg" width="460" height="200" type="sliced" color="0,0,0,210" />
+				<label depth="2" pos="20,-12" width="420" height="32" text="{probe_title}" font_size="28" color="[limeGreen]" effect="outline" />
+				<label depth="2" pos="20,-42" width="420" height="24" text="{probe_line1}" font_size="22" color="[white]" />
+				<label depth="2" pos="20,-66" width="420" height="24" text="{probe_line2}" font_size="22" color="[white]" />
+				<label depth="2" pos="20,-90" width="420" height="24" text="{probe_line3}" font_size="22" color="[white]" />
+				<label depth="2" pos="20,-114" width="420" height="24" text="{probe_line4}" font_size="22" color="[white]" />
+				<label depth="2" pos="20,-138" width="420" height="24" text="{probe_line5}" font_size="22" color="[white]" />
+				<label depth="2" pos="20,-162" width="420" height="24" text="{probe_line6}" font_size="22" color="[white]" />
+			</rect>
+		</window>
+	</append>
 </configs>
-
-
-

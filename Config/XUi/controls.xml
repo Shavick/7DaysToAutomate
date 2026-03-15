@@ -1,122 +1,107 @@
 ﻿<xmlpatch>
+	<append xpath="controls">
+		<!-- CRAFTER: RECIPE LIST -->
 
-    <append xpath="controls">
+		<crafter_recipe_entry>
+			<rect height="43" style="press, hover" controller="XUiC_CrafterRecipeEntry, 7DaysToAutomate" sound="[recipe_click]" tooltip="{tooltip}" sound_play_on_hover="[default_hover]">
+				<sprite depth="2" name="backgroundMain" sprite="menu_empty3px" pos="-3,3" width="49" height="49" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="45" height="45" pos="0,1" color="[darkGrey]" type="sliced" />
+				<sprite depth="4" name="Icon" atlas="ItemIconAtlas" sprite="{recipeicon}" size="40,40" pos="24,-22" pivot="center" foregroundlayer="true" />
+			</rect>
+		</crafter_recipe_entry>
 
-        <crafter_recipe_entry>
-            <rect height="43" style="press, hover" controller="XUiC_CrafterRecipeEntry, 7DaysToAutomate" sound="[recipe_click]" tooltip="{tooltip}" sound_play_on_hover="[default_hover]">
-                <sprite depth="2" name="backgroundMain" sprite="menu_empty3px" pos="-3,3" width="49" height="49" color="[black]" type="sliced" fillcenter="false" />
-                <sprite depth="3" name="background" width="45" height="45" pos="0,1" color="[darkGrey]" type="sliced" />
-                <sprite depth="4" name="Icon" atlas="ItemIconAtlas" sprite="{recipeicon}" size="40,40" pos="24,-22" pivot="center" foregroundlayer="true" />
-            </rect>
-        </crafter_recipe_entry>
+		<!-- CRAFTER: INGREDIENTS -->
 
+		<crafter_ingredient_entry>
+			<rect height="46" controller="XUiC_CrafterIngredientEntry, 7DaysToAutomate" disabled_font_color="[disabledLabelColor]" enabled_font_color="[labelColor]">
+				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
+				<sprite depth="4" name="icon" foregroundlayer="true" atlas="ItemIconAtlas" sprite="{ingredienticon}" color="[white]" pos="0,0" size="52,52" />
+				<label depth="5" name="itemCount" pos="28,-45" width="60" height="30" text="{ingredientcount}" pivot="center" justify="center" font_size="24" color="[white]" />
+			</rect>
+		</crafter_ingredient_entry>
 
-        <crafter_ingredient_entry>
-            <rect height="46" controller="XUiC_CrafterIngredientEntry, 7DaysToAutomate" disabled_font_color="[disabledLabelColor]" enabled_font_color="[labelColor]">
-                <sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
-                <sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
-                <sprite depth="4" name="icon" foregroundlayer="true" atlas="ItemIconAtlas" sprite="{ingredienticon}" color="[white]" pos="0,0" size="52,52"/>
-                <label depth="5" name="itemCount" pos="28,-45" width="60" height="30" text="{ingredientcount}" pivot="center" justify="center" font_size="24" color="[white]" />
-            </rect>
-        </crafter_ingredient_entry>
+		<!-- CRAFTER: CATEGORY ICONS -->
 
-        <crafter_category_icon>
-            <button name="categoryIcon" controller="CrafterCategoryEntry, 7DaysToAutomate" depth="1" size="36,36" text="{categoryname}" tooltip="{categoryname}" pivot="center" collider_scale="1.5" sound="[paging_click]" use_selection_box="false" />
-        </crafter_category_icon>
+		<crafter_category_icon>
+			<button name="categoryIcon" controller="CrafterCategoryEntry, 7DaysToAutomate" depth="1" size="36,36" text="{categoryname}" tooltip="{categoryname}" pivot="center" collider_scale="1.5" sound="[paging_click]" use_selection_box="false" />
+		</crafter_category_icon>
 
-        <crafter_input_container_entry>
-            <rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="InputContainerEntry, 7DaysToAutomate">
+		<!-- CRAFTER: INPUT CONTAINERS -->
 
-                <sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false"/>
-                <sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced"/>
+		<crafter_input_container_entry>
+			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="InputContainerEntry, 7DaysToAutomate">
+				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
+				<sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true" />
+				<label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center" />
+				<sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}" />
+				<sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}" />
+			</rect>
+		</crafter_input_container_entry>
 
-                <sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true"/>
+		<!-- CRAFTER: OUTPUT CONTAINERS -->
 
-                <label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center"/>
+		<crafter_output_container_entry>
+			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="OutputContainerEntry, 7DaysToAutomate">
+				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
+				<sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true" />
+				<label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center" />
+				<sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}" />
+				<sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}" />
+			</rect>
+		</crafter_output_container_entry>
 
-                <sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}"/>
-                <sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}"/>
+		<!-- CRAFTER: INPUT BUFFER -->
 
-            </rect>
-        </crafter_input_container_entry>
+		<machine_input_buffer_entry>
+			<rect width="60" height="60" style="press, hover" tooltip="{buffertooltip}" controller="InputBufferEntry, 7DaysToAutomate">
+				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
+				<sprite depth="4" name="icon" foregroundlayer="true" atlas="ItemIconAtlas" sprite="{bufferitemicon}" color="[white]" pos="0,0" size="52,52" />
+				<label depth="5" name="itemCount" pos="18,-45" width="36" height="24" text="{bufferitemcount}" pivot="center" justify="center" font_size="22" color="[white]" />
+				<label depth="5" name="itemName" pos="0,-2" width="56" height="20" text="{bufferitemname}" font_size="12" color="[white]" justify="center" visible="false" />
+			</rect>
+		</machine_input_buffer_entry>
 
-        <crafter_output_container_entry>
-            <rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="OutputContainerEntry, 7DaysToAutomate">
+		<!-- EXTRACTOR: OUTPUT CONTAINERS -->
 
-                <sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false"/>
-                <sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced"/>
+		<extractor_output_container_entry>
+			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="ExtractorOutputContainerEntry, 7DaysToAutomate">
+				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
+				<sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true" />
+				<label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center" />
+				<sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}" />
+				<sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}" />
+			</rect>
+		</extractor_output_container_entry>
 
-                <sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true"/>
+		<!-- DECANTER: INPUT CONTAINERS -->
 
-                <label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center"/>
+		<fuel_converter_input_container_entry>
+			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="FluidDecanterInputContainerEntry, 7DaysToAutomate">
+				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
+				<sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true" />
+				<label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center" />
+				<sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}" />
+				<sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}" />
+			</rect>
+		</fuel_converter_input_container_entry>
 
-                <sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}"/>
-                <sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}"/>
+		<!-- DECANTER: OUTPUT CONTAINERS -->
 
-            </rect>
-        </crafter_output_container_entry>
-
-        <machine_input_buffer_entry>
-            <rect width="60" height="60" style="press, hover" tooltip="{buffertooltip}" controller="InputBufferEntry, 7DaysToAutomate">
-                <sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false"/>
-                <sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced"/>
-
-                <sprite depth="4" name="icon" foregroundlayer="true" atlas="ItemIconAtlas" sprite="{bufferitemicon}" color="[white]" pos="0,0" size="52,52"/>
-                <label depth="5" name="itemCount" pos="18,-45" width="36" height="24" text="{bufferitemcount}" pivot="center" justify="center" font_size="22" color="[white]" />
-                <label depth="5" name="itemName" pos="0,-2" width="56" height="20" text="{bufferitemname}" font_size="12" color="[white]" justify="center" visible="false"/>
-            </rect>
-        </machine_input_buffer_entry>
-
-        <extractor_output_container_entry>
-            <rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="ExtractorOutputContainerEntry, 7DaysToAutomate">
-
-                <sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false"/>
-                <sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced"/>
-
-                <sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true"/>
-
-                <label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center"/>
-
-                <sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}"/>
-                <sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}"/>
-
-            </rect>
-        </extractor_output_container_entry>
-        <fuel_converter_input_container_entry>
-            <rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="FluidDecanterInputContainerEntry, 7DaysToAutomate">
-
-                <sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false"/>
-                <sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced"/>
-
-                <sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true"/>
-
-                <label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center"/>
-
-                <sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}"/>
-                <sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}"/>
-
-            </rect>
-        </fuel_converter_input_container_entry>
-
-        <fuel_converter_output_container_entry>
-            <rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="FluidDecanterOutputContainerEntry, 7DaysToAutomate">
-
-                <sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false"/>
-                <sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced"/>
-
-                <sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true"/>
-
-                <label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center"/>
-
-                <sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}"/>
-                <sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}"/>
-
-            </rect>
-        </fuel_converter_output_container_entry>
-    </append>
-
+		<fuel_converter_output_container_entry>
+			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="FluidDecanterOutputContainerEntry, 7DaysToAutomate">
+				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
+				<sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true" />
+				<label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center" />
+				<sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}" />
+				<sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}" />
+			</rect>
+		</fuel_converter_output_container_entry>
+	</append>
 </xmlpatch>
-
-
-
-

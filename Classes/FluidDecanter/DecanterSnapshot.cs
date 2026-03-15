@@ -3,7 +3,7 @@
 public class DecanterSnapshot : IHLRSnapshot
 {
     public string SnapshotKind => "Decanter";
-    public int SnapshotVersion => 3;
+    public int SnapshotVersion => 5;
 
     public Guid MachineId { get; set; }
     public Vector3i Position { get; set; }
@@ -20,6 +20,8 @@ public class DecanterSnapshot : IHLRSnapshot
     public Guid SelectedOutputPipeGraphId;
 
     public string SelectedFluidType;
+    public string SelectedRecipeKey;
+    public string MachineRecipeGroupsCsv;
     public Guid SelectedFluidGraphId;
 
     public int PendingItemInput;

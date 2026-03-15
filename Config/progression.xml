@@ -1,59 +1,57 @@
-<configs>
+﻿<configs>
+	<!-- TECH TREES -->
+	<append xpath="/progression">
+		<tech_tree name="Mechanical">
+			<node id="mech_t0" x="0" y="0" icon="mech_root" unlocks="mech_t1" />
+			<node id="mech_t1" x="1" y="-1" icon="mech_basic" unlocks="mech_t2" />
+			<node id="mech_t2" x="1" y="-2" icon="mech_basic2" />
+		</tech_tree>
+	</append>
 
-    <append xpath="/progression">
+	<!-- ELECTRICIAN: RECIPE UNLOCKS -->
+	<!-- map pipes into existing vanilla display tiers (25/45/55) -->
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/effect_group">
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="25,100" value="1" tags="itemPipe,itemPipeElbow,itemPipeSmallJoint,fluidIntake,fluidValve" />
 
-        <tech_tree name="Mechanical">
-            <node id="mech_t0" x="0" y="0" icon="mech_root" unlocks="mech_t1" />
-            <node id="mech_t1" x="1" y="-1" icon="mech_basic" unlocks="mech_t2"/>
-            <node id="mech_t2" x="1" y="-2" icon="mech_basic2" />
-        </tech_tree>
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="45,100" value="1" tags="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2,fluidIntakeT2,fluidValveT2" />
 
-    </append>
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="55,100" value="1" tags="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3,fluidIntakeT3,fluidValveT3" />
+	</append>
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='generatorBankA']">
+		<unlock_entry item="itemPipe,itemPipeElbow,itemPipeSmallJoint,fluidIntake,fluidValve" unlock_tier="1" />
+	</append>
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='motionsensor']">
+		<unlock_entry item="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2,fluidIntakeT2,fluidValveT2" unlock_tier="1" />
+	</append>
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='batterybank']">
+		<unlock_entry item="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3,fluidIntakeT3,fluidValveT3" unlock_tier="1" />
+	</append>
 
-    <!-- Electrician: map pipes into existing vanilla display tiers (25/45/55) -->
-    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/effect_group">
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="25,100" value="1" tags="itemPipe,itemPipeElbow,itemPipeSmallJoint,fluidIntake,fluidValve"/>
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="45,100" value="1" tags="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2,fluidIntakeT2,fluidValveT2"/>
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="55,100" value="1" tags="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3,fluidIntakeT3,fluidValveT3"/>
-    </append>
+	<!-- WORKSTATIONS: RECIPE UNLOCKS -->
+	<!-- map extractors/crafter into existing vanilla display rows -->
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/effect_group">
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="20,100" value="1" tags="universalIronExtractort1,universalCoalExtractor,universalNitrateExtractor,universalLeadExtractor,universalOilShaleExtractor" />
 
-    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='generatorBankA']">
-        <unlock_entry item="itemPipe,itemPipeElbow,itemPipeSmallJoint,fluidIntake,fluidValve" unlock_tier="1"/>
-    </append>
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="30,100" value="1" tags="universalIronExtractort2" />
 
-    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='motionsensor']">
-        <unlock_entry item="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2,fluidIntakeT2,fluidValveT2" unlock_tier="1"/>
-    </append>
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="40,100" value="1" tags="universalIronExtractort3,universalCrafter" />
 
-    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='batterybank']">
-        <unlock_entry item="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3,fluidIntakeT3,fluidValveT3" unlock_tier="1"/>
-    </append>
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="50,100" value="1" tags="universalIronExtractort4" />
 
-    <!-- Workstations: map extractors/crafter into existing vanilla display rows -->
-    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/effect_group">
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="20,100" value="1" tags="universalIronExtractort1,universalCoalExtractor,universalNitrateExtractor,universalLeadExtractor,universalOilShaleExtractor"/>
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="30,100" value="1" tags="universalIronExtractort2"/>
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="40,100" value="1" tags="universalIronExtractort3,universalCrafter"/>
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="50,100" value="1" tags="universalIronExtractort4"/>
-        <passive_effect name="RecipeTagUnlocked" operation="base_set" level="56,100" value="1" tags="universalIronExtractort5"/>
-    </append>
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="56,100" value="1" tags="universalIronExtractort5" />
+	</append>
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='cntDewCollector,toolAnvil,toolDewGatherer']">
+		<unlock_entry item="universalIronExtractort1,universalCoalExtractor,universalNitrateExtractor,universalLeadExtractor,universalOilShaleExtractor" unlock_tier="2" />
+	</append>
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='cntApiary,toolDewTarp,cementMixer']">
+		<unlock_entry item="universalIronExtractort2" unlock_tier="1" />
+	</append>
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='toolApiaryExtractor,toolApiaryBroodBox,resourceWaterFilter,chemistryStation']">
+		<unlock_entry item="universalIronExtractort3,universalCrafter" unlock_tier="1" />
 
-    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='cntDewCollector,toolAnvil,toolDewGatherer']">
-        <unlock_entry item="universalIronExtractort1,universalCoalExtractor,universalNitrateExtractor,universalLeadExtractor,universalOilShaleExtractor" unlock_tier="2"/>
-    </append>
-
-    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='cntApiary,toolDewTarp,cementMixer']">
-        <unlock_entry item="universalIronExtractort2" unlock_tier="1"/>
-    </append>
-
-    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='toolApiaryExtractor,toolApiaryBroodBox,resourceWaterFilter,chemistryStation']">
-        <unlock_entry item="universalIronExtractort3,universalCrafter" unlock_tier="1"/>
-        <unlock_entry item="universalIronExtractort4" unlock_tier="4"/>
-    </append>
-
-    <append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='toolApiarySmoker,toolForgeCrucible']">
-        <unlock_entry item="universalIronExtractort5" unlock_tier="1"/>
-    </append>
-
+		<unlock_entry item="universalIronExtractort4" unlock_tier="4" />
+	</append>
+	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='toolApiarySmoker,toolForgeCrucible']">
+		<unlock_entry item="universalIronExtractort5" unlock_tier="1" />
+	</append>
 </configs>
-

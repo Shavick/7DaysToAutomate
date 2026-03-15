@@ -593,6 +593,27 @@ public class HigherLogicRegistry
         if (!HasValidGraphStorageEndpoint(decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos))
             return "Missing Item Input";
 
+        if (string.IsNullOrEmpty(decanter.SelectedRecipeKey) && string.IsNullOrEmpty(decanter.SelectedFluidType))
+            return "No recipe selected";
+
+        if (string.IsNullOrEmpty(decanter.SelectedFluidType) &&
+            !string.IsNullOrEmpty(decanter.SelectedRecipeKey) &&
+            MachineRecipeRegistry.TryGetRecipeByKey(decanter.SelectedRecipeKey, out MachineRecipe selectedRecipe) &&
+            TileEntityFluidDecanter.TryReadMachineRecipeAsDecanterRule(
+                selectedRecipe,
+                Math.Max(1, decanter.CycleTickLength),
+                out _,
+                out _,
+                out string recipeFluidType,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _))
+        {
+            decanter.SelectedFluidType = recipeFluidType ?? string.Empty;
+        }
+
         if (string.IsNullOrEmpty(decanter.SelectedFluidType))
             return "No fluid selected";
 
@@ -621,7 +642,15 @@ public class HigherLogicRegistry
                 return "Input item unavailable";
             }
 
-            if (!TryFindDecanterInputCandidate(availableCounts, decanter.SelectedFluidType, out _, out _, out _, out _))
+            if (!TryFindDecanterInputCandidate(
+                    decanter,
+                    availableCounts,
+                    out _,
+                    out _,
+                    out _,
+                    out _,
+                    out _,
+                    out _))
                 return "No matching input item";
         }
 
@@ -774,52 +803,135 @@ public class HigherLogicRegistry
     }
 
     private bool TryFindDecanterInputCandidate(
+        DecanterSnapshot decanter,
         Dictionary<string, int> availableCounts,
-        string selectedFluidType,
         out string matchedItemName,
+        out int requiredInputCount,
         out int fluidAmountMg,
         out string returnItemName,
-        out int returnItemAmount)
+        out int returnItemAmount,
+        out int craftTimeTicks)
     {
         matchedItemName = string.Empty;
+        requiredInputCount = 0;
         fluidAmountMg = 0;
         returnItemName = string.Empty;
         returnItemAmount = 1;
+        craftTimeTicks = 1;
 
-        if (availableCounts == null || availableCounts.Count == 0 || string.IsNullOrEmpty(selectedFluidType))
+        if (decanter == null || availableCounts == null || availableCounts.Count == 0)
             return false;
 
-        string normalizedFluid = selectedFluidType.Trim().ToLowerInvariant();
-        if (string.IsNullOrEmpty(normalizedFluid))
-            return false;
+        string groupsCsv = string.IsNullOrWhiteSpace(decanter.MachineRecipeGroupsCsv)
+            ? "fluiddecanter"
+            : decanter.MachineRecipeGroupsCsv.Trim();
 
-        List<string> itemNames = new List<string>(availableCounts.Keys);
-        itemNames.Sort(StringComparer.Ordinal);
+        int defaultCraftTicks = Math.Max(1, decanter.CycleTickLength);
+        string normalizedSelectedFluid = (decanter.SelectedFluidType ?? string.Empty).Trim().ToLowerInvariant();
 
-        for (int i = 0; i < itemNames.Count; i++)
+        bool TryMatchRecipe(
+            MachineRecipe machineRecipe,
+            bool requireSelectedFluid,
+            out string inputItem,
+            out int inputCount,
+            out int outputFluidMg,
+            out string outputItem,
+            out int outputItemCount,
+            out int resolvedCraftTicks)
         {
-            string itemName = itemNames[i];
-            if (string.IsNullOrEmpty(itemName))
-                continue;
+            inputItem = string.Empty;
+            inputCount = 0;
+            outputFluidMg = 0;
+            outputItem = string.Empty;
+            outputItemCount = 1;
+            resolvedCraftTicks = defaultCraftTicks;
 
-            int count = availableCounts.TryGetValue(itemName, out int value) ? value : 0;
-            if (count <= 0)
-                continue;
+            if (machineRecipe == null)
+                return false;
 
-            if (!TileEntityFluidDecanter.TryGetConversionRuleForItem(itemName, out string fluidType, out int amountMg, out string returnItem, out int ruleReturnItemAmount))
-                continue;
+            if (!TileEntityFluidDecanter.IsRecipeAllowedForMachineGroups(machineRecipe, groupsCsv))
+                return false;
 
-            if (!string.Equals(fluidType, normalizedFluid, StringComparison.Ordinal))
-                continue;
+            if (!TileEntityFluidDecanter.TryReadMachineRecipeAsDecanterRule(
+                    machineRecipe,
+                    defaultCraftTicks,
+                    out inputItem,
+                    out inputCount,
+                    out string fluidType,
+                    out outputFluidMg,
+                    out outputItem,
+                    out outputItemCount,
+                    out resolvedCraftTicks,
+                    out _))
+            {
+                return false;
+            }
 
-            if (amountMg <= 0)
-                continue;
+            if (requireSelectedFluid &&
+                !string.IsNullOrEmpty(normalizedSelectedFluid) &&
+                !string.Equals(fluidType, normalizedSelectedFluid, StringComparison.Ordinal))
+            {
+                return false;
+            }
 
-            matchedItemName = itemName;
-            fluidAmountMg = amountMg;
-            returnItemName = returnItem ?? string.Empty;
-            returnItemAmount = Math.Max(1, ruleReturnItemAmount);
+            if (string.IsNullOrEmpty(inputItem) || inputCount <= 0 || outputFluidMg <= 0)
+                return false;
+
+            int available = availableCounts.TryGetValue(inputItem, out int value) ? value : 0;
+            if (available < inputCount)
+                return false;
+
+            decanter.SelectedRecipeKey = machineRecipe.NormalizedKey ?? string.Empty;
+            decanter.SelectedFluidType = fluidType ?? string.Empty;
             return true;
+        }
+
+        if (!string.IsNullOrEmpty(decanter.SelectedRecipeKey) &&
+            MachineRecipeRegistry.TryGetRecipeByKey(decanter.SelectedRecipeKey, out MachineRecipe selectedRecipe) &&
+            TryMatchRecipe(
+                selectedRecipe,
+                true,
+                out matchedItemName,
+                out requiredInputCount,
+                out fluidAmountMg,
+                out returnItemName,
+                out returnItemAmount,
+                out craftTimeTicks))
+        {
+            return true;
+        }
+
+        List<MachineRecipe> recipes = MachineRecipeRegistry.GetRecipesForMachineGroups(groupsCsv, false);
+        for (int i = 0; i < recipes.Count; i++)
+        {
+            if (TryMatchRecipe(
+                    recipes[i],
+                    true,
+                    out matchedItemName,
+                    out requiredInputCount,
+                    out fluidAmountMg,
+                    out returnItemName,
+                    out returnItemAmount,
+                    out craftTimeTicks))
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < recipes.Count; i++)
+        {
+            if (TryMatchRecipe(
+                    recipes[i],
+                    false,
+                    out matchedItemName,
+                    out requiredInputCount,
+                    out fluidAmountMg,
+                    out returnItemName,
+                    out returnItemAmount,
+                    out craftTimeTicks))
+            {
+                return true;
+            }
         }
 
         return false;
@@ -1100,7 +1212,15 @@ public class HigherLogicRegistry
             return false;
         }
 
-        if (!TryFindDecanterInputCandidate(availableCounts, decanter.SelectedFluidType, out string matchedItemName, out int fluidAmountMg, out string returnItemName, out int returnItemAmount))
+        if (!TryFindDecanterInputCandidate(
+                decanter,
+                availableCounts,
+                out string matchedItemName,
+                out int requiredInputCount,
+                out int fluidAmountMg,
+                out string returnItemName,
+                out int returnItemAmount,
+                out int craftTimeTicks))
         {
             blockedReason = "No matching input item";
             HLRDevLog($"[HLR][Decanter][Cycle] BLOCKED - {blockedReason} fluid={decanter.SelectedFluidType}");
@@ -1116,7 +1236,7 @@ public class HigherLogicRegistry
 
         Dictionary<string, int> request = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            { matchedItemName, 1 }
+            { matchedItemName, requiredInputCount }
         };
 
         HLRDevLog($"[HLR][Decanter][Cycle] CONSUME ATTEMPT graph={decanter.SelectedInputPipeGraphId} pos={decanter.SelectedInputChestPos} request={FormatItemMapForLog(request)}");
@@ -1130,11 +1250,12 @@ public class HigherLogicRegistry
             return false;
         }
 
-        decanter.PendingItemInput = 1;
+        decanter.PendingItemInput = Math.Max(1, consumedCount);
         decanter.PendingItemInputName = matchedItemName;
         decanter.PendingItemInputFluidAmountMg = Math.Max(0, fluidAmountMg);
         decanter.PendingItemInputReturnItemName = returnItemName ?? string.Empty;
         decanter.PendingItemInputReturnItemAmount = Math.Max(1, returnItemAmount);
+        decanter.CycleTickLength = Math.Max(1, craftTimeTicks);
 
         cycleAction = "Requested Input";
         HLRDevLog($"[HLR][Decanter][Cycle] CONSUME SUCCESS item={matchedItemName} consumed={consumedCount} fluidMg={decanter.PendingItemInputFluidAmountMg} returnItem={decanter.PendingItemInputReturnItemName} returnItemAmount={decanter.PendingItemInputReturnItemAmount}");
@@ -1522,6 +1643,8 @@ public class HigherLogicRegistry
             SelectedOutputMode = source.SelectedOutputMode,
             SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
             SelectedFluidType = source.SelectedFluidType,
+            SelectedRecipeKey = source.SelectedRecipeKey,
+            MachineRecipeGroupsCsv = source.MachineRecipeGroupsCsv,
             SelectedFluidGraphId = source.SelectedFluidGraphId,
             PendingItemInput = source.PendingItemInput,
             PendingItemOutput = source.PendingItemOutput,
@@ -1750,7 +1873,7 @@ public class HigherLogicRegistry
                 return null;
 
             case "Decanter":
-                if (version == 1 || version == 2 || version == 3)
+                if (version == 1 || version == 2 || version == 3 || version == 4 || version == 5)
                 {
                     return new DecanterSnapshot();
                 }
@@ -2014,6 +2137,8 @@ public class HigherLogicRegistry
         bw.Write(decanter.SelectedOutputPipeGraphId.ToString());
 
         bw.Write(decanter.SelectedFluidType ?? string.Empty);
+        bw.Write(decanter.SelectedRecipeKey ?? string.Empty);
+        bw.Write(decanter.MachineRecipeGroupsCsv ?? string.Empty);
         bw.Write(decanter.SelectedFluidGraphId.ToString());
 
         bw.Write(decanter.PendingItemInput);
@@ -2317,6 +2442,16 @@ public class HigherLogicRegistry
             decanter.SelectedOutputPipeGraphId = Guid.Empty;
 
         decanter.SelectedFluidType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
+        if (snapshotVersion >= 4)
+            decanter.SelectedRecipeKey = br.ReadString() ?? string.Empty;
+        else
+            decanter.SelectedRecipeKey = string.Empty;
+
+        if (snapshotVersion >= 5)
+            decanter.MachineRecipeGroupsCsv = br.ReadString() ?? string.Empty;
+        else
+            decanter.MachineRecipeGroupsCsv = string.Empty;
+
         string fluidGraph = br.ReadString();
         if (!Guid.TryParse(fluidGraph, out decanter.SelectedFluidGraphId))
             decanter.SelectedFluidGraphId = Guid.Empty;
@@ -2352,6 +2487,9 @@ public class HigherLogicRegistry
 
         if (decanter.PendingItemOutput <= 0)
             decanter.PendingItemOutputName = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(decanter.MachineRecipeGroupsCsv))
+            decanter.MachineRecipeGroupsCsv = "fluiddecanter";
     }
 
 }

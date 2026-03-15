@@ -1,17 +1,4 @@
-<configs>
-
-    <append xpath="/items/item[@name='drinkJarBoiledWater']">
-        <property name="FluidConvertType" value="water"/>
-        <property name="FluidConvertAmountGallons" value="0.5"/>
-        <property name="FluidConvertReturnItem" value="drinkJarEmpty"/>
-    </append>
-
-    <append xpath="/items/item[@name='ammoGasCan']">
-        <property name="FluidConvertType" value="gas"/>
-        <property name="FluidConvertAmountGallons" value="2"/>
-        <property name="FluidConvertReturnItem" value="resourceScrapPolymers"/>
-        <property name="FluidConvertReturnItemAmount" value="10"/>
-    </append>
-
+﻿<configs>
+	<!-- MACHINE ITEM OVERRIDES -->
+	<!-- Machine conversion behavior moved to /recipes machineRecipe entries. -->
 </configs>
-

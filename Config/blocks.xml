@@ -1,552 +1,573 @@
 ﻿<configs>
-    <append xpath="/blocks">
-        <!-- Universal Extractor - Iron T1 -->
-        <block name="universalIronExtractort1">
-            <property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="1000"/>
-            <property name="CustomIcon" value="generatorbank"/>
-            <property name="Stacknumber" value="1"/>
-            <property name="HeatMapStrength" value="0.5"/>
-            <property name="HeatMapTime" value="1200"/>
-            <property name="HeatMapFrequency" value="25"/>
-            <property name="EconomicValue" value="500"/>
-            <property name="DescriptionKey" value="universalIronExtractorDesc"/>
-            <property name="UnlockedBy" value="craftingWorkstations"/>
-            <!-- Custom Properties-->
-            <property name="BlockSource" value="terrOreIron"/>
-            <property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall"/>
-            <property name="OutputCount" value="1,1-3"/>
-            <property name="ExtractionSpeed" value="10,3"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+	<append xpath="/blocks">
+		<!-- MACHINES: EXTRACTORS -->
 
-        <!-- Universal Extractor - Iron T2 -->
-        <block name="universalIronExtractort2">
-            <property name="Extends" value="universalIronExtractort1"/>
-            <!-- Custom Properties-->
-            <property name="BlockSource" value="terrOreIron"/>
-            <property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall"/>
-            <property name="OutputCount" value="1-7,1-3"/>
-            <property name="ExtractionSpeed" value="5,1"/>
-        </block>
+		<!-- Universal Extractor - Iron T1 -->
 
-        <!-- Universal Extractor - Iron T3 -->
-        <block name="universalIronExtractort3">
-            <property name="Extends" value="universalIronExtractort1"/>
-            <!-- Custom Properties-->
-            <property name="BlockSource" value="terrOreIron"/>
-            <property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall"/>
-            <property name="OutputCount" value="1-7,1-2"/>
-            <property name="ExtractionSpeed" value="3,1"/>
-        </block>
+		<block name="universalIronExtractort1">
+			<property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="HeatMapStrength" value="0.5" />
+			<property name="HeatMapTime" value="1200" />
+			<property name="HeatMapFrequency" value="25" />
+			<property name="EconomicValue" value="500" />
+			<property name="DescriptionKey" value="universalIronExtractorDesc" />
+			<property name="UnlockedBy" value="craftingWorkstations" />
+			<!-- Custom Properties-->
+			<property name="BlockSource" value="terrOreIron" />
+			<property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall" />
+			<property name="OutputCount" value="1,1-3" />
+			<property name="ExtractionSpeed" value="10,3" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-        <!-- Universal Extractor - Iron T4 -->
-        <block name="universalIronExtractort4">
-            <property name="Extends" value="universalIronExtractort1"/>
-            <!-- Custom Properties-->
-            <property name="BlockSource" value="terrOreIron"/>
-            <property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall"/>
-            <property name="OutputCount" value="3-9,1-3"/>
-            <property name="ExtractionSpeed" value="3,1"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<!-- Universal Extractor - Iron T2 -->
 
-        <!-- Universal Extractor - Iron T5 -->
-        <block name="universalIronExtractort5">
-            <property name="Extends" value="universalIronExtractort1"/>
-            <!-- Custom Properties-->
-            <property name="BlockSource" value="terrOreIron"/>
-            <property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall"/>
-            <property name="OutputCount" value="0-150,1"/>
-            <property name="ExtractionSpeed" value="1,5"/>
-        </block>
+		<block name="universalIronExtractort2">
+			<property name="Extends" value="universalIronExtractort1" />
+			<!-- Custom Properties-->
+			<property name="BlockSource" value="terrOreIron" />
+			<property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall" />
+			<property name="OutputCount" value="1-7,1-3" />
+			<property name="ExtractionSpeed" value="5,1" />
+		</block>
 
-        <!-- Universal Extractor - Coal -->
-        <block name="universalCoalExtractor">
-            <property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="1000"/>
-            <property name="CustomIcon" value="generatorbank"/>
-            <property name="Stacknumber" value="1"/>
-            <property name="HeatMapStrength" value="0.5"/>
-            <property name="HeatMapTime" value="1200"/>
-            <property name="HeatMapFrequency" value="25"/>
-            <property name="EconomicValue" value="500"/>
-            <property name="DescriptionKey" value="universalCoalExtractorDesc"/>
-            <property name="UnlockedBy" value="craftingWorkstations"/>
-            <!-- Custom Properties-->
-            <property name="BlockSource" value="terrOreCoal"/>
-            <property name="ResourceGenerated" value="resourceCoal"/>
-            <property name="ExtractionSpeed" value="3"/>
-            <property name="OutputCount" value="1-2"/>
-            <property name="DevLogs" value="true"/>
-            <property name="NeedsFluidToRun" value="true"/>
-            <property name="FluidFuel" value="gas"/>
-            <property name="FluidFuelBufferGallons" value="20"/>
-            <property name="FluidFuelUsePerSecond" value="1"/>
-            <property name="FluidFuelPullPerSecond" value="20"/>
-        </block>
+		<!-- Universal Extractor - Iron T3 -->
 
-        <!-- Universal Extractor - Nitrate -->
-        <block name="universalNitrateExtractor">
-            <property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="1000"/>
-            <property name="CustomIcon" value="generatorbank"/>
-            <property name="Stacknumber" value="1"/>
-            <property name="HeatMapStrength" value="0.5"/>
-            <property name="HeatMapTime" value="1200"/>
-            <property name="HeatMapFrequency" value="25"/>
-            <property name="EconomicValue" value="500"/>
-            <property name="DescriptionKey" value="universalNitrateExtractorDesc"/>
-            <property name="UnlockedBy" value="craftingWorkstations"/>
-            <!-- Custom Properties-->
-            <property name="BlockSource" value="terrOrePotassiumNitrate"/>
-            <property name="ResourceGenerated" value="resourcePotassiumNitratePowder"/>
-            <property name="ExtractionSpeed" value="1"/>
-            <property name="OutputCount" value="1-5"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<block name="universalIronExtractort3">
+			<property name="Extends" value="universalIronExtractort1" />
+			<!-- Custom Properties-->
+			<property name="BlockSource" value="terrOreIron" />
+			<property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall" />
+			<property name="OutputCount" value="1-7,1-2" />
+			<property name="ExtractionSpeed" value="3,1" />
+		</block>
 
-        <!-- Universal Extractor - Lead -->
-        <block name="universalLeadExtractor">
-            <property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="1000"/>
-            <property name="CustomIcon" value="generatorbank"/>
-            <property name="Stacknumber" value="1"/>
-            <property name="HeatMapStrength" value="0.5"/>
-            <property name="HeatMapTime" value="1200"/>
-            <property name="HeatMapFrequency" value="25"/>
-            <property name="EconomicValue" value="500"/>
-            <property name="DescriptionKey" value="universalLeadExtractorDesc"/>
-            <property name="UnlockedBy" value="craftingWorkstations"/>
-            <!-- Custom Properties-->
-            <property name="BlockSource" value="terrOreLead"/>
-            <property name="ResourceGenerated" value="resourceScrapLead"/>
-            <property name="ExtractionSpeed" value="1"/>
-            <property name="OutputCount" value="5"/>
-        </block>
+		<!-- Universal Extractor - Iron T4 -->
 
-        <!-- Universal Extractor - Oil Shale -->
-        <block name="universalOilShaleExtractor">
-            <property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="1000"/>
-            <property name="CustomIcon" value="generatorbank"/>
-            <property name="Stacknumber" value="1"/>
-            <property name="HeatMapStrength" value="0.5"/>
-            <property name="HeatMapTime" value="1200"/>
-            <property name="HeatMapFrequency" value="25"/>
-            <property name="EconomicValue" value="500"/>
-            <property name="DescriptionKey" value="universalOilShaleExtractorDesc"/>
-            <property name="UnlockedBy" value="craftingWorkstations"/>
-            <!-- Custom Properties-->
-            <property name="BlockSource" value="terrOreOilDeposit"/>
-            <property name="ResourceGenerated" value="resourceOilShale"/>
-            <property name="ExtractionSpeed" value="1"/>
-            <property name="OutputCount" value="5"/>
-        </block>
+		<block name="universalIronExtractort4">
+			<property name="Extends" value="universalIronExtractort1" />
+			<!-- Custom Properties-->
+			<property name="BlockSource" value="terrOreIron" />
+			<property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall" />
+			<property name="OutputCount" value="3-9,1-3" />
+			<property name="ExtractionSpeed" value="3,1" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-        <block name="universalCrafter">
-            <property name="Class" value="UniversalCrafterBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="1000"/>
-            <property name="CustomIcon" value="generatorbank"/>
-            <property name="Stacknumber" value="1"/>
-            <property name="EconomicValue" value="1000"/>
-            <property name="DescriptionKey" value="universalCrafterDesc"/>
-            <property name="UnlockedBy" value="craftingWorkstations"/>
-            <!-- Placeholder properties - fill later -->
-            <property name="CraftingSpeed" value="1"/>
-            <property name="InternalStorageMultiplier" value="5"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<!-- Universal Extractor - Iron T5 -->
 
-        <block name="networkController">
-            <property name="Class" value="NetworkControllerBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Electrical/serverComputerPrefab.prefab"/>
-            <property name="CustomIcon" value="decoServerRackWhite"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="1200"/>
-            <property name="Stacknumber" value="1"/>
-            <property name="EconomicValue" value="1500"/>
-            <property name="DescriptionKey" value="networkControllerDesc"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<block name="universalIronExtractort5">
+			<property name="Extends" value="universalIronExtractort1" />
+			<!-- Custom Properties-->
+			<property name="BlockSource" value="terrOreIron" />
+			<property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall" />
+			<property name="OutputCount" value="0-150,1" />
+			<property name="ExtractionSpeed" value="1,5" />
+		</block>
 
-        <block name="itemPipe">
-            <property name="Class" value="ItemPipeBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Industrial/pipeSmall_1x1Prefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="false"/>
-            <property name="MaxDamage" value="500"/>
-            <property name="CustomIcon" value="pipeSmall1x1"/>
-	        <property name="CustomIconTint" value="8D2427"/>
-            <property name="Stacknumber" value="100"/>
-            <property name="EconomicValue" value="25"/>
-            <property name="DescriptionKey" value="itemPipeDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="DevLogs" value="true"/>
-            <property name="PipeThroughput" value="3"/>
-            <property name="PipeSpeed" value="1"/>
-            <property name="PipeLatency" value="1"/>
-        </block>
+		<!-- Universal Extractor - Coal -->
 
-        <block name="itemPipeElbow">
-            <property name="Class" value="ItemPipeBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Industrial/pipeSmallCornerPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="false"/>
-            <property name="MaxDamage" value="500"/>
-            <property name="CustomIcon" value="pipeSmallCorner"/>
-            <property name="CustomIconTint" value="8D2427"/>
-            <property name="Stacknumber" value="100"/>
-            <property name="EconomicValue" value="25"/>
-            <property name="DescriptionKey" value="itemPipeElbowDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="DevLogs" value="true"/>
-            <property name="PipeThroughput" value="5"/>
-            <property name="PipeSpeed" value="1"/>
-            <property name="PipeLatency" value="1"/>
-        </block>
+		<block name="universalCoalExtractor">
+			<property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="HeatMapStrength" value="0.5" />
+			<property name="HeatMapTime" value="1200" />
+			<property name="HeatMapFrequency" value="25" />
+			<property name="EconomicValue" value="500" />
+			<property name="DescriptionKey" value="universalCoalExtractorDesc" />
+			<property name="UnlockedBy" value="craftingWorkstations" />
+			<!-- Custom Properties-->
+			<property name="BlockSource" value="terrOreCoal" />
+			<property name="ResourceGenerated" value="resourceCoal" />
+			<property name="ExtractionSpeed" value="3" />
+			<property name="OutputCount" value="1-2" />
+			<property name="DevLogs" value="true" />
+			<property name="NeedsFluidToRun" value="true" />
+			<property name="FluidFuel" value="gas" />
+			<property name="FluidFuelBufferGallons" value="20" />
+			<property name="FluidFuelUsePerSecond" value="1" />
+			<property name="FluidFuelPullPerSecond" value="20" />
+		</block>
 
-        <block name="itemPipeSmallJoint">
-            <property name="Class" value="ItemPipeBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Industrial/pipeSmallJointPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="false"/>
-            <property name="MaxDamage" value="500"/>
-            <property name="CustomIcon" value="pipeSmallJoint"/>
-            <property name="CustomIconTint" value="8D2427"/>
-            <property name="Stacknumber" value="100"/>
-            <property name="EconomicValue" value="25"/>
-            <property name="DescriptionKey" value="itemPipeTJunctionDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="DevLogs" value="true"/>
-            <property name="PipeThroughput" value="5"/>
-            <property name="PipeSpeed" value="1"/>
-            <property name="PipeLatency" value="1"/>
-        </block>
+		<!-- Universal Extractor - Nitrate -->
 
+		<block name="universalNitrateExtractor">
+			<property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="HeatMapStrength" value="0.5" />
+			<property name="HeatMapTime" value="1200" />
+			<property name="HeatMapFrequency" value="25" />
+			<property name="EconomicValue" value="500" />
+			<property name="DescriptionKey" value="universalNitrateExtractorDesc" />
+			<property name="UnlockedBy" value="craftingWorkstations" />
+			<!-- Custom Properties-->
+			<property name="BlockSource" value="terrOrePotassiumNitrate" />
+			<property name="ResourceGenerated" value="resourcePotassiumNitratePowder" />
+			<property name="ExtractionSpeed" value="1" />
+			<property name="OutputCount" value="1-5" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-        <block name="itemPipeT2">
-            <property name="Extends" value="itemPipe"/>
-            <property name="CustomIconTint" value="0F5FA8"/>
-            <property name="MaxDamage" value="650"/>
-            <property name="EconomicValue" value="40"/>
-            <property name="DescriptionKey" value="itemPipeT2Desc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="PipeThroughput" value="9"/>
-            <property name="PipeSpeed" value="2"/>
-            <property name="PipeLatency" value="2"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<!-- Universal Extractor - Lead -->
 
-        <block name="itemPipeElbowT2">
-            <property name="Extends" value="itemPipeElbow"/>
-            <property name="CustomIconTint" value="0F5FA8"/>
-            <property name="MaxDamage" value="650"/>
-            <property name="EconomicValue" value="40"/>
-            <property name="DescriptionKey" value="itemPipeElbowT2Desc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="PipeThroughput" value="9"/>
-            <property name="PipeSpeed" value="2"/>
-            <property name="PipeLatency" value="2"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<block name="universalLeadExtractor">
+			<property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="HeatMapStrength" value="0.5" />
+			<property name="HeatMapTime" value="1200" />
+			<property name="HeatMapFrequency" value="25" />
+			<property name="EconomicValue" value="500" />
+			<property name="DescriptionKey" value="universalLeadExtractorDesc" />
+			<property name="UnlockedBy" value="craftingWorkstations" />
+			<!-- Custom Properties-->
+			<property name="BlockSource" value="terrOreLead" />
+			<property name="ResourceGenerated" value="resourceScrapLead" />
+			<property name="ExtractionSpeed" value="1" />
+			<property name="OutputCount" value="5" />
+		</block>
 
-        <block name="itemPipeSmallJointT2">
-            <property name="Extends" value="itemPipeSmallJoint"/>
-            <property name="CustomIconTint" value="0F5FA8"/>
-            <property name="MaxDamage" value="650"/>
-            <property name="EconomicValue" value="40"/>
-            <property name="DescriptionKey" value="itemPipeSmallJointT2Desc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="PipeThroughput" value="9"/>
-            <property name="PipeSpeed" value="2"/>
-            <property name="PipeLatency" value="2"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<!-- Universal Extractor - Oil Shale -->
 
-        <block name="itemPipeT3">
-            <property name="Extends" value="itemPipeT2"/>
-            <property name="CustomIconTint" value="2EA85C"/>
-            <property name="MaxDamage" value="800"/>
-            <property name="EconomicValue" value="60"/>
-            <property name="DescriptionKey" value="itemPipeT3Desc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="PipeThroughput" value="30"/>
-            <property name="PipeSpeed" value="10"/>
-            <property name="PipeLatency" value="100"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<block name="universalOilShaleExtractor">
+			<property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="HeatMapStrength" value="0.5" />
+			<property name="HeatMapTime" value="1200" />
+			<property name="HeatMapFrequency" value="25" />
+			<property name="EconomicValue" value="500" />
+			<property name="DescriptionKey" value="universalOilShaleExtractorDesc" />
+			<property name="UnlockedBy" value="craftingWorkstations" />
+			<!-- Custom Properties-->
+			<property name="BlockSource" value="terrOreOilDeposit" />
+			<property name="ResourceGenerated" value="resourceOilShale" />
+			<property name="ExtractionSpeed" value="1" />
+			<property name="OutputCount" value="5" />
+		</block>
 
-        <block name="itemPipeElbowT3">
-            <property name="Extends" value="itemPipeElbowT2"/>
-            <property name="CustomIconTint" value="2EA85C"/>
-            <property name="MaxDamage" value="800"/>
-            <property name="EconomicValue" value="60"/>
-            <property name="DescriptionKey" value="itemPipeElbowT3Desc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="PipeThroughput" value="30"/>
-            <property name="PipeSpeed" value="10"/>
-            <property name="PipeLatency" value="100"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<!-- MACHINES: CRAFTER -->
 
-        <block name="itemPipeSmallJointT3">
-            <property name="Extends" value="itemPipeSmallJointT2"/>
-            <property name="CustomIconTint" value="2EA85C"/>
-            <property name="MaxDamage" value="800"/>
-            <property name="EconomicValue" value="60"/>
-            <property name="DescriptionKey" value="itemPipeSmallJointT3Desc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="PipeThroughput" value="30"/>
-            <property name="PipeSpeed" value="10"/>
-            <property name="PipeLatency" value="100"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<block name="universalCrafter">
+			<property name="Class" value="UniversalCrafterBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1000" />
+			<property name="DescriptionKey" value="universalCrafterDesc" />
+			<property name="UnlockedBy" value="craftingWorkstations" />
+			<!-- Placeholder properties - fill later -->
+			<property name="CraftingSpeed" value="1" />
+			<property name="InternalStorageMultiplier" value="5" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-        <block name="liquidPipe">
-            <property name="Class" value="LiquidPipeBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Industrial/pipeSmall_1x1Prefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="false"/>
-            <property name="MaxDamage" value="550"/>
-            <property name="CustomIcon" value="pipeSmall1x1"/>
-            <property name="CustomIconTint" value="2B7A78"/>
-            <property name="Stacknumber" value="100"/>
-            <property name="EconomicValue" value="30"/>
-            <property name="DescriptionKey" value="liquidPipeDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="FluidPipeCapacityGps" value="250"/>
-        </block>
+		<!-- MACHINES: NETWORK -->
 
-        <block name="liquidPipeElbow">
-            <property name="Class" value="LiquidPipeBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Industrial/pipeSmallCornerPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="false"/>
-            <property name="MaxDamage" value="550"/>
-            <property name="CustomIcon" value="pipeSmallCorner"/>
-            <property name="CustomIconTint" value="2B7A78"/>
-            <property name="Stacknumber" value="100"/>
-            <property name="EconomicValue" value="30"/>
-            <property name="DescriptionKey" value="liquidPipeElbowDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="FluidPipeCapacityGps" value="250"/>
-        </block>
+		<block name="networkController">
+			<property name="Class" value="NetworkControllerBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/serverComputerPrefab.prefab" />
+			<property name="CustomIcon" value="decoServerRackWhite" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1200" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1500" />
+			<property name="DescriptionKey" value="networkControllerDesc" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-        <block name="liquidPipeSmallJoint">
-            <property name="Class" value="LiquidPipeBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Industrial/pipeSmallJointPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="false"/>
-            <property name="MaxDamage" value="550"/>
-            <property name="CustomIcon" value="pipeSmallJoint"/>
-            <property name="CustomIconTint" value="2B7A78"/>
-            <property name="Stacknumber" value="100"/>
-            <property name="EconomicValue" value="30"/>
-            <property name="DescriptionKey" value="liquidPipeTJunctionDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="FluidPipeCapacityGps" value="250"/>
-        </block>
+		<!-- ITEM PIPES -->
 
-        <block name="fluidValve">
-            <property name="Class" value="LiquidPipeBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Industrial/pipeSmall_1x1Prefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="false"/>
-            <property name="MaxDamage" value="600"/>
-            <property name="CustomIcon" value="pipeSmall1x1"/>
-            <property name="CustomIconTint" value="1B6E6C"/>
-            <property name="Stacknumber" value="100"/>
-            <property name="EconomicValue" value="40"/>
-            <property name="DescriptionKey" value="fluidValveDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="AllowValveToggle" value="true"/>
-            <property name="IsFluidValve" value="true"/>
-            <property name="FluidPipeCapacityGps" value="250"/>
-        </block>
+		<block name="itemPipe">
+			<property name="Class" value="ItemPipeBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Industrial/pipeSmall_1x1Prefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="false" />
+			<property name="MaxDamage" value="500" />
+			<property name="CustomIcon" value="pipeSmall1x1" />
+			<property name="CustomIconTint" value="8D2427" />
+			<property name="Stacknumber" value="100" />
+			<property name="EconomicValue" value="25" />
+			<property name="DescriptionKey" value="itemPipeDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="DevLogs" value="true" />
+			<property name="PipeThroughput" value="3" />
+			<property name="PipeSpeed" value="1" />
+			<property name="PipeLatency" value="1" />
+		</block>
 
-        <block name="fluidValveT2">
-            <property name="Extends" value="fluidValve"/>
-            <property name="CustomIconTint" value="0F5FA8"/>
-            <property name="MaxDamage" value="700"/>
-            <property name="EconomicValue" value="55"/>
-            <property name="DescriptionKey" value="fluidValveT2Desc"/>
-            <property name="FluidPipeCapacityGps" value="500"/>
-        </block>
+		<block name="itemPipeElbow">
+			<property name="Class" value="ItemPipeBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Industrial/pipeSmallCornerPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="false" />
+			<property name="MaxDamage" value="500" />
+			<property name="CustomIcon" value="pipeSmallCorner" />
+			<property name="CustomIconTint" value="8D2427" />
+			<property name="Stacknumber" value="100" />
+			<property name="EconomicValue" value="25" />
+			<property name="DescriptionKey" value="itemPipeElbowDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="DevLogs" value="true" />
+			<property name="PipeThroughput" value="5" />
+			<property name="PipeSpeed" value="1" />
+			<property name="PipeLatency" value="1" />
+		</block>
 
-        <block name="fluidValveT3">
-            <property name="Extends" value="fluidValveT2"/>
-            <property name="CustomIconTint" value="2EA85C"/>
-            <property name="MaxDamage" value="850"/>
-            <property name="EconomicValue" value="75"/>
-            <property name="DescriptionKey" value="fluidValveT3Desc"/>
-            <property name="FluidPipeCapacityGps" value="1000"/>
-        </block>
+		<block name="itemPipeSmallJoint">
+			<property name="Class" value="ItemPipeBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Industrial/pipeSmallJointPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="false" />
+			<property name="MaxDamage" value="500" />
+			<property name="CustomIcon" value="pipeSmallJoint" />
+			<property name="CustomIconTint" value="8D2427" />
+			<property name="Stacknumber" value="100" />
+			<property name="EconomicValue" value="25" />
+			<property name="DescriptionKey" value="itemPipeTJunctionDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="DevLogs" value="true" />
+			<property name="PipeThroughput" value="5" />
+			<property name="PipeSpeed" value="1" />
+			<property name="PipeLatency" value="1" />
+		</block>
 
-        <block name="fluidIntake">
-            <property name="Class" value="LiquidPipeBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Industrial/pipeSmallCornerPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="600"/>
-            <property name="CustomIcon" value="pipeSmallCorner"/>
-            <property name="CustomIconTint" value="1D8E89"/>
-            <property name="Stacknumber" value="100"/>
-            <property name="EconomicValue" value="40"/>
-            <property name="DescriptionKey" value="fluidIntakeDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="AllowValveToggle" value="true"/>
-            <property name="IsFluidIntake" value="true"/>
-            <property name="FluidIntakeOutputFluid" value="water"/>
-            <property name="FluidIntakeAllowedBlocks" value="water,waterMoving,terrWaterPOI"/>
-            <property name="FluidIntakeAllowWorldWaterVoxel" value="true"/>
-            <property name="FluidIntakeDisallowNameContains" value="Bucket"/>
-            <property name="FluidPipeCapacityGps" value="250"/>
-        </block>
+		<block name="itemPipeT2">
+			<property name="Extends" value="itemPipe" />
+			<property name="CustomIconTint" value="0F5FA8" />
+			<property name="MaxDamage" value="650" />
+			<property name="EconomicValue" value="40" />
+			<property name="DescriptionKey" value="itemPipeT2Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="PipeThroughput" value="9" />
+			<property name="PipeSpeed" value="2" />
+			<property name="PipeLatency" value="2" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-        <block name="fluidIntakeT2">
-            <property name="Extends" value="fluidIntake"/>
-            <property name="CustomIconTint" value="0F5FA8"/>
-            <property name="MaxDamage" value="700"/>
-            <property name="EconomicValue" value="55"/>
-            <property name="DescriptionKey" value="fluidIntakeT2Desc"/>
-            <property name="FluidPipeCapacityGps" value="500"/>
-        </block>
+		<block name="itemPipeElbowT2">
+			<property name="Extends" value="itemPipeElbow" />
+			<property name="CustomIconTint" value="0F5FA8" />
+			<property name="MaxDamage" value="650" />
+			<property name="EconomicValue" value="40" />
+			<property name="DescriptionKey" value="itemPipeElbowT2Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="PipeThroughput" value="9" />
+			<property name="PipeSpeed" value="2" />
+			<property name="PipeLatency" value="2" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-        <block name="fluidIntakeT3">
-            <property name="Extends" value="fluidIntakeT2"/>
-            <property name="CustomIconTint" value="2EA85C"/>
-            <property name="MaxDamage" value="850"/>
-            <property name="EconomicValue" value="75"/>
-            <property name="DescriptionKey" value="fluidIntakeT3Desc"/>
-            <property name="FluidPipeCapacityGps" value="1000"/>
-        </block>
+		<block name="itemPipeSmallJointT2">
+			<property name="Extends" value="itemPipeSmallJoint" />
+			<property name="CustomIconTint" value="0F5FA8" />
+			<property name="MaxDamage" value="650" />
+			<property name="EconomicValue" value="40" />
+			<property name="DescriptionKey" value="itemPipeSmallJointT2Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="PipeThroughput" value="9" />
+			<property name="PipeSpeed" value="2" />
+			<property name="PipeLatency" value="2" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-        <block name="fluidPump">
-            <property name="Class" value="FluidPumpBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Electrical/smallGeneratorPrefab.prefab"/>
-            <property name="CustomIcon" value="questGeneratorSmall"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="700"/>
-            <property name="Stacknumber" value="20"/>
-            <property name="EconomicValue" value="120"/>
-            <property name="DescriptionKey" value="fluidPumpDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="FluidPumpOutputCapGps" value="250"/>
-        </block>
+		<block name="itemPipeT3">
+			<property name="Extends" value="itemPipeT2" />
+			<property name="CustomIconTint" value="2EA85C" />
+			<property name="MaxDamage" value="800" />
+			<property name="EconomicValue" value="60" />
+			<property name="DescriptionKey" value="itemPipeT3Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="PipeThroughput" value="30" />
+			<property name="PipeSpeed" value="10" />
+			<property name="PipeLatency" value="100" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-        <block name="fluidStorageTank">
-            <property name="Class" value="FluidStorageBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Industrial/barrelGenericPrefab.prefab"/>
-            <property name="CustomIcon" value="cntBarrelAcidSingle00"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="1200"/>
-            <property name="Stacknumber" value="10"/>
-            <property name="EconomicValue" value="180"/>
-            <property name="DescriptionKey" value="fluidStorageTankDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="FluidStorageCapacityGallons" value="50"/>
-            <property name="FluidInputCapGps" value="10"/>
-            <property name="FluidOutputCapGps" value="10"/>
-        </block>
-        <block name="universalWasher">
-            <property name="Class" value="UniversalWasherBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="ModelOffset" value="-0.5,0.5,1"/>
-	        <property name="MultiBlockDim" value="2,2,3"/>
-            <property name="Model" value="@:Entities/Industrial/WasherIndustrialClosedPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="1000"/>
-            <property name="CustomIcon" value="generatorbank"/>
-            <property name="Stacknumber" value="1"/>
-            <property name="EconomicValue" value="1000"/>
-            <property name="DescriptionKey" value="universalWasherDesc"/>
-            <!-- Placeholder properties - fill later -->
-            <property name="DevLogs" value="true"/>
-            <property name="FluidMax" value="100"/>
-        </block>
+		<block name="itemPipeElbowT3">
+			<property name="Extends" value="itemPipeElbowT2" />
+			<property name="CustomIconTint" value="2EA85C" />
+			<property name="MaxDamage" value="800" />
+			<property name="EconomicValue" value="60" />
+			<property name="DescriptionKey" value="itemPipeElbowT3Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="PipeThroughput" value="30" />
+			<property name="PipeSpeed" value="10" />
+			<property name="PipeLatency" value="100" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-        <block name="universalFluidDecanter">
-            <property name="Class" value="FluidDecanterBlock, 7DaysToAutomate"/>
-            <property name="Material" value="Mmetal_hard"/>
-            <property name="Shape" value="ModelEntity"/>
-            <property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab"/>
-            <property name="Place" value="TowardsPlacer"/>
-            <property name="OnlySimpleRotations" value="true"/>
-            <property name="MaxDamage" value="1000"/>
-            <property name="CustomIcon" value="generatorbank"/>
-            <property name="Stacknumber" value="1"/>
-            <property name="EconomicValue" value="1250"/>
-            <property name="DescriptionKey" value="fluidDecanterDesc"/>
-            <property name="UnlockedBy" value="craftingElectrician"/>
-            <property name="InputSpeed" value="1"/>
-            <property name="DevLogs" value="true"/>
-        </block>
+		<block name="itemPipeSmallJointT3">
+			<property name="Extends" value="itemPipeSmallJointT2" />
+			<property name="CustomIconTint" value="2EA85C" />
+			<property name="MaxDamage" value="800" />
+			<property name="EconomicValue" value="60" />
+			<property name="DescriptionKey" value="itemPipeSmallJointT3Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="PipeThroughput" value="30" />
+			<property name="PipeSpeed" value="10" />
+			<property name="PipeLatency" value="100" />
+			<property name="DevLogs" value="true" />
+		</block>
 
-    </append>
+		<!-- FLUID PIPES -->
+
+		<block name="liquidPipe">
+			<property name="Class" value="LiquidPipeBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Industrial/pipeSmall_1x1Prefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="false" />
+			<property name="MaxDamage" value="550" />
+			<property name="CustomIcon" value="pipeSmall1x1" />
+			<property name="CustomIconTint" value="2B7A78" />
+			<property name="Stacknumber" value="100" />
+			<property name="EconomicValue" value="30" />
+			<property name="DescriptionKey" value="liquidPipeDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidPipeCapacityGps" value="250" />
+		</block>
+
+		<block name="liquidPipeElbow">
+			<property name="Class" value="LiquidPipeBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Industrial/pipeSmallCornerPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="false" />
+			<property name="MaxDamage" value="550" />
+			<property name="CustomIcon" value="pipeSmallCorner" />
+			<property name="CustomIconTint" value="2B7A78" />
+			<property name="Stacknumber" value="100" />
+			<property name="EconomicValue" value="30" />
+			<property name="DescriptionKey" value="liquidPipeElbowDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidPipeCapacityGps" value="250" />
+		</block>
+
+		<block name="liquidPipeSmallJoint">
+			<property name="Class" value="LiquidPipeBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Industrial/pipeSmallJointPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="false" />
+			<property name="MaxDamage" value="550" />
+			<property name="CustomIcon" value="pipeSmallJoint" />
+			<property name="CustomIconTint" value="2B7A78" />
+			<property name="Stacknumber" value="100" />
+			<property name="EconomicValue" value="30" />
+			<property name="DescriptionKey" value="liquidPipeTJunctionDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidPipeCapacityGps" value="250" />
+		</block>
+
+		<block name="fluidValve">
+			<property name="Class" value="LiquidPipeBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Industrial/pipeSmall_1x1Prefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="false" />
+			<property name="MaxDamage" value="600" />
+			<property name="CustomIcon" value="pipeSmall1x1" />
+			<property name="CustomIconTint" value="1B6E6C" />
+			<property name="Stacknumber" value="100" />
+			<property name="EconomicValue" value="40" />
+			<property name="DescriptionKey" value="fluidValveDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="AllowValveToggle" value="true" />
+			<property name="IsFluidValve" value="true" />
+			<property name="FluidPipeCapacityGps" value="250" />
+		</block>
+
+		<block name="fluidValveT2">
+			<property name="Extends" value="fluidValve" />
+			<property name="CustomIconTint" value="0F5FA8" />
+			<property name="MaxDamage" value="700" />
+			<property name="EconomicValue" value="55" />
+			<property name="DescriptionKey" value="fluidValveT2Desc" />
+			<property name="FluidPipeCapacityGps" value="500" />
+		</block>
+
+		<block name="fluidValveT3">
+			<property name="Extends" value="fluidValveT2" />
+			<property name="CustomIconTint" value="2EA85C" />
+			<property name="MaxDamage" value="850" />
+			<property name="EconomicValue" value="75" />
+			<property name="DescriptionKey" value="fluidValveT3Desc" />
+			<property name="FluidPipeCapacityGps" value="1000" />
+		</block>
+
+		<block name="fluidIntake">
+			<property name="Class" value="LiquidPipeBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Industrial/pipeSmallCornerPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="600" />
+			<property name="CustomIcon" value="pipeSmallCorner" />
+			<property name="CustomIconTint" value="1D8E89" />
+			<property name="Stacknumber" value="100" />
+			<property name="EconomicValue" value="40" />
+			<property name="DescriptionKey" value="fluidIntakeDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="AllowValveToggle" value="true" />
+			<property name="IsFluidIntake" value="true" />
+			<property name="FluidIntakeOutputFluid" value="water" />
+			<property name="FluidIntakeAllowedBlocks" value="water,waterMoving,terrWaterPOI" />
+			<property name="FluidIntakeAllowWorldWaterVoxel" value="true" />
+			<property name="FluidIntakeDisallowNameContains" value="Bucket" />
+			<property name="FluidPipeCapacityGps" value="250" />
+		</block>
+
+		<block name="fluidIntakeT2">
+			<property name="Extends" value="fluidIntake" />
+			<property name="CustomIconTint" value="0F5FA8" />
+			<property name="MaxDamage" value="700" />
+			<property name="EconomicValue" value="55" />
+			<property name="DescriptionKey" value="fluidIntakeT2Desc" />
+			<property name="FluidPipeCapacityGps" value="500" />
+		</block>
+
+		<block name="fluidIntakeT3">
+			<property name="Extends" value="fluidIntakeT2" />
+			<property name="CustomIconTint" value="2EA85C" />
+			<property name="MaxDamage" value="850" />
+			<property name="EconomicValue" value="75" />
+			<property name="DescriptionKey" value="fluidIntakeT3Desc" />
+			<property name="FluidPipeCapacityGps" value="1000" />
+		</block>
+
+		<!-- FLUID MACHINES -->
+
+		<block name="fluidPump">
+			<property name="Class" value="FluidPumpBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/smallGeneratorPrefab.prefab" />
+			<property name="CustomIcon" value="questGeneratorSmall" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="700" />
+			<property name="Stacknumber" value="20" />
+			<property name="EconomicValue" value="120" />
+			<property name="DescriptionKey" value="fluidPumpDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidPumpOutputCapGps" value="250" />
+		</block>
+
+		<block name="fluidStorageTank">
+			<property name="Class" value="FluidStorageBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Industrial/barrelGenericPrefab.prefab" />
+			<property name="CustomIcon" value="cntBarrelAcidSingle00" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1200" />
+			<property name="Stacknumber" value="10" />
+			<property name="EconomicValue" value="180" />
+			<property name="DescriptionKey" value="fluidStorageTankDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidStorageCapacityGallons" value="50" />
+			<property name="FluidInputCapGps" value="10" />
+			<property name="FluidOutputCapGps" value="10" />
+		</block>
+
+		<!-- MACHINES: WASHER + DECANTER -->
+
+		<block name="universalWasher">
+			<property name="Class" value="UniversalWasherBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="ModelOffset" value="-0.5,0.5,1" />
+			<property name="MultiBlockDim" value="2,2,3" />
+			<property name="Model" value="@:Entities/Industrial/WasherIndustrialClosedPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1000" />
+			<property name="DescriptionKey" value="universalWasherDesc" />
+			<!-- Placeholder properties - fill later -->
+			<property name="DevLogs" value="true" />
+			<property name="FluidMax" value="100" />
+		</block>
+
+		<block name="universalFluidDecanter">
+			<property name="Class" value="FluidDecanterBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1250" />
+			<property name="DescriptionKey" value="fluidDecanterDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="InputSpeed" value="1" />
+			<property name="MachineRecipes" value="fluiddecanter" />
+			<property name="DevLogs" value="true" />
+		</block>
+	</append>
 </configs>
-
 <!-- ===================================================================== -->
 <!-- Universal Crafter Configurable Properties -->
 <!-- ===================================================================== -->
-
 <!-- CraftingSpeed
      OPTIONAL
      Multiplier applied to crafting speed.
@@ -558,7 +579,6 @@
 <!-- Example:
      <property name="CraftingSpeed" value="1.5" />
 -->
-
 <!-- DevLogs
      OPTIONAL
      Enables verbose logging for this block and its TileEntity.
@@ -571,7 +591,6 @@
 <!-- Example:
      <property name="DevLogs" value="true" />
 -->
-
 <!-- ===================================================================== -->
 <!-- HOW IT WORKS BACKEND -->
 <!-- ===================================================================== -->
@@ -587,11 +606,9 @@
  - Output is deposited ONLY into the selected output container.
  - If ingredients or containers are missing, crafting pauses safely.
 -->
-
 <!-- ===================================================================== -->
 <!-- Universal Extractor Configurable Properties              -->
 <!-- ===================================================================== -->
-
 <!-- ResourceGenerated
      REQUIRED
      Comma-separated list of item names to produce.
@@ -599,7 +616,6 @@
 <!-- Example:
      <property name="ResourceGenerated" value="resourceScrapIron,resourceLead" />
 -->
-
 <!-- OutputCount
      OPTIONAL
      Output amount per production cycle.
@@ -611,7 +627,6 @@
 <!-- Example:
      <property name="OutputCount" value="1-3,2-5" />
 -->
-
 <!-- ExtractionSpeed
      OPTIONAL
      Production interval in TICKS.
@@ -624,7 +639,6 @@
 <!-- Example:
      <property name="ExtractionSpeed" value="300,600" />
 -->
-
 <!-- DevLogs
      OPTIONAL
      Enables verbose logging for this block and its TileEntity.
@@ -637,8 +651,6 @@
 <!-- Example:
      <property name="DevLogs" value="true" />
 -->
-
-
 <!-- ===================================================================== -->
 <!-- HOW IT WORKS (Extractor Actual)                                     -->
 <!-- ===================================================================== -->
@@ -652,8 +664,6 @@
  - Items are deposited into ANY nearby valid storage.
  - If no storage exists, the extractor shuts off automatically.
 -->
-
-
 <!-- ===================================================================== -->
 <!-- PIPES                                                                   -->
 <!-- ===================================================================== -->
@@ -682,19 +692,3 @@
      <property name="PipeSpeed" value="2" />
      <property name="PipeLatency" value="3" />
 -->
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
