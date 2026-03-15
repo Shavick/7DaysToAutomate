@@ -12,7 +12,18 @@
 			<input item="ammoGasCan" count="1" />
 			<output item="resourceScrapPolymers" count="10" />
 			<fluid_output type="gas" gallons="2" />
-      <fluid_output type="water" gallons="0.5" />
+		</machineRecipe>
+
+		<machineRecipe name="boiled_jar_from_water" machine="fluidinfuser">
+			<input item="drinkJarEmpty" count="1" />
+			<fluid_input type="water" gallons="0.5" />
+			<output item="drinkJarBoiledWater" count="1" />
+		</machineRecipe>
+
+		<machineRecipe name="gas_can_from_polymer" machine="fluidinfuser">
+			<input item="resourceScrapPolymers" count="10" />
+			<fluid_input type="gas" gallons="2" />
+			<output item="ammoGasCan" count="1" />
 		</machineRecipe>
 
 		<!-- ITEM PIPES: BASE -->
@@ -242,6 +253,14 @@
 		</recipe>
 
 		<recipe name="universalFluidDecanter" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalFluidDecanter">
+			<ingredient name="resourceForgedSteel" count="20" />
+			<ingredient name="resourceMechanicalParts" count="12" />
+			<ingredient name="resourceElectricParts" count="8" />
+			<ingredient name="resourceDuctTape" count="6" />
+			<ingredient name="resourceOil" count="20" />
+		</recipe>
+
+		<recipe name="universalFluidInfuser" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalFluidInfuser">
 			<ingredient name="resourceForgedSteel" count="20" />
 			<ingredient name="resourceMechanicalParts" count="12" />
 			<ingredient name="resourceElectricParts" count="8" />

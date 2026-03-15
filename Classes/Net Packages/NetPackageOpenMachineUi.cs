@@ -93,7 +93,7 @@
                     return;
                 }
 
-                if (CustomUi != "ExtractorInfo" && CustomUi != "CrafterInfo" && CustomUi != "FluidDecanterInfo")
+                if (CustomUi != "ExtractorInfo" && CustomUi != "CrafterInfo" && CustomUi != "FluidDecanterInfo" && CustomUi != "FluidInfuserInfo")
                 {
                     Log.Error($"[NetPkg][MachineUI][SERVER] Unknown UI key '{CustomUi}'");
                     return;
@@ -199,6 +199,19 @@
                         localPlayer.AimingGun = false;
                         XUiC_FluidDecanterInfo.Open(localPlayer, BlockPos);
                         Log.Out($"[NetPkg][MachineUI][CLIENT] Fluid Decanter UI open call executed");
+                        break;
+
+                    case "FluidInfuserInfo":
+                        if (!(te is TileEntityFluidInfuser))
+                        {
+                            Log.Error($"[NetPkg][MachineUI][CLIENT] TileEntity is not TileEntityFluidInfuser for UI {CustomUi}");
+                            return;
+                        }
+
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Opening Fluid Infuser UI at {BlockPos}");
+                        localPlayer.AimingGun = false;
+                        XUiC_FluidInfuserInfo.Open(localPlayer, BlockPos);
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Fluid Infuser UI open call executed");
                         break;
 
                     default:

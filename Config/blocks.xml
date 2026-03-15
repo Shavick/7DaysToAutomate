@@ -563,6 +563,24 @@
 			<property name="MachineRecipes" value="fluiddecanter" />
 			<property name="DevLogs" value="true" />
 		</block>
+
+		<block name="universalFluidInfuser">
+			<property name="Class" value="FluidInfuserBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1250" />
+			<property name="DescriptionKey" value="fluidInfuserDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="InputSpeed" value="1" />
+			<property name="MachineRecipes" value="fluidinfuser" />
+			<property name="DevLogs" value="true" />
+		</block>
 	</append>
 </configs>
 <!-- ===================================================================== -->

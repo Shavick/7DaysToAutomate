@@ -294,6 +294,13 @@ public class HigherLogicRegistry
                 isDirty = true;
                 break;
 
+            case FluidInfuserSnapshot infuser:
+                HLRDevLog($"[HLR][FluidInfuser] Simulate @ {infuser.Position} ticks={hlrTicksToSimulate}");
+                SimulateInfuser(infuser, worldTime, hlrTicksToSimulate);
+                infuser.LastHLRSimTime = worldTime;
+                isDirty = true;
+                break;
+
             default:
                 HLRDevLog($"[HLR] Unknown snapshot type '{snapshot.SnapshotKind}' — skipping");
                 break;
@@ -580,6 +587,535 @@ public class HigherLogicRegistry
 
         decanter.WorldTime = worldTime;
         HLRDevLog($"[HLR][Decanter] SIMULATE END @ {decanter.Position} action='{decanter.LastAction}' reason='{decanter.LastBlockReason}' pendingIn={decanter.PendingItemInput} pendingItemOut={decanter.PendingItemOutput} pendingFluidOutMg={decanter.PendingFluidOutput}");
+    }
+
+    private void SimulateInfuser(FluidInfuserSnapshot infuser, ulong worldTime, int hlrTicksToSimulate)
+    {
+        if (infuser == null)
+            return;
+
+        if (infuser.PendingOutputs == null)
+            infuser.PendingOutputs = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        HLRDevLog($"[HLR][FluidInfuser] SIMULATE BEGIN @ {infuser.Position} ticks={hlrTicksToSimulate} processing={infuser.IsProcessing} pendingOut={FormatItemMapForLog(infuser.PendingOutputs)}");
+
+        if (!infuser.IsOn)
+        {
+            infuser.LastAction = "Off";
+            infuser.LastBlockReason = string.Empty;
+            infuser.WorldTime = worldTime;
+            HLRDevLog($"[HLR][FluidInfuser] SKIP - OFF @ {infuser.Position}");
+            return;
+        }
+
+        int ticksRemaining = Math.Max(1, hlrTicksToSimulate);
+        string nextAction = infuser.LastAction ?? "Idle";
+        string nextReason = string.Empty;
+
+        if (!TryFlushInfuserPendingOutput(infuser, out string blockedReason) &&
+            infuser.PendingOutputs.Count > 0)
+        {
+            infuser.LastAction = "Waiting";
+            infuser.LastBlockReason = string.IsNullOrEmpty(blockedReason) ? "Output blocked" : blockedReason;
+            infuser.WorldTime = worldTime;
+            HLRDevLog($"[HLR][FluidInfuser] WAIT - pending output blocked reason='{infuser.LastBlockReason}'");
+            return;
+        }
+
+        while (ticksRemaining > 0)
+        {
+            if (!infuser.IsProcessing)
+            {
+                string requirementsReason = GetInfuserMissingRequirementReason(infuser);
+                if (!string.IsNullOrEmpty(requirementsReason))
+                {
+                    nextAction = "Waiting";
+                    nextReason = requirementsReason;
+                    break;
+                }
+
+                if (!TryBeginInfuserCycle(infuser, out blockedReason))
+                {
+                    nextAction = "Waiting";
+                    nextReason = string.IsNullOrEmpty(blockedReason) ? "Waiting" : blockedReason;
+                    break;
+                }
+
+                nextAction = infuser.LastAction ?? "Requested Input";
+                nextReason = infuser.LastBlockReason ?? string.Empty;
+                ticksRemaining--;
+                if (ticksRemaining <= 0)
+                    break;
+
+                continue;
+            }
+
+            int cycleLength = Math.Max(1, infuser.CycleTickLength);
+            int needed = cycleLength - infuser.CycleTickCounter;
+            if (needed <= 0)
+                needed = 1;
+
+            int advance = Math.Min(ticksRemaining, needed);
+            infuser.CycleTickCounter += advance;
+            ticksRemaining -= advance;
+            nextAction = "Processing";
+            nextReason = string.Empty;
+
+            if (infuser.CycleTickCounter < cycleLength)
+                break;
+
+            CompleteInfuserCycle(infuser);
+            nextAction = infuser.LastAction ?? "Craft complete";
+            nextReason = infuser.LastBlockReason ?? string.Empty;
+
+            if (!TryFlushInfuserPendingOutput(infuser, out blockedReason) &&
+                infuser.PendingOutputs.Count > 0)
+            {
+                nextAction = "Waiting";
+                nextReason = string.IsNullOrEmpty(blockedReason) ? "Output blocked" : blockedReason;
+                break;
+            }
+        }
+
+        infuser.LastAction = nextAction;
+        infuser.LastBlockReason = nextReason;
+        infuser.WorldTime = worldTime;
+        HLRDevLog($"[HLR][FluidInfuser] SIMULATE END @ {infuser.Position} action='{infuser.LastAction}' reason='{infuser.LastBlockReason}' processing={infuser.IsProcessing} cycle={infuser.CycleTickCounter}/{Math.Max(1, infuser.CycleTickLength)} pendingOut={FormatItemMapForLog(infuser.PendingOutputs)}");
+    }
+
+    private string GetInfuserMissingRequirementReason(FluidInfuserSnapshot infuser)
+    {
+        if (infuser == null)
+            return "World unavailable";
+
+        if (string.IsNullOrEmpty(infuser.SelectedRecipeKey))
+            return "No recipe selected";
+
+        if (infuser.SelectedInputPipeGraphId == Guid.Empty || infuser.SelectedInputChestPos == Vector3i.zero)
+            return "Missing Item Input";
+
+        if (!HasValidGraphStorageEndpoint(infuser.SelectedInputPipeGraphId, infuser.SelectedInputChestPos))
+            return "Missing Item Input";
+
+        if (infuser.SelectedOutputChestPos == Vector3i.zero)
+            return "Missing Item Output";
+
+        if (infuser.SelectedOutputMode != OutputTransportMode.Pipe)
+            return "HLR requires pipe item output";
+
+        if (infuser.SelectedOutputPipeGraphId == Guid.Empty)
+            return "Missing Item Output";
+
+        if (!HasValidGraphStorageEndpoint(infuser.SelectedOutputPipeGraphId, infuser.SelectedOutputChestPos))
+            return "Missing Item Output";
+
+        if (!TryGetInfuserRule(
+                infuser,
+                infuser.SelectedRecipeKey,
+                out string normalizedRecipeKey,
+                out List<MachineRecipeInput> itemInputs,
+                out string fluidType,
+                out int fluidAmountMg,
+                out _,
+                out int craftTimeTicks))
+        {
+            return "Selected recipe unavailable";
+        }
+
+        infuser.SelectedRecipeKey = normalizedRecipeKey;
+        infuser.SelectedFluidType = fluidType ?? string.Empty;
+        infuser.CycleTickLength = Math.Max(1, craftTimeTicks);
+
+        if (!TryResolveInfuserFluidGraph(infuser, fluidType, out Guid graphId))
+            return "Missing/Invalid Fluid Input";
+
+        infuser.SelectedFluidGraphId = graphId;
+
+        if (!FluidGraphManager.TryGetAvailableFluidAmount(world, 0, graphId, fluidType, out int availableMg) ||
+            availableMg < fluidAmountMg)
+        {
+            return $"Need {FormatGallons(fluidAmountMg)} gal {ToFluidDisplayName(fluidType)}";
+        }
+
+        if (!TryGetSnapshotStorageItemCounts(infuser.SelectedInputPipeGraphId, infuser.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
+            availableCounts == null)
+        {
+            return "Input storage unavailable";
+        }
+
+        for (int i = 0; i < itemInputs.Count; i++)
+        {
+            MachineRecipeInput input = itemInputs[i];
+            if (input == null)
+                continue;
+
+            int available = availableCounts.TryGetValue(input.ItemName, out int found) ? found : 0;
+            if (available < input.Count)
+                return $"Need {input.Count}x {GetItemDisplayNameForLog(input.ItemName)}";
+        }
+
+        return string.Empty;
+    }
+
+    private bool TryBeginInfuserCycle(FluidInfuserSnapshot infuser, out string blockedReason)
+    {
+        blockedReason = string.Empty;
+
+        if (infuser == null)
+        {
+            blockedReason = "World unavailable";
+            return false;
+        }
+
+        if (!TryGetInfuserRule(
+                infuser,
+                infuser.SelectedRecipeKey,
+                out string normalizedRecipeKey,
+                out List<MachineRecipeInput> itemInputs,
+                out string fluidType,
+                out int fluidAmountMg,
+                out _,
+                out int craftTimeTicks))
+        {
+            blockedReason = "Selected recipe unavailable";
+            return false;
+        }
+
+        if (!TryResolveInfuserFluidGraph(infuser, fluidType, out Guid graphId))
+        {
+            blockedReason = "Missing/Invalid Fluid Input";
+            return false;
+        }
+
+        if (!FluidGraphManager.TryGetAvailableFluidAmount(world, 0, graphId, fluidType, out int availableMg) ||
+            availableMg < fluidAmountMg)
+        {
+            blockedReason = $"Need {FormatGallons(fluidAmountMg)} gal {ToFluidDisplayName(fluidType)}";
+            return false;
+        }
+
+        Dictionary<string, int> request = BuildInfuserItemRequest(itemInputs);
+        if (!TryConsumeSnapshotStorageItems(infuser.SelectedInputPipeGraphId, infuser.SelectedInputChestPos, request, out Dictionary<string, int> consumed) ||
+            !DidInfuserConsumeAllRequested(request, consumed))
+        {
+            if (consumed != null && consumed.Count > 0)
+                TryDepositSnapshotOutput(infuser.SelectedInputPipeGraphId, infuser.SelectedInputChestPos, consumed, out _);
+
+            blockedReason = "Missing item ingredients";
+            return false;
+        }
+
+        if (!FluidGraphManager.TryConsumeFluid(world, 0, graphId, fluidType, fluidAmountMg, out int consumedMg) ||
+            consumedMg < fluidAmountMg)
+        {
+            if (consumed != null && consumed.Count > 0)
+                TryDepositSnapshotOutput(infuser.SelectedInputPipeGraphId, infuser.SelectedInputChestPos, consumed, out _);
+
+            if (consumedMg > 0)
+                FluidGraphManager.TryInjectFluid(world, 0, graphId, fluidType, consumedMg, out _);
+
+            blockedReason = $"Need {FormatGallons(fluidAmountMg)} gal {ToFluidDisplayName(fluidType)}";
+            return false;
+        }
+
+        infuser.SelectedRecipeKey = normalizedRecipeKey;
+        infuser.SelectedFluidType = fluidType ?? string.Empty;
+        infuser.SelectedFluidGraphId = graphId;
+        SetPendingInfuserInputs(infuser, consumed, fluidType, consumedMg);
+        infuser.IsProcessing = true;
+        infuser.CycleTickCounter = 0;
+        infuser.CycleTickLength = Math.Max(1, craftTimeTicks);
+        infuser.ActiveRecipeKey = normalizedRecipeKey;
+        infuser.LastAction = "Requested Input";
+        infuser.LastBlockReason = string.Empty;
+        HLRDevLog($"[HLR][FluidInfuser] CYCLE START recipe='{normalizedRecipeKey}' fluid={fluidType} fluidMg={fluidAmountMg} inputs={FormatItemMapForLog(request)}");
+        return true;
+    }
+
+    private void CompleteInfuserCycle(FluidInfuserSnapshot infuser)
+    {
+        if (infuser == null)
+            return;
+
+        if (infuser.PendingOutputs == null)
+            infuser.PendingOutputs = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        string recipeKey = string.IsNullOrEmpty(infuser.ActiveRecipeKey) ? infuser.SelectedRecipeKey : infuser.ActiveRecipeKey;
+        if (!TryGetInfuserRule(
+                infuser,
+                recipeKey,
+                out string normalizedRecipeKey,
+                out _,
+                out _,
+                out _,
+                out List<MachineRecipeItemOutput> itemOutputs,
+                out _))
+        {
+            infuser.IsProcessing = false;
+            infuser.CycleTickCounter = 0;
+            infuser.ActiveRecipeKey = string.Empty;
+            infuser.LastAction = "Waiting";
+            infuser.LastBlockReason = "Selected recipe unavailable";
+            return;
+        }
+
+        for (int i = 0; i < itemOutputs.Count; i++)
+        {
+            MachineRecipeItemOutput output = itemOutputs[i];
+            if (output == null || string.IsNullOrEmpty(output.ItemName) || output.Count <= 0)
+                continue;
+
+            AddPendingInfuserOutput(infuser.PendingOutputs, output.ItemName, output.Count);
+        }
+
+        infuser.SelectedRecipeKey = normalizedRecipeKey;
+        ClearPendingInfuserInputs(infuser);
+        infuser.IsProcessing = false;
+        infuser.CycleTickCounter = 0;
+        infuser.ActiveRecipeKey = string.Empty;
+        infuser.LastAction = "Craft complete";
+        infuser.LastBlockReason = string.Empty;
+        HLRDevLog($"[HLR][FluidInfuser] CYCLE COMPLETE recipe='{normalizedRecipeKey}' pendingOut={FormatItemMapForLog(infuser.PendingOutputs)}");
+    }
+
+    private bool TryFlushInfuserPendingOutput(FluidInfuserSnapshot infuser, out string blockedReason)
+    {
+        blockedReason = string.Empty;
+
+        if (infuser == null || infuser.PendingOutputs == null || infuser.PendingOutputs.Count == 0)
+            return true;
+
+        if (infuser.SelectedOutputMode != OutputTransportMode.Pipe)
+        {
+            blockedReason = "HLR requires pipe item output";
+            return false;
+        }
+
+        if (infuser.SelectedOutputPipeGraphId == Guid.Empty || infuser.SelectedOutputChestPos == Vector3i.zero)
+        {
+            blockedReason = "Missing Item Output";
+            return false;
+        }
+
+        foreach (var kvp in new List<KeyValuePair<string, int>>(infuser.PendingOutputs))
+        {
+            if (string.IsNullOrEmpty(kvp.Key) || kvp.Value <= 0)
+            {
+                infuser.PendingOutputs.Remove(kvp.Key);
+                continue;
+            }
+
+            Dictionary<string, int> request = new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                { kvp.Key, kvp.Value }
+            };
+
+            if (!TryDepositSnapshotOutput(infuser.SelectedOutputPipeGraphId, infuser.SelectedOutputChestPos, request, out Dictionary<string, int> deposited) ||
+                deposited == null ||
+                !deposited.TryGetValue(kvp.Key, out int moved) ||
+                moved <= 0)
+            {
+                blockedReason = "Output blocked";
+                return false;
+            }
+
+            int remaining = kvp.Value - moved;
+            if (remaining > 0)
+            {
+                infuser.PendingOutputs[kvp.Key] = remaining;
+                blockedReason = "Output blocked";
+                return false;
+            }
+
+            infuser.PendingOutputs.Remove(kvp.Key);
+            infuser.LastAction = "Output transferred";
+            infuser.LastBlockReason = string.Empty;
+        }
+
+        return true;
+    }
+
+    private bool TryResolveInfuserFluidGraph(FluidInfuserSnapshot infuser, string fluidType, out Guid graphId)
+    {
+        graphId = Guid.Empty;
+
+        if (infuser == null || string.IsNullOrWhiteSpace(fluidType))
+            return false;
+
+        string normalizedFluid = fluidType.Trim().ToLowerInvariant();
+
+        if (infuser.SelectedFluidGraphId != Guid.Empty &&
+            IsDecanterFluidGraphCompatible(infuser.SelectedFluidGraphId, normalizedFluid) &&
+            DoesDecanterGraphHaveActivePump(infuser.SelectedFluidGraphId))
+        {
+            graphId = infuser.SelectedFluidGraphId;
+            return true;
+        }
+
+        List<Guid> candidates = GetDecanterAdjacentFluidGraphCandidates(infuser.Position);
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            Guid candidate = candidates[i];
+            if (!IsDecanterFluidGraphCompatible(candidate, normalizedFluid))
+                continue;
+
+            if (!DoesDecanterGraphHaveActivePump(candidate))
+                continue;
+
+            graphId = candidate;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetInfuserRule(
+        FluidInfuserSnapshot infuser,
+        string recipeKey,
+        out string normalizedRecipeKey,
+        out List<MachineRecipeInput> itemInputs,
+        out string fluidType,
+        out int fluidAmountMg,
+        out List<MachineRecipeItemOutput> itemOutputs,
+        out int craftTimeTicks)
+    {
+        normalizedRecipeKey = string.Empty;
+        itemInputs = new List<MachineRecipeInput>();
+        fluidType = string.Empty;
+        fluidAmountMg = 0;
+        itemOutputs = new List<MachineRecipeItemOutput>();
+        craftTimeTicks = Math.Max(1, infuser?.CycleTickLength ?? 1);
+
+        if (infuser == null || string.IsNullOrEmpty(recipeKey))
+            return false;
+
+        if (!MachineRecipeRegistry.TryGetRecipeByKey(recipeKey, out MachineRecipe recipe) || recipe == null)
+            return false;
+
+        if (!TileEntityFluidInfuser.TryReadMachineRecipeAsInfuserRule(
+                recipe,
+                Math.Max(1, infuser.CycleTickLength),
+                out itemInputs,
+                out fluidType,
+                out fluidAmountMg,
+                out itemOutputs,
+                out craftTimeTicks,
+                out _))
+        {
+            return false;
+        }
+
+        normalizedRecipeKey = recipe.NormalizedKey ?? recipeKey;
+        return true;
+    }
+
+    private static Dictionary<string, int> BuildInfuserItemRequest(List<MachineRecipeInput> itemInputs)
+    {
+        Dictionary<string, int> request = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (itemInputs == null)
+            return request;
+
+        for (int i = 0; i < itemInputs.Count; i++)
+        {
+            MachineRecipeInput input = itemInputs[i];
+            if (input == null || string.IsNullOrEmpty(input.ItemName) || input.Count <= 0)
+                continue;
+
+            request[input.ItemName] = input.Count;
+        }
+
+        return request;
+    }
+
+    private static bool DidInfuserConsumeAllRequested(Dictionary<string, int> requested, Dictionary<string, int> consumed)
+    {
+        if (requested == null || consumed == null)
+            return false;
+
+        foreach (var kvp in requested)
+        {
+            if (!consumed.TryGetValue(kvp.Key, out int count) || count < kvp.Value)
+                return false;
+        }
+
+        return true;
+    }
+
+    private static void AddPendingInfuserOutput(Dictionary<string, int> pendingOutputs, string itemName, int amount)
+    {
+        if (pendingOutputs == null || string.IsNullOrEmpty(itemName) || amount <= 0)
+            return;
+
+        if (pendingOutputs.TryGetValue(itemName, out int existing))
+            pendingOutputs[itemName] = existing + amount;
+        else
+            pendingOutputs[itemName] = amount;
+    }
+
+    private static void SetPendingInfuserInputs(
+        FluidInfuserSnapshot infuser,
+        Dictionary<string, int> consumedItems,
+        string fluidType,
+        int fluidAmountMg)
+    {
+        if (infuser == null)
+            return;
+
+        if (infuser.PendingInputs == null)
+            infuser.PendingInputs = new Dictionary<string, int>(StringComparer.Ordinal);
+        else
+            infuser.PendingInputs.Clear();
+
+        if (consumedItems != null)
+        {
+            foreach (KeyValuePair<string, int> kvp in consumedItems)
+            {
+                if (string.IsNullOrEmpty(kvp.Key) || kvp.Value <= 0)
+                    continue;
+
+                infuser.PendingInputs[kvp.Key] = kvp.Value;
+            }
+        }
+
+        infuser.PendingFluidInputType = fluidType ?? string.Empty;
+        infuser.PendingFluidInputAmountMg = Math.Max(0, fluidAmountMg);
+    }
+
+    private static void ClearPendingInfuserInputs(FluidInfuserSnapshot infuser)
+    {
+        if (infuser == null)
+            return;
+
+        infuser.PendingInputs?.Clear();
+        infuser.PendingFluidInputType = string.Empty;
+        infuser.PendingFluidInputAmountMg = 0;
+    }
+
+    private static string ToFluidDisplayName(string fluidType)
+    {
+        if (string.IsNullOrWhiteSpace(fluidType))
+            return "None";
+
+        string normalized = fluidType.Trim().Replace('_', ' ');
+        return System.Globalization.CultureInfo.InvariantCulture.TextInfo.ToTitleCase(normalized.ToLowerInvariant());
+    }
+
+    private static string FormatGallons(int amountMg)
+    {
+        double gallons = amountMg / (double)FluidConstants.MilliGallonsPerGallon;
+        return gallons.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static string GetItemDisplayNameForLog(string itemName)
+    {
+        if (string.IsNullOrWhiteSpace(itemName))
+            return "Unknown";
+
+        ItemValue itemValue = ItemClass.GetItem(itemName, false);
+        if (itemValue?.ItemClass != null)
+            return itemValue.ItemClass.GetLocalizedItemName();
+
+        return itemName;
     }
 
     private string GetDecanterMissingRequirementReason(DecanterSnapshot decanter)
@@ -1436,6 +1972,8 @@ public class HigherLogicRegistry
             lastSimTime = crafter.LastHLRSimTime;
         else if (snapshot is DecanterSnapshot decanter)
             lastSimTime = decanter.LastHLRSimTime;
+        else if (snapshot is FluidInfuserSnapshot infuser)
+            lastSimTime = infuser.LastHLRSimTime;
         else
             return 0;
 
@@ -1537,6 +2075,9 @@ public class HigherLogicRegistry
 
             case DecanterSnapshot decanter:
                 return CloneDecanterSnapshot(decanter);
+
+            case FluidInfuserSnapshot infuser:
+                return CloneFluidInfuserSnapshot(infuser);
 
             default:
                 Log.Error($"[HLR][Save] CloneSnapshotForSave FAIL — unknown snapshot kind '{snapshot?.SnapshotKind}'");
@@ -1661,6 +2202,51 @@ public class HigherLogicRegistry
             LastAction = source.LastAction,
             LastBlockReason = source.LastBlockReason
         };
+    }
+
+    private FluidInfuserSnapshot CloneFluidInfuserSnapshot(FluidInfuserSnapshot source)
+    {
+        var clone = new FluidInfuserSnapshot
+        {
+            MachineId = source.MachineId,
+            Position = source.Position,
+            WorldTime = source.WorldTime,
+            LastHLRSimTime = source.LastHLRSimTime,
+            IsOn = source.IsOn,
+            SelectedInputChestPos = source.SelectedInputChestPos,
+            SelectedInputPipeGraphId = source.SelectedInputPipeGraphId,
+            SelectedOutputChestPos = source.SelectedOutputChestPos,
+            SelectedOutputMode = source.SelectedOutputMode,
+            SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
+            SelectedRecipeKey = source.SelectedRecipeKey,
+            SelectedFluidType = source.SelectedFluidType,
+            SelectedFluidGraphId = source.SelectedFluidGraphId,
+            IsProcessing = source.IsProcessing,
+            CycleTickCounter = source.CycleTickCounter,
+            CycleTickLength = source.CycleTickLength,
+            ActiveRecipeKey = source.ActiveRecipeKey,
+            MachineRecipeGroupsCsv = source.MachineRecipeGroupsCsv,
+            PendingInputs = new Dictionary<string, int>(StringComparer.Ordinal),
+            PendingFluidInputType = source.PendingFluidInputType,
+            PendingFluidInputAmountMg = source.PendingFluidInputAmountMg,
+            PendingOutputs = new Dictionary<string, int>(StringComparer.Ordinal),
+            LastAction = source.LastAction,
+            LastBlockReason = source.LastBlockReason
+        };
+
+        if (source.PendingInputs != null)
+        {
+            foreach (var kvp in source.PendingInputs)
+                clone.PendingInputs[kvp.Key] = kvp.Value;
+        }
+
+        if (source.PendingOutputs != null)
+        {
+            foreach (var kvp in source.PendingOutputs)
+                clone.PendingOutputs[kvp.Key] = kvp.Value;
+        }
+
+        return clone;
     }
 
     public Dictionary<string, int> GetSnapshotCountsByType()
@@ -1880,6 +2466,14 @@ public class HigherLogicRegistry
                 HLRDevLog($"[HLR][Factory] Unsupported Decanter version {version}");
                 return null;
 
+            case "FluidInfuser":
+                if (version == 1 || version == 2)
+                {
+                    return new FluidInfuserSnapshot();
+                }
+                HLRDevLog($"[HLR][Factory] Unsupported FluidInfuser version {version}");
+                return null;
+
             default:
                 Log.Error($"[HLR][Factory] Unknown snapshot kind '{kind}'");
                 return null;
@@ -1969,6 +2563,9 @@ public class HigherLogicRegistry
 
                     if (snapshot is DecanterSnapshot decanter)
                         SaveDecanterSnapshot(bw, decanter);
+
+                    if (snapshot is FluidInfuserSnapshot infuser)
+                        SaveFluidInfuserSnapshot(bw, infuser);
                 }
             }
 
@@ -2160,6 +2757,62 @@ public class HigherLogicRegistry
         bw.Write(decanter.LastBlockReason ?? string.Empty);
     }
 
+    private void SaveFluidInfuserSnapshot(BinaryWriter bw, FluidInfuserSnapshot infuser)
+    {
+        bw.Write(infuser.WorldTime);
+        bw.Write(infuser.LastHLRSimTime);
+        bw.Write(infuser.IsOn);
+
+        bw.Write(infuser.SelectedInputChestPos.x);
+        bw.Write(infuser.SelectedInputChestPos.y);
+        bw.Write(infuser.SelectedInputChestPos.z);
+        bw.Write(infuser.SelectedInputPipeGraphId.ToString());
+
+        bw.Write(infuser.SelectedOutputChestPos.x);
+        bw.Write(infuser.SelectedOutputChestPos.y);
+        bw.Write(infuser.SelectedOutputChestPos.z);
+        bw.Write((int)infuser.SelectedOutputMode);
+        bw.Write(infuser.SelectedOutputPipeGraphId.ToString());
+
+        bw.Write(infuser.SelectedRecipeKey ?? string.Empty);
+        bw.Write(infuser.SelectedFluidType ?? string.Empty);
+        bw.Write(infuser.SelectedFluidGraphId.ToString());
+
+        bw.Write(infuser.IsProcessing);
+        bw.Write(infuser.CycleTickCounter);
+        bw.Write(infuser.CycleTickLength);
+        bw.Write(infuser.ActiveRecipeKey ?? string.Empty);
+        bw.Write(infuser.MachineRecipeGroupsCsv ?? string.Empty);
+
+        int pendingInputCount = infuser.PendingInputs?.Count ?? 0;
+        bw.Write(pendingInputCount);
+        if (infuser.PendingInputs != null)
+        {
+            foreach (var kvp in infuser.PendingInputs)
+            {
+                bw.Write(kvp.Key ?? string.Empty);
+                bw.Write(kvp.Value);
+            }
+        }
+
+        bw.Write(infuser.PendingFluidInputType ?? string.Empty);
+        bw.Write(infuser.PendingFluidInputAmountMg);
+
+        int pendingCount = infuser.PendingOutputs?.Count ?? 0;
+        bw.Write(pendingCount);
+        if (infuser.PendingOutputs != null)
+        {
+            foreach (var kvp in infuser.PendingOutputs)
+            {
+                bw.Write(kvp.Key ?? string.Empty);
+                bw.Write(kvp.Value);
+            }
+        }
+
+        bw.Write(infuser.LastAction ?? string.Empty);
+        bw.Write(infuser.LastBlockReason ?? string.Empty);
+    }
+
     public void Load()
     {
         EnsureSavePaths();
@@ -2229,6 +2882,8 @@ public class HigherLogicRegistry
                         LoadCrafterSnapshot(br, crafter, snapshotVersion);
                     if (snapshot is DecanterSnapshot decanter)
                         LoadDecanterSnapshot(br, decanter, snapshotVersion);
+                    if (snapshot is FluidInfuserSnapshot infuser)
+                        LoadFluidInfuserSnapshot(br, infuser, snapshotVersion);
                     snapshots[machineId] = snapshot;
                 }
             }
@@ -2490,6 +3145,92 @@ public class HigherLogicRegistry
 
         if (string.IsNullOrWhiteSpace(decanter.MachineRecipeGroupsCsv))
             decanter.MachineRecipeGroupsCsv = "fluiddecanter";
+    }
+
+    private void LoadFluidInfuserSnapshot(BinaryReader br, FluidInfuserSnapshot infuser, int snapshotVersion)
+    {
+        infuser.WorldTime = br.ReadUInt64();
+        infuser.LastHLRSimTime = snapshotVersion >= 1 ? br.ReadUInt64() : infuser.WorldTime;
+        infuser.IsOn = br.ReadBoolean();
+
+        int inX = br.ReadInt32();
+        int inY = br.ReadInt32();
+        int inZ = br.ReadInt32();
+        infuser.SelectedInputChestPos = new Vector3i(inX, inY, inZ);
+        string inputGraph = br.ReadString();
+        if (!Guid.TryParse(inputGraph, out infuser.SelectedInputPipeGraphId))
+            infuser.SelectedInputPipeGraphId = Guid.Empty;
+
+        int outX = br.ReadInt32();
+        int outY = br.ReadInt32();
+        int outZ = br.ReadInt32();
+        infuser.SelectedOutputChestPos = new Vector3i(outX, outY, outZ);
+        infuser.SelectedOutputMode = (OutputTransportMode)br.ReadInt32();
+        string outputGraph = br.ReadString();
+        if (!Guid.TryParse(outputGraph, out infuser.SelectedOutputPipeGraphId))
+            infuser.SelectedOutputPipeGraphId = Guid.Empty;
+
+        infuser.SelectedRecipeKey = br.ReadString() ?? string.Empty;
+        infuser.SelectedFluidType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
+        string fluidGraph = br.ReadString();
+        if (!Guid.TryParse(fluidGraph, out infuser.SelectedFluidGraphId))
+            infuser.SelectedFluidGraphId = Guid.Empty;
+
+        infuser.IsProcessing = br.ReadBoolean();
+        infuser.CycleTickCounter = Math.Max(0, br.ReadInt32());
+        infuser.CycleTickLength = Math.Max(1, br.ReadInt32());
+        infuser.ActiveRecipeKey = br.ReadString() ?? string.Empty;
+        infuser.MachineRecipeGroupsCsv = br.ReadString() ?? string.Empty;
+
+        infuser.PendingInputs = new Dictionary<string, int>(StringComparer.Ordinal);
+        if (snapshotVersion >= 2)
+        {
+            int pendingInputCount = Math.Max(0, br.ReadInt32());
+            for (int i = 0; i < pendingInputCount; i++)
+            {
+                string itemName = br.ReadString() ?? string.Empty;
+                int count = br.ReadInt32();
+                if (string.IsNullOrEmpty(itemName) || count <= 0)
+                    continue;
+
+                infuser.PendingInputs[itemName] = count;
+            }
+
+            infuser.PendingFluidInputType = br.ReadString() ?? string.Empty;
+            infuser.PendingFluidInputAmountMg = Math.Max(0, br.ReadInt32());
+        }
+        else
+        {
+            infuser.PendingFluidInputType = string.Empty;
+            infuser.PendingFluidInputAmountMg = 0;
+        }
+
+        int pendingCount = Math.Max(0, br.ReadInt32());
+        infuser.PendingOutputs = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < pendingCount; i++)
+        {
+            string itemName = br.ReadString() ?? string.Empty;
+            int count = br.ReadInt32();
+            if (string.IsNullOrEmpty(itemName) || count <= 0)
+                continue;
+
+            infuser.PendingOutputs[itemName] = count;
+        }
+
+        infuser.LastAction = br.ReadString() ?? string.Empty;
+        infuser.LastBlockReason = br.ReadString() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(infuser.MachineRecipeGroupsCsv))
+            infuser.MachineRecipeGroupsCsv = "fluidinfuser";
+
+        if (!infuser.IsProcessing)
+        {
+            infuser.CycleTickCounter = 0;
+            infuser.ActiveRecipeKey = string.Empty;
+            infuser.PendingInputs?.Clear();
+            infuser.PendingFluidInputType = string.Empty;
+            infuser.PendingFluidInputAmountMg = 0;
+        }
     }
 
 }

@@ -27,6 +27,18 @@ public sealed class MachineRecipeItemOutput
     }
 }
 
+public sealed class MachineRecipeFluidInput
+{
+    public string Type { get; }
+    public int AmountMg { get; }
+
+    public MachineRecipeFluidInput(string type, int amountMg)
+    {
+        Type = type ?? string.Empty;
+        AmountMg = Math.Max(1, amountMg);
+    }
+}
+
 public sealed class MachineRecipeFluidOutput
 {
     public string Type { get; }
@@ -57,6 +69,7 @@ public sealed class MachineRecipe
     public string Machine { get; }
     public int? CraftTimeTicks { get; }
     public IReadOnlyList<MachineRecipeInput> Inputs { get; }
+    public IReadOnlyList<MachineRecipeFluidInput> FluidInputs { get; }
     public IReadOnlyList<MachineRecipeItemOutput> ItemOutputs { get; }
     public IReadOnlyList<MachineRecipeFluidOutput> FluidOutputs { get; }
     public IReadOnlyList<MachineRecipeGasOutput> GasOutputs { get; }
@@ -69,6 +82,7 @@ public sealed class MachineRecipe
         string machine,
         int? craftTimeTicks,
         List<MachineRecipeInput> inputs,
+        List<MachineRecipeFluidInput> fluidInputs,
         List<MachineRecipeItemOutput> itemOutputs,
         List<MachineRecipeFluidOutput> fluidOutputs,
         List<MachineRecipeGasOutput> gasOutputs,
@@ -80,6 +94,7 @@ public sealed class MachineRecipe
         Machine = machine ?? string.Empty;
         CraftTimeTicks = craftTimeTicks;
         Inputs = (inputs ?? new List<MachineRecipeInput>()).AsReadOnly();
+        FluidInputs = (fluidInputs ?? new List<MachineRecipeFluidInput>()).AsReadOnly();
         ItemOutputs = (itemOutputs ?? new List<MachineRecipeItemOutput>()).AsReadOnly();
         FluidOutputs = (fluidOutputs ?? new List<MachineRecipeFluidOutput>()).AsReadOnly();
         GasOutputs = (gasOutputs ?? new List<MachineRecipeGasOutput>()).AsReadOnly();
@@ -260,6 +275,7 @@ public static class MachineRecipeRegistry
         string machine,
         int? craftTimeTicks,
         List<MachineRecipeInput> inputs,
+        List<MachineRecipeFluidInput> fluidInputs,
         List<MachineRecipeItemOutput> itemOutputs,
         List<MachineRecipeFluidOutput> fluidOutputs,
         List<MachineRecipeGasOutput> gasOutputs)
@@ -269,7 +285,7 @@ public static class MachineRecipeRegistry
             : "~";
 
         return
-            $"machine={machine}|ct={craftToken}|in={FormatInputs(inputs)}|out={FormatItemOutputs(itemOutputs)}|fout={FormatFluidOutputs(fluidOutputs)}|gout={FormatGasOutputs(gasOutputs)}";
+            $"machine={machine}|ct={craftToken}|in={FormatInputs(inputs)}|fin={FormatFluidInputs(fluidInputs)}|out={FormatItemOutputs(itemOutputs)}|fout={FormatFluidOutputs(fluidOutputs)}|gout={FormatGasOutputs(gasOutputs)}";
     }
 
     public static bool TryParseGallonsToMg(string rawAmount, out int amountMg)
@@ -407,6 +423,7 @@ public static class MachineRecipeRegistry
         }
 
         Dictionary<string, int> inputCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+        Dictionary<string, int> fluidInputMgByType = new Dictionary<string, int>(StringComparer.Ordinal);
         Dictionary<string, int> outputCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         Dictionary<string, int> fluidMgByType = new Dictionary<string, int>(StringComparer.Ordinal);
         Dictionary<string, int> gasMgByType = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -427,6 +444,16 @@ public static class MachineRecipeRegistry
                     }
 
                     AddClamped(inputCounts, inputItem, inputCount);
+                    break;
+
+                case "fluid_input":
+                    if (!TryParseFluidGasNode(child, out string fluidInputType, out int fluidInputMg, out string fluidInputError))
+                    {
+                        error = $"Invalid <fluid_input>: {fluidInputError}";
+                        return false;
+                    }
+
+                    AddClamped(fluidInputMgByType, fluidInputType, fluidInputMg);
                     break;
 
                 case "output":
@@ -474,6 +501,7 @@ public static class MachineRecipeRegistry
         }
 
         List<MachineRecipeInput> inputs = new List<MachineRecipeInput>();
+        List<MachineRecipeFluidInput> fluidInputs = new List<MachineRecipeFluidInput>();
         List<MachineRecipeItemOutput> outputs = new List<MachineRecipeItemOutput>();
         List<MachineRecipeFluidOutput> fluidOutputs = new List<MachineRecipeFluidOutput>();
         List<MachineRecipeGasOutput> gasOutputs = new List<MachineRecipeGasOutput>();
@@ -484,6 +512,14 @@ public static class MachineRecipeRegistry
         {
             string key = sortedInputKeys[i];
             inputs.Add(new MachineRecipeInput(key, inputCounts[key]));
+        }
+
+        List<string> sortedFluidInputKeys = new List<string>(fluidInputMgByType.Keys);
+        sortedFluidInputKeys.Sort(StringComparer.Ordinal);
+        for (int i = 0; i < sortedFluidInputKeys.Count; i++)
+        {
+            string key = sortedFluidInputKeys[i];
+            fluidInputs.Add(new MachineRecipeFluidInput(key, fluidInputMgByType[key]));
         }
 
         List<string> sortedOutputKeys = new List<string>(outputCounts.Keys);
@@ -510,7 +546,7 @@ public static class MachineRecipeRegistry
             gasOutputs.Add(new MachineRecipeGasOutput(key, gasMgByType[key]));
         }
 
-        string normalizedKey = BuildNormalizedKey(machine, craftTimeTicks, inputs, outputs, fluidOutputs, gasOutputs);
+        string normalizedKey = BuildNormalizedKey(machine, craftTimeTicks, inputs, fluidInputs, outputs, fluidOutputs, gasOutputs);
         string sourceContext = $"machine={machine},name={name},order={order}";
 
         recipe = new MachineRecipe(
@@ -518,6 +554,7 @@ public static class MachineRecipeRegistry
             machine,
             craftTimeTicks,
             inputs,
+            fluidInputs,
             outputs,
             fluidOutputs,
             gasOutputs,
@@ -639,6 +676,24 @@ public static class MachineRecipeRegistry
                 continue;
 
             entries.Add($"{output.ItemName}*{output.Count}");
+        }
+
+        return string.Join(";", entries);
+    }
+
+    private static string FormatFluidInputs(List<MachineRecipeFluidInput> inputs)
+    {
+        if (inputs == null || inputs.Count == 0)
+            return string.Empty;
+
+        List<string> entries = new List<string>(inputs.Count);
+        for (int i = 0; i < inputs.Count; i++)
+        {
+            MachineRecipeFluidInput input = inputs[i];
+            if (input == null)
+                continue;
+
+            entries.Add($"{input.Type}*{input.AmountMg}");
         }
 
         return string.Join(";", entries);

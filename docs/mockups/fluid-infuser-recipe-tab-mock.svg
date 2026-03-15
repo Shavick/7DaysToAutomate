@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="493" height="530" viewBox="0 0 493 530">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3f403a"/>
+      <stop offset="35%" stop-color="#23251f"/>
+      <stop offset="100%" stop-color="#111210"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1d1f1b" stop-opacity="0.88"/>
+      <stop offset="100%" stop-color="#090a09" stop-opacity="0.92"/>
+    </linearGradient>
+    <linearGradient id="header" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4a4c46"/>
+      <stop offset="100%" stop-color="#2e302d"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="493" height="530" fill="url(#bg)"/>
+
+  <rect x="0" y="84" width="493" height="446" fill="url(#panel)"/>
+  <rect x="0" y="0" width="493" height="52" fill="url(#header)"/>
+  <rect x="0" y="52" width="122" height="30" fill="#4e5035" opacity="0.55"/>
+  <rect x="14" y="60" width="92" height="32" rx="5" fill="#23271f" stroke="#8ca85b" stroke-width="2"/>
+  <text x="60" y="82" text-anchor="middle" fill="#d7f18f" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700">Recipes</text>
+
+  <text x="246.5" y="35" text-anchor="middle" fill="#d7f18f" font-family="Segoe UI, Arial, sans-serif" font-size="27" font-weight="700">Fluid Infuser</text>
+  <text x="455" y="40" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="48" font-weight="700">×</text>
+
+  <text x="246.5" y="126" text-anchor="middle" fill="#d7f18f" font-family="Segoe UI, Arial, sans-serif" font-size="25" font-weight="800">SELECTED RECIPE</text>
+  <rect x="145" y="136" width="204" height="44" rx="8" fill="#151714" stroke="#5b6157" stroke-width="2"/>
+  <text x="247" y="166" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700">Gas Can</text>
+
+  <g fill="#f0f0f0" font-family="Segoe UI, Arial, sans-serif" filter="url(#shadow)">
+    <text x="22" y="222" font-size="24" font-weight="700">State: Running</text>
+    <text x="22" y="252" font-size="24" font-weight="700">Cycle: 0/1</text>
+    <text x="22" y="282" font-size="22" font-weight="700">Selected Input: 661, 38, -78</text>
+    <text x="22" y="310" font-size="22" font-weight="700">Selected Output: 657, 38, -80</text>
+    <text x="22" y="338" font-size="20" font-weight="700">Fluid Graph: 1e42d946-da84-42ad-893a-1b556ffe814e</text>
+    <text x="22" y="366" font-size="22" font-weight="700">Last Action: Requested Input</text>
+    <text x="22" y="394" font-size="22" font-weight="700">Block Reason:</text>
+  </g>
+
+  <g opacity="0.18">
+    <rect x="26" y="96" width="100" height="110" rx="16" fill="#705f46"/>
+    <rect x="196" y="92" width="104" height="118" rx="16" fill="#705f46"/>
+    <rect x="368" y="100" width="82" height="102" rx="16" fill="#705f46"/>
+    <rect x="0" y="136" width="493" height="10" fill="#8d8d8d"/>
+  </g>
+
+  <rect x="132" y="491" width="200" height="38" rx="2" fill="#7c7c7c" opacity="0.9"/>
+  <text x="232" y="519" text-anchor="middle" fill="#d7f18f" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">Turn Off</text>
+</svg>

@@ -33,6 +33,17 @@ public static class Helper
             converter.setModified();
             converter.NeedsUiRefresh = true;
         }
+
+        if (te is TileEntityFluidInfuser infuser)
+        {
+            infuser.RefreshAvailableInputTargets(world);
+            infuser.RefreshAvailableOutputTargets(world);
+            infuser.ResolveSelectedInputContainer();
+            infuser.ResolveSelectedOutputContainer();
+            infuser.ResolveFluidInputGraph(world);
+            infuser.setModified();
+            infuser.NeedsUiRefresh = true;
+        }
     }
     private static int GetLocalRequesterEntityId(World world)
     {
@@ -84,6 +95,12 @@ public static class Helper
                 if (customUi == "FluidDecanterInfo")
                 {
                     XUiC_FluidDecanterInfo.Open(localPlayer, blockPos);
+                    return;
+                }
+
+                if (customUi == "FluidInfuserInfo")
+                {
+                    XUiC_FluidInfuserInfo.Open(localPlayer, blockPos);
                     return;
                 }
                 Log.Error($"[NetPkg][MachineUI][SERVER] Unknown local-host UI key '{customUi}'");
@@ -454,6 +471,93 @@ public static class Helper
         }
 
         te.ServerCycleFluidSelection(direction);
+    }
+
+    public static void RequestFluidInfuserSelectRecipe(Vector3i blockPos, string recipeKey)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[FluidInfuser][Helper] RequestFluidInfuserSelectRecipe world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageFluidInfuserControl>()
+                    .SetupSelectRecipe(blockPos, GetLocalRequesterEntityId(world), recipeKey),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityFluidInfuser;
+        if (te == null)
+        {
+            Log.Error($"[FluidInfuser][Helper] No infuser at pos={blockPos}");
+            return;
+        }
+
+        te.ServerSelectRecipe(recipeKey);
+    }
+
+    public static void RequestFluidInfuserSelectInput(Vector3i blockPos, Vector3i chestPos, string pipeGraphId)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[FluidInfuser][Helper] RequestFluidInfuserSelectInput world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageFluidInfuserControl>()
+                    .SetupSelectInput(blockPos, GetLocalRequesterEntityId(world), chestPos, pipeGraphId),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityFluidInfuser;
+        if (te == null)
+        {
+            Log.Error($"[FluidInfuser][Helper] No infuser at pos={blockPos}");
+            return;
+        }
+
+        te.ServerSelectInputContainer(chestPos, pipeGraphId);
+    }
+
+    public static void RequestFluidInfuserSelectOutput(Vector3i blockPos, Vector3i targetPos, int mode, string pipeGraphId)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[FluidInfuser][Helper] RequestFluidInfuserSelectOutput world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageFluidInfuserControl>()
+                    .SetupSelectOutput(blockPos, GetLocalRequesterEntityId(world), targetPos, mode, pipeGraphId),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityFluidInfuser;
+        if (te == null)
+        {
+            Log.Error($"[FluidInfuser][Helper] No infuser at pos={blockPos}");
+            return;
+        }
+
+        te.ServerSelectOutputContainer(targetPos, (OutputTransportMode)mode, pipeGraphId);
     }
     public static void RequestPipeProbeSnapshot(int clrIdx, Vector3i blockPos, int entityPlayerId)
     {

@@ -28,6 +28,8 @@ universalWasherDesc,"Washes selected materials using water as a processing fluid
 
 universalFluidDecanter,"Fluid Decanter"
 fluidDecanterDesc,"Extracts fluid from compatible items and injects it into connected liquid pipes."
+universalFluidInfuser,"Fluid Infuser"
+fluidInfuserDesc,"Combines configured item inputs with fluid from connected pipes to craft new items."
 
 itemPipe,"Item Pipe (T1)"
 itemPipeElbow,"Item Pipe Elbow (T1)"

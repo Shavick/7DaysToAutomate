@@ -103,5 +103,35 @@
 				<sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}" />
 			</rect>
 		</fuel_converter_output_container_entry>
+
+		<fluid_infuser_input_container_entry>
+			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="FluidInfuserInputContainerEntry, 7DaysToAutomate">
+				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
+				<sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true" />
+				<label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center" />
+				<sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}" />
+				<sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}" />
+			</rect>
+		</fluid_infuser_input_container_entry>
+
+		<fluid_infuser_output_container_entry>
+			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="FluidInfuserOutputContainerEntry, 7DaysToAutomate">
+				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
+				<sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true" />
+				<label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center" />
+				<sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}" />
+				<sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}" />
+			</rect>
+		</fluid_infuser_output_container_entry>
+
+		<fluid_infuser_recipe_entry>
+			<rect width="40" height="40" style="press, hover" controller="FluidInfuserRecipeEntry, 7DaysToAutomate" sound="[recipe_click]" tooltip="{tooltip}" sound_play_on_hover="[default_hover]">
+				<sprite depth="2" name="backgroundMain" sprite="menu_empty3px" pos="-2,2" width="44" height="44" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="40" height="40" pos="0,0" color="[darkGrey]" type="sliced" />
+				<sprite depth="4" name="Icon" atlas="ItemIconAtlas" sprite="{recipeicon}" size="36,36" pos="20,-20" pivot="center" foregroundlayer="true" />
+			</rect>
+		</fluid_infuser_recipe_entry>
 	</append>
 </xmlpatch>
