@@ -125,7 +125,6 @@
     <Compile Include="Classes\HLR\WorldHLR.cs" />
     <Compile Include="Classes\Machines\MachineBlock.cs" />
     <Compile Include="Classes\Machines\TileEntityMachine.cs" />
-    <Compile Include="Classes\Net Packages\NetPackageExtractor.cs" />
     <Compile Include="Classes\Net Packages\NetPackageExtractorControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageFluidDecanterControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageOpenMachineUi.cs" />
