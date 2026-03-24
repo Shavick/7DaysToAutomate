@@ -40,7 +40,7 @@ public class HigherLogicRegistry
         saveCycleActive = false;
         saveBatchIndex = 0;
 
-        HLRDevLog($"[HLR] CTOR â€” Snapshot dictionary initialized");
+        HLRDevLog($"[HLR] CTOR — Snapshot dictionary initialized");
     }
 
     private static void HLRDevLog(string msg)
@@ -53,8 +53,8 @@ public class HigherLogicRegistry
 
     public void Init()
     {
-        HLRDevLog("[HLR] Init â€” Higher Logic Registry initialized");
-        HLRDevLog($"[HLR] Init â€” Current snapshot count = {snapshots.Count}");
+        HLRDevLog("[HLR] Init — Higher Logic Registry initialized");
+        HLRDevLog($"[HLR] Init — Current snapshot count = {snapshots.Count}");
     }
 
     public void Update(ulong worldTime)
@@ -72,14 +72,14 @@ public class HigherLogicRegistry
 
         lastUpdateTime = worldTime;
 
-        HLRDevLog($"[HLR] Update tick â€” worldTime={worldTime}, lastSaveTime={lastSaveTime}, saveInterval={SAVE_INTERVAL}, snapshots={snapshots.Count}");
+        HLRDevLog($"[HLR] Update tick — worldTime={worldTime}, lastSaveTime={lastSaveTime}, saveInterval={SAVE_INTERVAL}, snapshots={snapshots.Count}");
 
         if (snapshots.Count == 0)
         {
             return;
         }
 
-        HLRDevLog($"[HLR] Simulating batch {currentBatchIndex + 1}/{BATCH_COUNT} â€” total snapshots={snapshots.Count}");
+        HLRDevLog($"[HLR] Simulating batch {currentBatchIndex + 1}/{BATCH_COUNT} — total snapshots={snapshots.Count}");
 
         int snapshotIndex = 0;
         int simulatedThisTick = 0;
@@ -98,7 +98,7 @@ public class HigherLogicRegistry
             snapshotIndex++;
         }
 
-        HLRDevLog($"[HLR] Batch complete â€” simulated {simulatedThisTick} snapshot(s)");
+        HLRDevLog($"[HLR] Batch complete — simulated {simulatedThisTick} snapshot(s)");
 
         currentBatchIndex++;
         if (currentBatchIndex >= BATCH_COUNT)
@@ -115,7 +115,7 @@ public class HigherLogicRegistry
             }
             else
             {
-                HLRDevLog("[HLR] Periodic save skipped â€” no dirty changes");
+                HLRDevLog("[HLR] Periodic save skipped — no dirty changes");
             }
 
             lastSaveTime = worldTime;
@@ -126,7 +126,7 @@ public class HigherLogicRegistry
     {
         if (count <= 0)
         {
-            HLRDevLog("[HLR][Phantom] AddPhantomExtractors ABORT â€” count <= 0");
+            HLRDevLog("[HLR][Phantom] AddPhantomExtractors ABORT — count <= 0");
             return 0;
         }
 
@@ -162,7 +162,7 @@ public class HigherLogicRegistry
             added++;
         }
 
-        HLRDevLog($"[HLR][Phantom] AddPhantomExtractors SUCCESS â€” added={added}");
+        HLRDevLog($"[HLR][Phantom] AddPhantomExtractors SUCCESS — added={added}");
         return added;
     }
 
@@ -170,20 +170,20 @@ public class HigherLogicRegistry
     {
         if (count <= 0)
         {
-            HLRDevLog("[HLR][Phantom] AddPhantomCrafters ABORT â€” count <= 0");
+            HLRDevLog("[HLR][Phantom] AddPhantomCrafters ABORT — count <= 0");
             return 0;
         }
 
         if (string.IsNullOrEmpty(recipeName))
         {
-            HLRDevLog("[HLR][Phantom] AddPhantomCrafters ABORT â€” recipeName is null/empty");
+            HLRDevLog("[HLR][Phantom] AddPhantomCrafters ABORT — recipeName is null/empty");
             return 0;
         }
 
         Recipe recipe = CraftingManager.GetRecipe(recipeName);
         if (recipe == null)
         {
-            Log.Error($"[HLR][Phantom] AddPhantomCrafters FAIL â€” recipe '{recipeName}' not found");
+            Log.Error($"[HLR][Phantom] AddPhantomCrafters FAIL — recipe '{recipeName}' not found");
             return 0;
         }
 
@@ -222,7 +222,7 @@ public class HigherLogicRegistry
             added++;
         }
 
-        HLRDevLog($"[HLR][Phantom] AddPhantomCrafters SUCCESS â€” added={added} recipe='{recipeName}'");
+        HLRDevLog($"[HLR][Phantom] AddPhantomCrafters SUCCESS — added={added} recipe='{recipeName}'");
         return added;
     }
 
@@ -254,7 +254,7 @@ public class HigherLogicRegistry
             isDirty = true;
         }
 
-        HLRDevLog($"[HLR][Phantom] ClearPhantomMachines SUCCESS â€” removed={toRemove.Count}");
+        HLRDevLog($"[HLR][Phantom] ClearPhantomMachines SUCCESS — removed={toRemove.Count}");
         return toRemove.Count;
     }
 
@@ -302,7 +302,7 @@ public class HigherLogicRegistry
                 break;
 
             default:
-                HLRDevLog($"[HLR] Unknown snapshot type '{snapshot.SnapshotKind}' â€” skipping");
+                HLRDevLog($"[HLR] Unknown snapshot type '{snapshot.SnapshotKind}' — skipping");
                 break;
         }
     }
@@ -311,7 +311,7 @@ public class HigherLogicRegistry
     {
         if (!extractor.IsOn)
         {
-            HLRDevLog($"[HLR][Extractor] SKIP â€” extractor OFF @ {extractor.Position}");
+            HLRDevLog($"[HLR][Extractor] SKIP — extractor OFF @ {extractor.Position}");
             return;
         }
 
@@ -319,7 +319,7 @@ public class HigherLogicRegistry
         {
             extractor.IsOn = false;
             extractor.IsEnabledByPlayer = false;
-            HLRDevLog("[HLR][Extractor] STOP â€” Missing output graph/storage endpoint; shutting down extractor");
+            HLRDevLog("[HLR][Extractor] STOP — Missing output graph/storage endpoint; shutting down extractor");
             return;
         }
 
@@ -370,7 +370,7 @@ public class HigherLogicRegistry
                 AddToOwedDictionary(extractor.OwedResources, timer.Resource, remaining);
 
             int nowOwed = extractor.OwedResources.TryGetValue(timer.Resource, out int owedValue) ? owedValue : 0;
-            HLRDevLog($"[HLR][Extractor] PRODUCED â€” {totalProduced}x {timer.Resource} deposited={accepted} owed={nowOwed}");
+            HLRDevLog($"[HLR][Extractor] PRODUCED — {totalProduced}x {timer.Resource} deposited={accepted} owed={nowOwed}");
         }
 
         extractor.WorldTime = worldTime;
@@ -398,7 +398,7 @@ public class HigherLogicRegistry
 
         if (crafter.SelectedInputPipeGraphId == Guid.Empty || crafter.SelectedInputChestPos == Vector3i.zero)
         {
-            HLRDevLog("[HLR][Crafter] STOP â€” Missing input graph/chest context");
+            HLRDevLog("[HLR][Crafter] STOP — Missing input graph/chest context");
             crafter.IsCrafting = false;
             crafter.DisabledByPlayer = true;
             return;
@@ -406,7 +406,7 @@ public class HigherLogicRegistry
 
         if (!HasValidGraphStorageEndpoint(crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos))
         {
-            HLRDevLog("[HLR][Crafter] STOP â€” Input graph/storage endpoint unavailable");
+            HLRDevLog("[HLR][Crafter] STOP — Input graph/storage endpoint unavailable");
             crafter.IsCrafting = false;
             crafter.DisabledByPlayer = true;
             return;
@@ -414,7 +414,7 @@ public class HigherLogicRegistry
 
         if (crafter.SelectedOutputPipeGraphId == Guid.Empty || crafter.SelectedOutputChestPos == Vector3i.zero)
         {
-            HLRDevLog("[HLR][Crafter] STOP â€” Missing output graph/chest context");
+            HLRDevLog("[HLR][Crafter] STOP — Missing output graph/chest context");
             crafter.IsCrafting = false;
             crafter.DisabledByPlayer = true;
             return;
@@ -422,7 +422,7 @@ public class HigherLogicRegistry
 
         if (!HasValidGraphStorageEndpoint(crafter.SelectedOutputPipeGraphId, crafter.SelectedOutputChestPos))
         {
-            HLRDevLog("[HLR][Crafter] STOP â€” Output graph/storage endpoint unavailable");
+            HLRDevLog("[HLR][Crafter] STOP — Output graph/storage endpoint unavailable");
             crafter.IsCrafting = false;
             crafter.DisabledByPlayer = true;
             return;
@@ -440,7 +440,7 @@ public class HigherLogicRegistry
 
         if (!TryGetSnapshotStorageItemCounts(crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos, out Dictionary<string, int> availableCounts))
         {
-            HLRDevLog("[HLR][Crafter] STOP â€” Input storage snapshot unavailable");
+            HLRDevLog("[HLR][Crafter] STOP — Input storage snapshot unavailable");
             crafter.IsCrafting = false;
             crafter.DisabledByPlayer = true;
             return;
@@ -461,7 +461,7 @@ public class HigherLogicRegistry
             if (craftsThisTick <= 0)
             {
                 crafter.IsCrafting = false;
-                HLRDevLog($"[HLR][Crafter] STOP â€” Ingredient '{itemName}' unavailable");
+                HLRDevLog($"[HLR][Crafter] STOP — Ingredient '{itemName}' unavailable");
                 return;
             }
         }
@@ -479,7 +479,7 @@ public class HigherLogicRegistry
 
         if (!TryConsumeSnapshotStorageItems(crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos, requiredForCrafts, out Dictionary<string, int> consumed))
         {
-            HLRDevLog("[HLR][Crafter] STOP â€” Failed to consume required ingredients from graph snapshot");
+            HLRDevLog("[HLR][Crafter] STOP — Failed to consume required ingredients from graph snapshot");
             crafter.IsCrafting = false;
             return;
         }
@@ -508,7 +508,7 @@ public class HigherLogicRegistry
                 AddToOwedDictionary(crafter.OwedResources, outputName, remaining);
 
             int owedNow = crafter.OwedResources.TryGetValue(outputName, out int owed) ? owed : 0;
-            HLRDevLog($"[HLR][Crafter] PRODUCE â€” {produced}x {outputName} deposited={depositedCount} owed={owedNow}");
+            HLRDevLog($"[HLR][Crafter] PRODUCE — {produced}x {outputName} deposited={depositedCount} owed={owedNow}");
         }
 
         HLRDevLog($"[HLR][Crafter] SIMULATE END @ {crafter.Position}");
@@ -1991,7 +1991,7 @@ public class HigherLogicRegistry
 
     private void StageSaveBatch(int batchIndex)
     {
-        HLRDevLog($"[HLR][Save] StageSaveBatch BEGIN â€” batch {batchIndex + 1}/{BATCH_COUNT}");
+        HLRDevLog($"[HLR][Save] StageSaveBatch BEGIN — batch {batchIndex + 1}/{BATCH_COUNT}");
 
         int snapshotIndex = 0;
         int stagedCount = 0;
@@ -2023,7 +2023,7 @@ public class HigherLogicRegistry
 
         savedBatches.Add(batchIndex);
 
-        HLRDevLog($"[HLR][Save] StageSaveBatch END â€” staged {stagedCount} snapshot(s)");
+        HLRDevLog($"[HLR][Save] StageSaveBatch END — staged {stagedCount} snapshot(s)");
     }
 
     private void BeginSaveCycle()
@@ -2033,7 +2033,7 @@ public class HigherLogicRegistry
         saveBatchIndex = 0;
         saveCycleActive = true;
 
-        HLRDevLog("[HLR][Save] BeginSaveCycle â€” round-robin save started");
+        HLRDevLog("[HLR][Save] BeginSaveCycle — round-robin save started");
     }
 
     private bool IsSaveCycleComplete()
@@ -2054,7 +2054,7 @@ public class HigherLogicRegistry
 
         if (IsSaveCycleComplete())
         {
-            HLRDevLog("[HLR][Save] Round-robin cycle complete â€” finalizing full save");
+            HLRDevLog("[HLR][Save] Round-robin cycle complete — finalizing full save");
             SaveSnapshotSet(stagedSaveSnapshots);
             stagedSaveSnapshots.Clear();
             savedBatches.Clear();
@@ -2080,7 +2080,7 @@ public class HigherLogicRegistry
                 return CloneFluidInfuserSnapshot(infuser);
 
             default:
-                Log.Error($"[HLR][Save] CloneSnapshotForSave FAIL â€” unknown snapshot kind '{snapshot?.SnapshotKind}'");
+                Log.Error($"[HLR][Save] CloneSnapshotForSave FAIL — unknown snapshot kind '{snapshot?.SnapshotKind}'");
                 return null;
         }
     }
@@ -2366,23 +2366,23 @@ public class HigherLogicRegistry
     // ---------------------------------------------
     public void RegisterMachine(Guid machineId, IHLRSnapshot snapshot)
     {
-        HLRDevLog($"[HLR] RegisterMachine â€” BEGIN id={machineId}");
+        HLRDevLog($"[HLR] RegisterMachine — BEGIN id={machineId}");
 
         if (snapshot == null)
         {
-            Log.Error("[HLR] RegisterMachine FAIL â€” snapshot is null");
+            Log.Error("[HLR] RegisterMachine FAIL — snapshot is null");
             return;
         }
 
         if (string.IsNullOrEmpty(snapshot.SnapshotKind))
         {
-            Log.Error("[HLR] RegisterMachine FAIL â€” SnapshotKind is null or empty");
+            Log.Error("[HLR] RegisterMachine FAIL — SnapshotKind is null or empty");
             return;
         }
 
         if (machineId == Guid.Empty)
         {
-            Log.Error("[HLR] RegisterMachine FAIL â€” machineId is Guid.Empty");
+            Log.Error("[HLR] RegisterMachine FAIL — machineId is Guid.Empty");
             return;
         }
 
@@ -2392,14 +2392,14 @@ public class HigherLogicRegistry
         isDirty = true;
 
         HLRDevLog(
-            $"[HLR] RegisterMachine â€” SUCCESS " +
+            $"[HLR] RegisterMachine — SUCCESS " +
             $"id={machineId} " +
             $"kind={snapshot.SnapshotKind} " +
             $"version={snapshot.SnapshotVersion} " +
             $"replacedExisting={replacing}"
         );
 
-        HLRDevLog($"[HLR] RegisterMachine â€” Active snapshots = {snapshots.Count}");
+        HLRDevLog($"[HLR] RegisterMachine — Active snapshots = {snapshots.Count}");
     }
 
     // ---------------------------------------------
@@ -2407,20 +2407,20 @@ public class HigherLogicRegistry
     // ---------------------------------------------
     public bool TryUnregisterMachine(Guid machineId, out IHLRSnapshot snapshot)
     {
-        HLRDevLog($"[HLR] TryUnregisterMachine â€” BEGIN id={machineId}");
+        HLRDevLog($"[HLR] TryUnregisterMachine — BEGIN id={machineId}");
 
         snapshot = null;
 
         if (machineId == Guid.Empty)
         {
-            Log.Error("[HLR] TryUnregisterMachine FAIL â€” machineId is Guid.Empty");
+            Log.Error("[HLR] TryUnregisterMachine FAIL — machineId is Guid.Empty");
             return false;
         }
 
         if (!snapshots.TryGetValue(machineId, out snapshot))
         {
-            HLRDevLog($"[HLR] TryUnregisterMachine â€” MISS id={machineId}");
-            HLRDevLog($"[HLR] TryUnregisterMachine â€” Active snapshots = {snapshots.Count}");
+            HLRDevLog($"[HLR] TryUnregisterMachine — MISS id={machineId}");
+            HLRDevLog($"[HLR] TryUnregisterMachine — Active snapshots = {snapshots.Count}");
             return false;
         }
 
@@ -2428,13 +2428,13 @@ public class HigherLogicRegistry
         isDirty = true;
 
         HLRDevLog(
-            $"[HLR] TryUnregisterMachine â€” SUCCESS " +
+            $"[HLR] TryUnregisterMachine — SUCCESS " +
             $"id={machineId} " +
             $"kind={snapshot.SnapshotKind} " +
             $"version={snapshot.SnapshotVersion}"
         );
 
-        HLRDevLog($"[HLR] TryUnregisterMachine â€” Active snapshots = {snapshots.Count}");
+        HLRDevLog($"[HLR] TryUnregisterMachine — Active snapshots = {snapshots.Count}");
         return true;
     }
 
@@ -2541,7 +2541,7 @@ public class HigherLogicRegistry
 
                 int snapshotCount = sourceSnapshots.Count;
                 bw.Write(snapshotCount);
-                HLRDevLog($"[HLR][IO] Save â€” snapshotCount={snapshotCount}");
+                HLRDevLog($"[HLR][IO] Save — snapshotCount={snapshotCount}");
 
                 foreach (var snapshot in sourceSnapshots.Values)
                 {
@@ -2553,7 +2553,7 @@ public class HigherLogicRegistry
                     bw.Write(snapshot.Position.y);
                     bw.Write(snapshot.Position.z);
 
-                    HLRDevLog($"[HLR][IO] Save â€” snapshot kind={snapshot.SnapshotKind} version={snapshot.SnapshotVersion} machineid={snapshot.MachineId}");
+                    HLRDevLog($"[HLR][IO] Save — snapshot kind={snapshot.SnapshotKind} version={snapshot.SnapshotVersion} machineid={snapshot.MachineId}");
 
                     if (snapshot is ExtractorSnapshotV1 extractor)
                         SaveExtractorSnapshot(bw, extractor);
@@ -2574,7 +2574,7 @@ public class HigherLogicRegistry
 
             File.Move(tempFile, hlrFile);
 
-            HLRDevLog($"[HLR][IO] Save OK â€” wrote header v{HLR_VERSION}");
+            HLRDevLog($"[HLR][IO] Save OK — wrote header v{HLR_VERSION}");
         }
         catch (Exception ex)
         {
@@ -2819,7 +2819,7 @@ public class HigherLogicRegistry
 
         if (!File.Exists(hlrFile))
         {
-            HLRDevLog("[HLR][IO] Load â€” no file found, starting fresh");
+            HLRDevLog("[HLR][IO] Load — no file found, starting fresh");
             return;
         }
 
@@ -2833,7 +2833,7 @@ public class HigherLogicRegistry
 
                 if (magic != "HLR")
                 {
-                    Log.Error($"[HLR][IO] Load FAILED â€” bad magic '{magic}'");
+                    Log.Error($"[HLR][IO] Load FAILED — bad magic '{magic}'");
                     return;
                 }
 
@@ -2841,15 +2841,15 @@ public class HigherLogicRegistry
 
                 if (fileVersion != HLR_VERSION)
                 {
-                    Log.Error($"[HLR][IO] Load FAILED â€” unsupported version {fileVersion}");
+                    Log.Error($"[HLR][IO] Load FAILED — unsupported version {fileVersion}");
                     return;
                 }
 
-                HLRDevLog($"[HLR][IO] Load OK â€” header valid (v{fileVersion})");
+                HLRDevLog($"[HLR][IO] Load OK — header valid (v{fileVersion})");
 
                 // Load Snapshot Count
                 int snapshotCount = br.ReadInt32();
-                HLRDevLog($"[HLR][IO] Load â€” snapshotCount={snapshotCount}");
+                HLRDevLog($"[HLR][IO] Load — snapshotCount={snapshotCount}");
 
                 // Snapshot Information
                 for (int i = 0; i < snapshotCount; i++)
@@ -2857,7 +2857,7 @@ public class HigherLogicRegistry
                     string kind = br.ReadString();
                     int snapshotVersion = br.ReadInt32();
 
-                    HLRDevLog($"[HLR][IO] Load â€” snapshot[{i}] kind={kind} version={snapshotVersion}");
+                    HLRDevLog($"[HLR][IO] Load — snapshot[{i}] kind={kind} version={snapshotVersion}");
 
                     var snapshot = CreateSnapshot(kind, snapshotVersion);
                     if (snapshot == null)
@@ -2891,11 +2891,11 @@ public class HigherLogicRegistry
 
         catch (EndOfStreamException)
         {
-            Log.Error("[HLR][IO] Load FAILED â€” file truncated");
+            Log.Error("[HLR][IO] Load FAILED — file truncated");
         }
         catch (Exception ex)
         {
-            Log.Error($"[HLR][IO] Load FAILED â€” exception: {ex}");
+            Log.Error($"[HLR][IO] Load FAILED — exception: {ex}");
         }
         HLRDevLog($"[HLR] Load Called! file={hlrFile}");
     }

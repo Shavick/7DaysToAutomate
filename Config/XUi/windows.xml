@@ -281,6 +281,96 @@
 			</rect>
 		</window>
 
+		<window name="windowMelterInfo" controller="MelterInfo, 7DaysToAutomate" width="450" height="380" panel="Center" cursor_area="true">
+			<rect pos="0,-100">
+				<panel name="header" height="50" depth="1">
+					<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+					<label depth="6" pos="0,-6" width="450" height="40" text="{machinename}" font_size="36" justify="center" color="[limeGreen]" effect="outline" />
+				</panel>
+				<rect name="content" pos="0,-50" height="330">
+					<sprite depth="1" name="bg" width="450" height="500" type="sliced" color="[black]" alpha="0.8" />
+				</rect>
+				<button depth="10" name="closeButton" pos="415,-25" width="35" height="35" pivot="center" sprite="ui_game_symbol_x" defaultcolor="[white]" hovercolor="[red]" type="sliced" sound="[paging_click]" on_press="true" />
+				<rect pos="0,-78">
+					<label depth="6" pos="0,-6" width="450" height="34" text="RECIPE OUTPUT" font_size="30" justify="center" color="[limeGreen]" effect="outline" />
+					<button depth="6" name="recipeprevbutton" pos="150,-38" width="28" height="28" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
+					<label depth="6" pos="180,-36" width="90" height="28" text="{selectedfluid}" justify="center" font_size="30" color="[white]" />
+					<button depth="6" name="recipenextbutton" pos="272,-38" width="28" height="28" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
+				</rect>
+				<rect pos="22,-160">
+					<label depth="6" pos="0,0" width="420" height="26" text="State: {machine_state}" font_size="24" color="[white]" />
+					<label depth="6" pos="0,-26" width="420" height="26" text="Cycle: {cycle_timer}" font_size="22" color="[white]" />
+					<label depth="6" pos="0,-52" width="420" height="26" text="Selected Input: {selected_input}" font_size="20" color="[white]" />
+					<label depth="6" pos="0,-76" width="420" height="26" text="Fluid Graph: {selected_fluid_graph}" font_size="20" color="[white]" />
+					<label depth="6" pos="0,-100" width="420" height="26" text="Last Action: {last_action}" font_size="20" color="[white]" />
+					<label depth="6" pos="0,-124" width="420" height="26" text="Block Reason: {block_reason}" font_size="20" color="[white]" />
+				</rect>
+				<rect pos="-310,0">
+					<panel name="pendingItemsHeader" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Item Input Buffer" font_size="28" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<panel name="pendingItemsPanel" pos="-2,-45" width="300" height="120" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<sprite depth="2" name="pendingInputItemFrame" sprite="menu_empty3px" pos="18,-28" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+						<sprite depth="3" name="pendingInputItemBg" pos="21,-31" width="56" height="56" color="[mediumGrey]" type="sliced" />
+						<sprite depth="4" name="pendingInputItemIcon" atlas="ItemIconAtlas" sprite="{pending_item_input_icon}" pos="21,-31" width="56" height="56" foregroundlayer="true" visible="{pending_item_input_has_item}" />
+						<label depth="5" name="pendingInputItemCount" pos="49,-78" width="26" height="18" text="{pending_item_input}" font_size="20" justify="right" color="[white]" effect="outline" visible="{pending_item_input_has_item}" />
+						<label depth="6" pos="92,-26" width="190" height="26" text="{pending_item_input_name}" font_size="20" color="[white]" />
+					</panel>
+				</rect>
+				<rect pos="-310,-175">
+					<panel name="pendingFluidHeader" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Fluid Output Buffer" font_size="28" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<panel name="pendingFluidPanel" pos="-2,-45" width="300" height="120" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<sprite depth="4" name="pendingOutputFluidIcon" sprite="ui_game_symbol_water" pos="18,-24" width="56" height="56" foregroundlayer="true" />
+						<label depth="6" pos="92,-24" width="190" height="24" text="{pending_fluid_output_name}" font_size="20" color="[white]" />
+						<label depth="6" pos="92,-50" width="190" height="24" text="{pending_fluid_output}" font_size="20" color="[white]" />
+					</panel>
+				</rect>
+				<rect pos="460,0">
+					<panel name="inputContainerPanel" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Item Input Container" font_size="30" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<grid name="melterInputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="MelterInputContainerList, 7DaysToAutomate">
+						<melter_input_container_entry name="0" />
+					</grid>
+				</rect>
+				<rect pos="460,-175">
+					<panel name="heatHeader" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Heat" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<panel name="heatPanel" pos="-2,-45" width="300" height="120" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<label depth="6" pos="20,-14" width="260" height="24" text="Current: {current_heat} / Source Max: {max_heat}" font_size="18" color="[white]" />
+						<label depth="6" pos="20,-38" width="260" height="24" text="Required: {required_heat}" font_size="18" color="[white]" />
+						<sprite depth="3" pos="20,-72" width="260" height="22" sprite="menu_empty3px" type="sliced" color="[black]" fillcenter="false" />
+						<filledsprite depth="4" pos="22,-74" width="256" height="18" type="filled" filldirection="horizontal" fill="{heat_fill}" color="255,120,32,210" />
+					</panel>
+				</rect>
+				<rect pos="0,0">
+					<panel name="requirementsHeader" pos="460,-356" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[black]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Requirements" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<panel name="requirementsPanel" pos="460,-400" width="300" height="150" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<label depth="6" pos="55,-10" text="Item Input" color="[green]" visible="{req_item_input}" />
+						<label depth="6" pos="55,-10" text="Item Input" color="[red]" visible="{req_not_item_input}" />
+						<label depth="6" pos="55,-40" text="Fluid Output" color="[green]" visible="{req_fluid_output}" />
+						<label depth="6" pos="55,-40" text="Fluid Output" color="[red]" visible="{req_not_fluid_output}" />
+						<label depth="6" pos="55,-70" text="Heat" color="[green]" visible="{req_heat}" />
+						<label depth="6" pos="55,-70" text="Heat" color="[red]" visible="{req_not_heat}" />
+					</panel>
+				</rect>
+			</rect>
+		</window>
+
 		<window name="windowFluidInfuserInfo" controller="FluidInfuserInfo, 7DaysToAutomate" width="450" height="380" panel="Center" cursor_area="true">
 			<rect pos="0,-100">
 				<panel name="header" height="50" depth="1">

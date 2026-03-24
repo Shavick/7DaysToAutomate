@@ -25,7 +25,7 @@
 			<property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall" />
 			<property name="OutputCount" value="1,1-3" />
 			<property name="ExtractionSpeed" value="10,3" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<!-- Universal Extractor - Iron T2 -->
@@ -59,7 +59,7 @@
 			<property name="ResourceGenerated" value="resourceScrapIron,resourceRockSmall" />
 			<property name="OutputCount" value="3-9,1-3" />
 			<property name="ExtractionSpeed" value="3,1" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<!-- Universal Extractor - Iron T5 -->
@@ -96,8 +96,8 @@
 			<property name="ResourceGenerated" value="resourceCoal" />
 			<property name="ExtractionSpeed" value="3" />
 			<property name="OutputCount" value="1-2" />
-			<property name="DevLogs" value="true" />
-			<property name="NeedsFluidToRun" value="true" />
+			<property name="DevLogs" value="false" />
+			<property name="NeedsFluidToRun" value="false" />
 			<property name="FluidFuel" value="gas" />
 			<property name="FluidFuelBufferGallons" value="20" />
 			<property name="FluidFuelUsePerSecond" value="1" />
@@ -127,7 +127,7 @@
 			<property name="ResourceGenerated" value="resourcePotassiumNitratePowder" />
 			<property name="ExtractionSpeed" value="1" />
 			<property name="OutputCount" value="1-5" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<!-- Universal Extractor - Lead -->
@@ -198,7 +198,7 @@
 			<!-- Placeholder properties - fill later -->
 			<property name="CraftingSpeed" value="1" />
 			<property name="InternalStorageMultiplier" value="5" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<!-- MACHINES: NETWORK -->
@@ -215,7 +215,7 @@
 			<property name="Stacknumber" value="1" />
 			<property name="EconomicValue" value="1500" />
 			<property name="DescriptionKey" value="networkControllerDesc" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<!-- ITEM PIPES -->
@@ -234,7 +234,7 @@
 			<property name="EconomicValue" value="25" />
 			<property name="DescriptionKey" value="itemPipeDesc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 			<property name="PipeThroughput" value="3" />
 			<property name="PipeSpeed" value="1" />
 			<property name="PipeLatency" value="1" />
@@ -254,7 +254,7 @@
 			<property name="EconomicValue" value="25" />
 			<property name="DescriptionKey" value="itemPipeElbowDesc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 			<property name="PipeThroughput" value="5" />
 			<property name="PipeSpeed" value="1" />
 			<property name="PipeLatency" value="1" />
@@ -274,7 +274,7 @@
 			<property name="EconomicValue" value="25" />
 			<property name="DescriptionKey" value="itemPipeTJunctionDesc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 			<property name="PipeThroughput" value="5" />
 			<property name="PipeSpeed" value="1" />
 			<property name="PipeLatency" value="1" />
@@ -290,7 +290,7 @@
 			<property name="PipeThroughput" value="9" />
 			<property name="PipeSpeed" value="2" />
 			<property name="PipeLatency" value="2" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<block name="itemPipeElbowT2">
@@ -303,7 +303,7 @@
 			<property name="PipeThroughput" value="9" />
 			<property name="PipeSpeed" value="2" />
 			<property name="PipeLatency" value="2" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<block name="itemPipeSmallJointT2">
@@ -316,7 +316,7 @@
 			<property name="PipeThroughput" value="9" />
 			<property name="PipeSpeed" value="2" />
 			<property name="PipeLatency" value="2" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<block name="itemPipeT3">
@@ -329,7 +329,7 @@
 			<property name="PipeThroughput" value="30" />
 			<property name="PipeSpeed" value="10" />
 			<property name="PipeLatency" value="100" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<block name="itemPipeElbowT3">
@@ -342,7 +342,7 @@
 			<property name="PipeThroughput" value="30" />
 			<property name="PipeSpeed" value="10" />
 			<property name="PipeLatency" value="100" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<block name="itemPipeSmallJointT3">
@@ -355,7 +355,7 @@
 			<property name="PipeThroughput" value="30" />
 			<property name="PipeSpeed" value="10" />
 			<property name="PipeLatency" value="100" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<!-- FLUID PIPES -->
@@ -542,7 +542,7 @@
 			<property name="EconomicValue" value="1000" />
 			<property name="DescriptionKey" value="universalWasherDesc" />
 			<!-- Placeholder properties - fill later -->
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 			<property name="FluidMax" value="100" />
 		</block>
 
@@ -561,7 +561,7 @@
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="InputSpeed" value="1" />
 			<property name="MachineRecipes" value="fluiddecanter" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
 
 		<block name="universalFluidInfuser">
@@ -579,8 +579,33 @@
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="InputSpeed" value="1" />
 			<property name="MachineRecipes" value="fluidinfuser" />
-			<property name="DevLogs" value="true" />
+			<property name="DevLogs" value="false" />
 		</block>
+
+		<block name="universalMelter">
+			<property name="Class" value="MelterBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1400" />
+			<property name="DescriptionKey" value="universalMelterDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="InputSpeed" value="1" />
+			<property name="MachineRecipes" value="melter" />
+			<property name="EnableHeatRequirement" value="true" />
+			<property name="HeatGainCapPerTick" value="3" />
+			<property name="HeatLossPerTick" value="1" />
+			<property name="DevLogs" value="false" />
+		</block>
+	</append>
+
+	<append xpath="/blocks/block[@name='campfire']">
+		<property name="HeatOutput" value="30" />
 	</append>
 </configs>
 <!-- ===================================================================== -->

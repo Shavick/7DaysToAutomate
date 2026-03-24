@@ -15,6 +15,7 @@ public static class UCTileEntityIDs
     public const int FluidStorage = 139;
     public const int FluidDecanter = 140;
     public const int FluidInfuser = 141;
+    public const int Melter = 142;
 }
 
 public class TileEntityUniversalExtractor : TileEntityMachine
@@ -389,6 +390,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
             IsEnabledByPlayer = isEnabledByPlayer,
             LastHLRSimTime = world.GetWorldTime(),
             SelectedOutputChestPos = SelectedOutputChestPos,
+            SelectedOutputMode = SelectedOutputMode,
             SelectedOutputPipeGraphId = SelectedPipeGraphId,
             Timers = new List<ResourceTimer>(timers),
             OwedResources = new Dictionary<string, int>()
@@ -421,6 +423,7 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         timers.AddRange(snapshot.Timers);
         isExtractorOn = snapshot.IsOn;
         SelectedOutputChestPos = snapshot.SelectedOutputChestPos;
+        SelectedOutputMode = snapshot.SelectedOutputMode;
         SelectedPipeGraphId = snapshot.SelectedOutputPipeGraphId;
         isEnabledByPlayer = snapshot.IsEnabledByPlayer;
         LoadFluidFuelConfig();
@@ -1547,8 +1550,6 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
     }
 }
-
-
 
 
 

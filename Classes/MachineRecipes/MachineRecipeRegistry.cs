@@ -68,6 +68,7 @@ public sealed class MachineRecipe
     public string Name { get; }
     public string Machine { get; }
     public int? CraftTimeTicks { get; }
+    public int RequiredHeat { get; }
     public IReadOnlyList<MachineRecipeInput> Inputs { get; }
     public IReadOnlyList<MachineRecipeFluidInput> FluidInputs { get; }
     public IReadOnlyList<MachineRecipeItemOutput> ItemOutputs { get; }
@@ -81,6 +82,7 @@ public sealed class MachineRecipe
         string name,
         string machine,
         int? craftTimeTicks,
+        int requiredHeat,
         List<MachineRecipeInput> inputs,
         List<MachineRecipeFluidInput> fluidInputs,
         List<MachineRecipeItemOutput> itemOutputs,
@@ -93,6 +95,7 @@ public sealed class MachineRecipe
         Name = name ?? string.Empty;
         Machine = machine ?? string.Empty;
         CraftTimeTicks = craftTimeTicks;
+        RequiredHeat = Math.Max(0, requiredHeat);
         Inputs = (inputs ?? new List<MachineRecipeInput>()).AsReadOnly();
         FluidInputs = (fluidInputs ?? new List<MachineRecipeFluidInput>()).AsReadOnly();
         ItemOutputs = (itemOutputs ?? new List<MachineRecipeItemOutput>()).AsReadOnly();
@@ -274,6 +277,7 @@ public static class MachineRecipeRegistry
     public static string BuildNormalizedKey(
         string machine,
         int? craftTimeTicks,
+        int requiredHeat,
         List<MachineRecipeInput> inputs,
         List<MachineRecipeFluidInput> fluidInputs,
         List<MachineRecipeItemOutput> itemOutputs,
@@ -283,9 +287,10 @@ public static class MachineRecipeRegistry
         string craftToken = craftTimeTicks.HasValue
             ? craftTimeTicks.Value.ToString(CultureInfo.InvariantCulture)
             : "~";
+        string heatToken = Math.Max(0, requiredHeat).ToString(CultureInfo.InvariantCulture);
 
         return
-            $"machine={machine}|ct={craftToken}|in={FormatInputs(inputs)}|fin={FormatFluidInputs(fluidInputs)}|out={FormatItemOutputs(itemOutputs)}|fout={FormatFluidOutputs(fluidOutputs)}|gout={FormatGasOutputs(gasOutputs)}";
+            $"machine={machine}|ct={craftToken}|heat={heatToken}|in={FormatInputs(inputs)}|fin={FormatFluidInputs(fluidInputs)}|out={FormatItemOutputs(itemOutputs)}|fout={FormatFluidOutputs(fluidOutputs)}|gout={FormatGasOutputs(gasOutputs)}";
     }
 
     public static bool TryParseGallonsToMg(string rawAmount, out int amountMg)
@@ -427,6 +432,7 @@ public static class MachineRecipeRegistry
         Dictionary<string, int> outputCounts = new Dictionary<string, int>(StringComparer.Ordinal);
         Dictionary<string, int> fluidMgByType = new Dictionary<string, int>(StringComparer.Ordinal);
         Dictionary<string, int> gasMgByType = new Dictionary<string, int>(StringComparer.Ordinal);
+        int requiredHeat = 0;
 
         foreach (XElement child in node.Elements())
         {
@@ -484,6 +490,23 @@ public static class MachineRecipeRegistry
                     }
 
                     AddClamped(gasMgByType, gasType, gasMg);
+                    break;
+
+                case "heat":
+                    string heatRaw = (child.Attribute("value")?.Value ?? string.Empty).Trim();
+                    if (string.IsNullOrEmpty(heatRaw))
+                    {
+                        error = "Invalid <heat>: missing value";
+                        return false;
+                    }
+
+                    if (!int.TryParse(heatRaw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedHeat) || parsedHeat < 0)
+                    {
+                        error = $"Invalid <heat>: value '{heatRaw}' must be a non-negative integer";
+                        return false;
+                    }
+
+                    requiredHeat = Math.Max(requiredHeat, parsedHeat);
                     break;
             }
         }
@@ -546,13 +569,14 @@ public static class MachineRecipeRegistry
             gasOutputs.Add(new MachineRecipeGasOutput(key, gasMgByType[key]));
         }
 
-        string normalizedKey = BuildNormalizedKey(machine, craftTimeTicks, inputs, fluidInputs, outputs, fluidOutputs, gasOutputs);
+        string normalizedKey = BuildNormalizedKey(machine, craftTimeTicks, requiredHeat, inputs, fluidInputs, outputs, fluidOutputs, gasOutputs);
         string sourceContext = $"machine={machine},name={name},order={order}";
 
         recipe = new MachineRecipe(
             name,
             machine,
             craftTimeTicks,
+            requiredHeat,
             inputs,
             fluidInputs,
             outputs,

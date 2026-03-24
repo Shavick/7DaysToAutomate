@@ -26,6 +26,36 @@
 			<output item="ammoGasCan" count="1" />
 		</machineRecipe>
 
+		<machineRecipe name="melt_scrap_iron" machine="melter">
+			<heat value="20" />
+			<input item="resourceScrapIron" count="100" />
+			<fluid_output type="molten_iron" gallons="1" />
+		</machineRecipe>
+
+		<machineRecipe name="melt_scrap_lead" machine="melter">
+			<heat value="22" />
+			<input item="resourceScrapLead" count="100" />
+			<fluid_output type="molten_lead" gallons="1" />
+		</machineRecipe>
+
+		<machineRecipe name="melt_clay_lump" machine="melter">
+			<heat value="15" />
+			<input item="resourceClayLump" count="100" />
+			<fluid_output type="molten_clay" gallons="1" />
+		</machineRecipe>
+
+		<machineRecipe name="melt_sand" machine="melter">
+			<heat value="35" />
+			<input item="resourceSand" count="100" />
+			<fluid_output type="molten_glass" gallons="1" />
+		</machineRecipe>
+
+		<machineRecipe name="melt_scrap_brass" machine="melter">
+			<heat value="55" />
+			<input item="resourceScrapBrass" count="100" />
+			<fluid_output type="molten_brass" gallons="1" />
+		</machineRecipe>
+
 		<!-- ITEM PIPES: BASE -->
 
 		<recipe name="itemPipe" count="12" craft_area="workbench" craft_time="15" tags="learnable,workbenchCrafting,itemPipe">
@@ -262,6 +292,14 @@
 
 		<recipe name="universalFluidInfuser" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalFluidInfuser">
 			<ingredient name="resourceForgedSteel" count="20" />
+			<ingredient name="resourceMechanicalParts" count="12" />
+			<ingredient name="resourceElectricParts" count="8" />
+			<ingredient name="resourceDuctTape" count="6" />
+			<ingredient name="resourceOil" count="20" />
+		</recipe>
+
+		<recipe name="universalMelter" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalMelter">
+			<ingredient name="resourceForgedSteel" count="25" />
 			<ingredient name="resourceMechanicalParts" count="12" />
 			<ingredient name="resourceElectricParts" count="8" />
 			<ingredient name="resourceDuctTape" count="6" />

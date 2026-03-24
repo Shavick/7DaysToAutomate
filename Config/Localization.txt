@@ -30,6 +30,8 @@ universalFluidDecanter,"Fluid Decanter"
 fluidDecanterDesc,"Extracts fluid from compatible items and injects it into connected liquid pipes."
 universalFluidInfuser,"Fluid Infuser"
 fluidInfuserDesc,"Combines configured item inputs with fluid from connected pipes to craft new items."
+universalMelter,"Universal Melter"
+universalMelterDesc,"Melts configured item inputs into molten fluids when heated from below."
 
 itemPipe,"Item Pipe (T1)"
 itemPipeElbow,"Item Pipe Elbow (T1)"

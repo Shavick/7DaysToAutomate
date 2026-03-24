@@ -118,6 +118,11 @@
     <Compile Include="Classes\FluidInfuser\Containers\Input\XUiC_FluidInfuserInputContainerList.cs" />
     <Compile Include="Classes\FluidInfuser\Containers\Output\XUiC_FluidInfuserOutputContainerEntry.cs" />
     <Compile Include="Classes\FluidInfuser\Containers\Output\XUiC_FluidInfuserOutputContainerList.cs" />
+    <Compile Include="Classes\Melter\MelterBlock.cs" />
+    <Compile Include="Classes\Melter\TileEntityMelter.cs" />
+    <Compile Include="Classes\Melter\XUiC_MelterInfo.cs" />
+    <Compile Include="Classes\Melter\XUiC_MelterInputContainerEntry.cs" />
+    <Compile Include="Classes\Melter\XUiC_MelterInputContainerList.cs" />
     <Compile Include="Classes\HarmonyPatches\BlockCompositeTileEntity_PipeEndpointDirtyPatch.cs" />
     <Compile Include="Classes\HarmonyPatches\Block_OnBlockActivated_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\ProgressionFromXML_Load_Patches.cs" />
@@ -138,6 +143,7 @@
     <Compile Include="Classes\Net Packages\NetPackageExtractorControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageFluidDecanterControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageFluidInfuserControl.cs" />
+    <Compile Include="Classes\Net Packages\NetPackageMelterControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageOpenMachineUi.cs" />
     <Compile Include="Classes\\Net Packages\\NetPackageToggleMachinePower.cs" />
     <Compile Include="Classes\Networks\NetworkControllerBlock.cs" />
@@ -183,8 +189,6 @@
     <PostBuildEvent>call build.cmd</PostBuildEvent>
   </PropertyGroup>
 </Project>
-
-
 
 
 

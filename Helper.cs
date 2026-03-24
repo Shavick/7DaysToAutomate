@@ -44,6 +44,15 @@ public static class Helper
             infuser.setModified();
             infuser.NeedsUiRefresh = true;
         }
+
+        if (te is TileEntityMelter melter)
+        {
+            melter.RefreshAvailableInputTargets(world);
+            melter.ResolveSelectedInputContainer();
+            melter.ResolveFluidOutputGraph(world);
+            melter.setModified();
+            melter.NeedsUiRefresh = true;
+        }
     }
     private static int GetLocalRequesterEntityId(World world)
     {
@@ -101,6 +110,12 @@ public static class Helper
                 if (customUi == "FluidInfuserInfo")
                 {
                     XUiC_FluidInfuserInfo.Open(localPlayer, blockPos);
+                    return;
+                }
+
+                if (customUi == "MelterInfo")
+                {
+                    XUiC_MelterInfo.Open(localPlayer, blockPos);
                     return;
                 }
                 Log.Error($"[NetPkg][MachineUI][SERVER] Unknown local-host UI key '{customUi}'");
@@ -559,6 +574,64 @@ public static class Helper
 
         te.ServerSelectOutputContainer(targetPos, (OutputTransportMode)mode, pipeGraphId);
     }
+
+    public static void RequestMelterSelectInput(Vector3i blockPos, Vector3i chestPos, string pipeGraphId)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[Melter][Helper] RequestMelterSelectInput world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageMelterControl>()
+                    .SetupSelectInput(blockPos, GetLocalRequesterEntityId(world), chestPos, pipeGraphId),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityMelter;
+        if (te == null)
+        {
+            Log.Error($"[Melter][Helper] No melter at pos={blockPos}");
+            return;
+        }
+
+        te.ServerSelectInputContainer(chestPos, pipeGraphId);
+    }
+
+    public static void RequestMelterCycleRecipe(Vector3i blockPos, int direction)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[Melter][Helper] RequestMelterCycleRecipe world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageMelterControl>()
+                    .SetupCycleRecipe(blockPos, GetLocalRequesterEntityId(world), direction),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityMelter;
+        if (te == null)
+        {
+            Log.Error($"[Melter][Helper] No melter at pos={blockPos}");
+            return;
+        }
+
+        te.ServerCycleFluidSelection(direction);
+    }
     public static void RequestPipeProbeSnapshot(int clrIdx, Vector3i blockPos, int entityPlayerId)
     {
         var world = GameManager.Instance?.World;
@@ -620,9 +693,6 @@ public static class Helper
         );
     }
 }
-
-
-
 
 
 

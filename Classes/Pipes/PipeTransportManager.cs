@@ -104,7 +104,7 @@ public static class PipeTransportManager
         graphDispatchStates.Clear();
         lastBlockedReasonByJob.Clear();
         lastBlockedReasonLogTimeByJob.Clear();
-        Log.Out("[PipeTransportManager] ClearAll()");
+        //Log.Out("[PipeTransportManager] ClearAll()");
     }
 
     public static int GetActiveJobCount()
@@ -536,7 +536,7 @@ public static class PipeTransportManager
 
         if (!RegisterJob(job))
         {
-            Log.Out($"[PipeTransportManager] TryRequestCrafterInputs failed to register packet job for machine={targetMachinePos}");
+            //Log.Out($"[PipeTransportManager] TryRequestCrafterInputs failed to register packet job for machine={targetMachinePos}");
             return false;
         }
 
@@ -934,9 +934,9 @@ public static class PipeTransportManager
         }
 
         if (totalPicked != job.GetTotalItemCount())
-            Log.Out($"[PipeTransportManager] Input packet partial pickup {job.JobId} picked={totalPicked}");
+            //Log.Out($"[PipeTransportManager] Input packet partial pickup {job.JobId} picked={totalPicked}");
 
-        job.SetPacketItemCounts(pickedPacket);
+            job.SetPacketItemCounts(pickedPacket);
         job.HasPickedUpItems = true;
         job.TransitStartWorldTime = world.GetWorldTime();
 

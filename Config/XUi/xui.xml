@@ -24,6 +24,10 @@
 			<window name="windowFluidInfuserInfo" />
 		</window_group>
 
+		<window_group name="MelterInfo" open_backpack_on_open="false" close_compass_on_open="true" defaultSelected="bp.content">
+			<window name="windowMelterInfo" />
+		</window_group>
+
 		<!-- HUD WINDOW GROUPS -->
 
 		<window_group name="PipeProbeHud" open_backpack_on_open="false">

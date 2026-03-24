@@ -6,7 +6,7 @@ public class ExtractorSnapshotV1 : IHLRSnapshot
     public string SnapshotKind => "Extractor";
     public bool IsPhantom;
     public ulong LastHLRSimTime;
-    int IHLRSnapshot.SnapshotVersion => 2;
+    int IHLRSnapshot.SnapshotVersion => 3;
     Guid IHLRSnapshot.MachineId
     {
         get => MachineId;
@@ -27,6 +27,7 @@ public class ExtractorSnapshotV1 : IHLRSnapshot
 
     // Pipe graph context for HLR push planning.
     public Vector3i SelectedOutputChestPos;
+    public OutputTransportMode SelectedOutputMode;
     public Guid SelectedOutputPipeGraphId;
 
     // Production State
