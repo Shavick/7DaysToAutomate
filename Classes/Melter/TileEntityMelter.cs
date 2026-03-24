@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Reflection;
 using UnityEngine;
 
 public class TileEntityMelter : TileEntityMachine
 {
-    private const int PersistVersion = 1;
-    private const int ClientSyncVersion = 1;
+    private const int PersistVersion = 105;
+    private const int ClientSyncVersion = 4;
     private const int MaxSerializedInputTargets = 64;
     private const int MaxSerializedOutputTargets = 64;
     private const int MaxSerializedFluidOptions = 64;
@@ -24,6 +26,8 @@ public class TileEntityMelter : TileEntityMachine
 
     private static readonly object InvalidRecipeWarnSync = new object();
     private static readonly HashSet<string> warnedInvalidRecipeKeys = new HashSet<string>(StringComparer.Ordinal);
+    private static readonly object HeatSourceStateSync = new object();
+    private static readonly Dictionary<Type, Func<object, bool?>> heatSourceActiveStateReaders = new Dictionary<Type, Func<object, bool?>>();
 
     private sealed class FuelConversionRule
     {
@@ -72,6 +76,7 @@ public class TileEntityMelter : TileEntityMachine
 
     private bool configLoaded;
     private int refreshTicker;
+    private float heatFraction;
     private int lastStateSignature = int.MinValue;
     private ulong lastUiSyncWorldTime;
 
@@ -466,43 +471,182 @@ public class TileEntityMelter : TileEntityMachine
         int sourceHeat = GetHeatOutputFromBelow(world);
         CurrentHeatSourceMax = Math.Max(0, sourceHeat);
 
-        int gainCapPerTick = ReadIntProperty("HeatGainCapPerTick", 3, 1, 1000);
-        int lossPerTick = ReadIntProperty("HeatLossPerTick", 1, 0, 1000);
+        float gainPerTick = ReadFloatProperty("HeatGainCapPerTick", 3f, 0f, 1000f);
+        float lossPerTick = ReadFloatProperty("HeatLossPerTick", 1f, 0f, 1000f);
 
-        if (CurrentHeat < CurrentHeatSourceMax)
-        {
-            int delta = CurrentHeatSourceMax - CurrentHeat;
-            CurrentHeat += Math.Min(Math.Max(0, gainCapPerTick), delta);
-        }
-        else if (CurrentHeat > CurrentHeatSourceMax)
-        {
-            CurrentHeat -= Math.Min(Math.Max(0, lossPerTick), CurrentHeat - CurrentHeatSourceMax);
-        }
+        float heatExact = Math.Max(0f, CurrentHeat + heatFraction);
+        float sourceMax = CurrentHeatSourceMax;
 
-        if (CurrentHeat < 0)
-            CurrentHeat = 0;
+        if (heatExact < sourceMax)
+            heatExact = Math.Min(sourceMax, heatExact + Math.Max(0f, gainPerTick));
+        else if (heatExact > sourceMax)
+            heatExact = Math.Max(sourceMax, heatExact - Math.Max(0f, lossPerTick));
+
+        if (heatExact < 0f)
+            heatExact = 0f;
+
+        CurrentHeat = Math.Max(0, Mathf.FloorToInt(heatExact));
+        heatFraction = Mathf.Clamp01(heatExact - CurrentHeat);
 
         return oldHeat != CurrentHeat || oldSourceMax != CurrentHeatSourceMax;
     }
 
     private int GetHeatOutputFromBelow(WorldBase world)
     {
+        TryGetHeatSourceInfo(world, out int heatOutput, out _, out _, out _);
+        return Math.Max(0, heatOutput);
+    }
+
+    public string GetHeatSourceUiState(WorldBase world)
+    {
+        if (!TryGetHeatSourceInfo(world, out _, out bool hasSource, out bool hasBurningState, out bool isBurning) || !hasSource)
+            return "none";
+
+        if (hasBurningState && !isBurning)
+            return "off";
+
+        return "heating";
+    }
+
+    private bool TryGetHeatSourceInfo(
+        WorldBase world,
+        out int heatOutput,
+        out bool hasSource,
+        out bool hasBurningState,
+        out bool isBurning)
+    {
+        heatOutput = 0;
+        hasSource = false;
+        hasBurningState = false;
+        isBurning = false;
+
         if (world == null)
-            return 0;
+            return false;
 
         Vector3i below = ToWorldPos() + Vector3i.down;
         BlockValue blockBelow;
         if (!SafeWorldRead.TryGetBlock(world, 0, below, out blockBelow))
-            return 0;
+            return false;
 
         string heatRaw = blockBelow.Block?.Properties?.GetString("HeatOutput");
         if (string.IsNullOrWhiteSpace(heatRaw))
-            return 0;
+            return false;
 
         if (!int.TryParse(heatRaw.Trim(), out int heat))
-            return 0;
+            return false;
 
-        return Math.Max(0, heat);
+        heat = Math.Max(0, heat);
+        if (heat <= 0)
+            return false;
+
+        hasSource = true;
+        heatOutput = heat;
+
+        // If a heat source exposes IsBurning/isBurning, only count it when burning.
+        TileEntity belowTe = world.GetTileEntity(below);
+        if (belowTe != null &&
+            TryResolveHeatSourceActiveState(belowTe, out bool hasActiveState, out bool activeState) &&
+            hasActiveState)
+        {
+            hasBurningState = true;
+            isBurning = activeState;
+
+            if (!isBurning)
+                heatOutput = 0;
+        }
+
+        return true;
+    }
+
+    private static bool TryResolveHeatSourceActiveState(TileEntity tileEntity, out bool hasActiveState, out bool isActive)
+    {
+        hasActiveState = false;
+        isActive = false;
+
+        if (tileEntity == null)
+            return false;
+
+        Type teType = tileEntity.GetType();
+        Func<object, bool?> reader = GetOrCreateHeatSourceActiveStateReader(teType);
+        if (reader == null)
+            return false;
+
+        bool? activeValue = null;
+        try
+        {
+            activeValue = reader(tileEntity);
+        }
+        catch
+        {
+            activeValue = null;
+        }
+
+        if (!activeValue.HasValue)
+            return false;
+
+        hasActiveState = true;
+        isActive = activeValue.Value;
+        return true;
+    }
+
+    private static Func<object, bool?> GetOrCreateHeatSourceActiveStateReader(Type tileEntityType)
+    {
+        if (tileEntityType == null)
+            return null;
+
+        lock (HeatSourceStateSync)
+        {
+            if (heatSourceActiveStateReaders.TryGetValue(tileEntityType, out Func<object, bool?> cached))
+                return cached;
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase;
+            const string propName = "IsBurning";
+            const string fieldName = "isBurning";
+
+            PropertyInfo prop = tileEntityType.GetProperty(propName, flags);
+            if (prop != null &&
+                prop.PropertyType == typeof(bool) &&
+                prop.GetIndexParameters().Length == 0 &&
+                prop.GetGetMethod(true) != null)
+            {
+                Func<object, bool?> propReader = obj =>
+                {
+                    try
+                    {
+                        return (bool)prop.GetValue(obj, null);
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                };
+
+                heatSourceActiveStateReaders[tileEntityType] = propReader;
+                return propReader;
+            }
+
+            FieldInfo field = tileEntityType.GetField(fieldName, flags);
+            if (field != null && field.FieldType == typeof(bool))
+            {
+                Func<object, bool?> fieldReader = obj =>
+                {
+                    try
+                    {
+                        return (bool)field.GetValue(obj);
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                };
+
+                heatSourceActiveStateReaders[tileEntityType] = fieldReader;
+                return fieldReader;
+            }
+
+            heatSourceActiveStateReaders[tileEntityType] = null;
+            return null;
+        }
     }
 
     public bool ServerSelectInputContainer(Vector3i chestPos, string pipeGraphId)
@@ -1724,6 +1868,7 @@ public class TileEntityMelter : TileEntityMachine
                 pendingFluidOutputCapacityMg = Math.Max(0, br.ReadInt32());
                 CurrentHeat = Math.Max(0, br.ReadInt32());
                 CurrentHeatSourceMax = Math.Max(0, br.ReadInt32());
+                heatFraction = 0f;
 
                 LastAction = br.ReadString() ?? string.Empty;
                 LastBlockReason = br.ReadString() ?? string.Empty;
@@ -1737,8 +1882,12 @@ public class TileEntityMelter : TileEntityMachine
 
             int version = br.ReadInt32();
 
-            if (version >= 101)
+            if (version >= 101 || version == 1)
             {
+                bool hasRecipeKey = version >= 105 || version == 1;
+                bool hasPendingItemMetadata = version >= 102 || version == 1;
+                bool hasPendingReturnAmount = version >= 103 || version == 1;
+
                 IsOn = br.ReadBoolean();
 
                 int inX = br.ReadInt32();
@@ -1759,7 +1908,7 @@ public class TileEntityMelter : TileEntityMachine
                     SelectedOutputPipeGraphId = Guid.Empty;
 
                 SelectedFluidType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
-                if (version >= 105)
+                if (hasRecipeKey)
                     SelectedRecipeKey = br.ReadString() ?? string.Empty;
                 else
                     SelectedRecipeKey = string.Empty;
@@ -1772,12 +1921,12 @@ public class TileEntityMelter : TileEntityMachine
                 pendingFluidInput = Math.Max(0, br.ReadInt32());
                 pendingFluidOutput = Math.Max(0, br.ReadInt32());
 
-                if (version >= 102)
+                if (hasPendingItemMetadata)
                 {
                     pendingItemInputName = br.ReadString() ?? string.Empty;
                     pendingItemInputFluidAmountMg = Math.Max(0, br.ReadInt32());
                     pendingItemInputReturnItemName = br.ReadString() ?? string.Empty;
-                    if (version >= 103)
+                    if (hasPendingReturnAmount)
                         pendingItemInputReturnItemAmount = Math.Max(1, br.ReadInt32());
                     else
                         pendingItemInputReturnItemAmount = 1;
@@ -1801,6 +1950,7 @@ public class TileEntityMelter : TileEntityMachine
                 pendingFluidOutputCapacityMg = Math.Max(0, br.ReadInt32());
                 CurrentHeat = Math.Max(0, br.ReadInt32());
                 CurrentHeatSourceMax = Math.Max(0, br.ReadInt32());
+                heatFraction = 0f;
 
                 LastAction = br.ReadString() ?? string.Empty;
                 LastBlockReason = br.ReadString() ?? string.Empty;
@@ -1825,7 +1975,7 @@ public class TileEntityMelter : TileEntityMachine
         }
         catch (Exception ex)
         {
-            Log.Error($"[FluidDecanter][READ] Failed at {ToWorldPos()} mode={mode}: {ex.Message}");
+            Log.Error($"[Melter][READ] Failed at {ToWorldPos()} mode={mode}: {ex.Message}");
             ResetState();
         }
     }
@@ -1863,6 +2013,7 @@ public class TileEntityMelter : TileEntityMachine
         pendingFluidOutputCapacityMg = 5000;
         CurrentHeat = 0;
         CurrentHeatSourceMax = 0;
+        heatFraction = 0f;
 
         LastAction = "Idle";
         LastBlockReason = string.Empty;
@@ -2113,6 +2264,29 @@ public class TileEntityMelter : TileEntityMachine
         string raw = blockValue.Block?.Properties?.GetString(propertyName);
         if (string.IsNullOrEmpty(raw) || !int.TryParse(raw, out int value))
             value = fallback;
+
+        if (value < min)
+            value = min;
+        else if (value > max)
+            value = max;
+
+        return value;
+    }
+
+    private float ReadFloatProperty(string propertyName, float fallback, float min, float max)
+    {
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        float value;
+
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            value = fallback;
+        }
+        else if (!float.TryParse(raw.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value) &&
+                 !float.TryParse(raw.Trim(), out value))
+        {
+            value = fallback;
+        }
 
         if (value < min)
             value = min;

@@ -511,9 +511,11 @@ public static class MachineRecipeRegistry
             }
         }
 
-        if (inputCounts.Count <= 0)
+        bool hasItemInput = inputCounts.Count > 0;
+        bool hasFluidInput = fluidInputMgByType.Count > 0;
+        if (!hasItemInput && !hasFluidInput)
         {
-            error = "Recipe requires at least one <input>";
+            error = "Recipe requires at least one input (<input> or <fluid_input>)";
             return false;
         }
 

@@ -53,6 +53,13 @@ public static class Helper
             melter.setModified();
             melter.NeedsUiRefresh = true;
         }
+
+        if (te is TileEntityFluidMixer mixer)
+        {
+            mixer.ResolveFluidOutputGraph(world);
+            mixer.setModified();
+            mixer.NeedsUiRefresh = true;
+        }
     }
     private static int GetLocalRequesterEntityId(World world)
     {
@@ -116,6 +123,11 @@ public static class Helper
                 if (customUi == "MelterInfo")
                 {
                     XUiC_MelterInfo.Open(localPlayer, blockPos);
+                    return;
+                }
+                if (customUi == "FluidMixerInfo")
+                {
+                    XUiC_FluidMixerInfo.Open(localPlayer, blockPos);
                     return;
                 }
                 Log.Error($"[NetPkg][MachineUI][SERVER] Unknown local-host UI key '{customUi}'");
@@ -632,6 +644,35 @@ public static class Helper
 
         te.ServerCycleFluidSelection(direction);
     }
+
+    public static void RequestFluidMixerCycleRecipe(Vector3i blockPos, int direction)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[FluidMixer][Helper] RequestFluidMixerCycleRecipe world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageFluidMixerControl>()
+                    .SetupCycleRecipe(blockPos, GetLocalRequesterEntityId(world), direction),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityFluidMixer;
+        if (te == null)
+        {
+            Log.Error($"[FluidMixer][Helper] No fluid mixer at pos={blockPos}");
+            return;
+        }
+
+        te.ServerCycleRecipe(direction);
+    }
     public static void RequestPipeProbeSnapshot(int clrIdx, Vector3i blockPos, int entityPlayerId)
     {
         var world = GameManager.Instance?.World;
@@ -693,7 +734,6 @@ public static class Helper
         );
     }
 }
-
 
 
 

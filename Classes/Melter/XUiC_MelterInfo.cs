@@ -159,10 +159,32 @@ public class XUiC_MelterInfo : XUiController
                 value = melter == null ? "0" : GetRequiredHeat(melter).ToString(CultureInfo.InvariantCulture);
                 return true;
             case "heat_fill":
-                int max = melter?.CurrentHeatSourceMax ?? 0;
-                float fill = max > 0 ? Mathf.Clamp01((float)melter.CurrentHeat / max) : 0f;
+                int required = melter == null ? 0 : GetRequiredHeat(melter);
+                float fill = required > 0 ? Mathf.Clamp01((float)melter.CurrentHeat / required) : 0f;
                 value = fill.ToString("0.###", CultureInfo.InvariantCulture);
                 return true;
+            case "heat_source_none":
+                value = GetHeatSourceState(melter, world) == "none" ? "true" : "false";
+                return true;
+            case "heat_source_off":
+                value = GetHeatSourceState(melter, world) == "off" ? "true" : "false";
+                return true;
+            case "heat_source_heating":
+                value = GetHeatSourceState(melter, world) == "heating" ? "true" : "false";
+                return true;
+            case "heat_source_status":
+                switch (GetHeatSourceState(melter, world))
+                {
+                    case "off":
+                        value = "Heat Source: Off";
+                        return true;
+                    case "heating":
+                        value = "Heat Source: Active";
+                        return true;
+                    default:
+                        value = "Heat Source: Missing";
+                        return true;
+                }
         }
 
         return false;
@@ -177,6 +199,14 @@ public class XUiC_MelterInfo : XUiController
             return 0;
 
         return Math.Max(0, recipe.RequiredHeat);
+    }
+
+    private static string GetHeatSourceState(TileEntityMelter melter, WorldBase world)
+    {
+        if (melter == null || world == null)
+            return "none";
+
+        return melter.GetHeatSourceUiState(world) ?? "none";
     }
 
     private static string FormatGallons(int milliGallons)

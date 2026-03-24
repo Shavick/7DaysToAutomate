@@ -56,6 +56,12 @@
 			<fluid_output type="molten_brass" gallons="1" />
 		</machineRecipe>
 
+		<machineRecipe name="mix_molten_iron_alloy" machine="fluid_mixer">
+			<fluid_input type="molten_iron" gallons="1" />
+			<fluid_input type="molten_clay" gallons="0.5" />
+			<fluid_output type="molten_iron_alloy" gallons="1.5" />
+		</machineRecipe>
+
 		<!-- ITEM PIPES: BASE -->
 
 		<recipe name="itemPipe" count="12" craft_area="workbench" craft_time="15" tags="learnable,workbenchCrafting,itemPipe">

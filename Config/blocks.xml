@@ -598,12 +598,33 @@
 			<property name="InputSpeed" value="1" />
 			<property name="MachineRecipes" value="melter" />
 			<property name="EnableHeatRequirement" value="true" />
-			<property name="HeatGainCapPerTick" value="3" />
-			<property name="HeatLossPerTick" value="1" />
+			<property name="HeatGainCapPerTick" value="0.25" />
+			<property name="HeatLossPerTick" value="0.25" />
+			<property name="DevLogs" value="false" />
+		</block>
+
+		<block name="universalFluidMixer">
+			<property name="Class" value="FluidMixerBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1500" />
+			<property name="DescriptionKey" value="fluidMixerDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="InputSpeed" value="1" />
+			<property name="MachineRecipes" value="fluid_mixer" />
+			<property name="PendingFluidOutputCapacityGallons" value="5" />
 			<property name="DevLogs" value="false" />
 		</block>
 	</append>
 
+
+	<set xpath="//block[@name='campfire']/property[@name='StabilitySupport']/@value">true</set>
 	<append xpath="/blocks/block[@name='campfire']">
 		<property name="HeatOutput" value="30" />
 	</append>

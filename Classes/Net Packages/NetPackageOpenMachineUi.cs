@@ -93,7 +93,7 @@
                     return;
                 }
 
-                if (CustomUi != "ExtractorInfo" && CustomUi != "CrafterInfo" && CustomUi != "FluidDecanterInfo" && CustomUi != "FluidInfuserInfo" && CustomUi != "MelterInfo")
+                if (CustomUi != "ExtractorInfo" && CustomUi != "CrafterInfo" && CustomUi != "FluidDecanterInfo" && CustomUi != "FluidInfuserInfo" && CustomUi != "MelterInfo" && CustomUi != "FluidMixerInfo")
                 {
                     Log.Error($"[NetPkg][MachineUI][SERVER] Unknown UI key '{CustomUi}'");
                     return;
@@ -225,6 +225,19 @@
                         localPlayer.AimingGun = false;
                         XUiC_MelterInfo.Open(localPlayer, BlockPos);
                         Log.Out($"[NetPkg][MachineUI][CLIENT] Melter UI open call executed");
+                        break;
+
+                    case "FluidMixerInfo":
+                        if (!(te is TileEntityFluidMixer))
+                        {
+                            Log.Error($"[NetPkg][MachineUI][CLIENT] TileEntity is not TileEntityFluidMixer for UI {CustomUi}");
+                            return;
+                        }
+
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Opening Fluid Mixer UI at {BlockPos}");
+                        localPlayer.AimingGun = false;
+                        XUiC_FluidMixerInfo.Open(localPlayer, BlockPos);
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Fluid Mixer UI open call executed");
                         break;
 
                     default:
