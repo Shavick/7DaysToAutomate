@@ -84,11 +84,11 @@ public class XUiC_FluidMixerInfo : XUiController
             case "powerbutton":
                 if (mixer == null)
                 {
-                    value = "Off";
+                    value = "Turn On";
                     return true;
                 }
 
-                value = mixer.IsOn ? "On" : "Off";
+                value = mixer.IsOn ? "Turn Off" : "Turn On";
                 return true;
             case "machine_state":
                 if (mixer == null)
@@ -156,6 +156,7 @@ public class XUiC_FluidMixerInfo : XUiController
             return;
 
         Helper.RequestMachinePowerToggle(mixer.GetClrIdx(), blockPosition, !mixer.IsOn);
+        RefreshBindings(true);
     }
 
     private static string ToFluidDisplayName(string fluidType)

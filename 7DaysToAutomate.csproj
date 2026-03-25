@@ -124,8 +124,15 @@
     <Compile Include="Classes\Melter\XUiC_MelterInputContainerEntry.cs" />
     <Compile Include="Classes\Melter\XUiC_MelterInputContainerList.cs" />
     <Compile Include="Classes\FluidMixer\FluidMixerBlock.cs" />
+    <Compile Include="Classes\FluidMixer\FluidMixerSnapshot.cs" />
     <Compile Include="Classes\FluidMixer\TileEntityFluidMixer.cs" />
     <Compile Include="Classes\FluidMixer\XUiC_FluidMixerInfo.cs" />
+    <Compile Include="Classes\Caster\CasterBlock.cs" />
+    <Compile Include="Classes\Caster\CasterSnapshot.cs" />
+    <Compile Include="Classes\Caster\TileEntityCaster.cs" />
+    <Compile Include="Classes\Caster\XUiC_CasterInfo.cs" />
+    <Compile Include="Classes\Caster\Containers\Output\XUiC_CasterOutputContainerEntry.cs" />
+    <Compile Include="Classes\Caster\Containers\Output\XUiC_CasterOutputContainerList.cs" />
     <Compile Include="Classes\HarmonyPatches\BlockCompositeTileEntity_PipeEndpointDirtyPatch.cs" />
     <Compile Include="Classes\HarmonyPatches\Block_OnBlockActivated_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\ProgressionFromXML_Load_Patches.cs" />
@@ -133,6 +140,8 @@
     <Compile Include="Classes\HarmonyPatches\TileEntity_Instantiate_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\World_Init_Patches.cs" />
     <Compile Include="Classes\HLR\HigherLogicRegistry.cs" />
+    <Compile Include="Classes\HLR\HigherLogicRegistry.MixerCaster.cs" />
+    <Compile Include="Classes\HLR\HigherLogicRegistry.MixerCasterIO.cs" />
     <Compile Include="Classes\MachineRecipes\MachineRecipeRegistry.cs" />
     <Compile Include="Classes\Machines\MachineOutputDiscovery.cs" />
     <Compile Include="Classes\Net Packages\NetPackageCrafterControl.cs" />
@@ -148,6 +157,7 @@
     <Compile Include="Classes\Net Packages\NetPackageFluidInfuserControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageMelterControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageFluidMixerControl.cs" />
+    <Compile Include="Classes\Net Packages\NetPackageCasterControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageOpenMachineUi.cs" />
     <Compile Include="Classes\\Net Packages\\NetPackageToggleMachinePower.cs" />
     <Compile Include="Classes\Networks\NetworkControllerBlock.cs" />
@@ -193,5 +203,3 @@
     <PostBuildEvent>call build.cmd</PostBuildEvent>
   </PropertyGroup>
 </Project>
-
-

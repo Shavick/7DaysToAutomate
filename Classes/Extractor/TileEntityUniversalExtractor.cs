@@ -17,6 +17,7 @@ public static class UCTileEntityIDs
     public const int FluidInfuser = 141;
     public const int Melter = 142;
     public const int FluidMixer = 143;
+    public const int Caster = 144;
 }
 
 public class TileEntityUniversalExtractor : TileEntityMachine
@@ -1551,7 +1552,6 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
     }
 }
-
 
 
 

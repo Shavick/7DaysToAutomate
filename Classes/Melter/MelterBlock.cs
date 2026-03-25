@@ -5,6 +5,55 @@ public class MelterBlock : MachineBlock<TileEntityMelter>
         return new TileEntityMelter(chunk);
     }
 
+    public override void OnBlockLoaded(
+        WorldBase world,
+        int clrIdx,
+        Vector3i blockPos,
+        BlockValue blockValue)
+    {
+        base.OnBlockLoaded(world, clrIdx, blockPos, blockValue);
+
+        if (world.IsRemote())
+            return;
+
+        TileEntityMelter te = world.GetTileEntity(clrIdx, blockPos) as TileEntityMelter;
+        if (te == null)
+            return;
+
+        HigherLogicRegistry hlr = WorldHLR.GetOrCreate((World)world);
+        if (hlr != null && hlr.TryUnregisterMachine(te.MachineGuid, out IHLRSnapshot snapshot))
+            te.ApplyHLRSnapshot(snapshot);
+
+        te.SetSimulatedByHLR(false);
+    }
+
+    public override void OnBlockUnloaded(
+        WorldBase world,
+        int clrIdx,
+        Vector3i blockPos,
+        BlockValue blockValue)
+    {
+        base.OnBlockUnloaded(world, clrIdx, blockPos, blockValue);
+
+        if (world.IsRemote())
+            return;
+
+        TileEntityMelter te = world.GetTileEntity(clrIdx, blockPos) as TileEntityMelter;
+        if (te == null)
+            return;
+
+        IHLRSnapshot snapshot = te.BuildHLRSnapshot(world);
+        if (snapshot == null)
+            return;
+
+        HigherLogicRegistry hlr = WorldHLR.GetOrCreate((World)world);
+        if (hlr == null)
+            return;
+
+        hlr.RegisterMachine(te.MachineGuid, snapshot);
+        te.SetSimulatedByHLR(true);
+    }
+
     public override bool HasBlockActivationCommands(
         WorldBase world,
         BlockValue blockValue,

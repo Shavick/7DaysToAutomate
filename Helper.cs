@@ -60,6 +60,14 @@ public static class Helper
             mixer.setModified();
             mixer.NeedsUiRefresh = true;
         }
+
+        if (te is TileEntityCaster caster)
+        {
+            caster.RefreshAvailableOutputTargets(world);
+            caster.ResolveFluidInputGraph(world);
+            caster.setModified();
+            caster.NeedsUiRefresh = true;
+        }
     }
     private static int GetLocalRequesterEntityId(World world)
     {
@@ -128,6 +136,11 @@ public static class Helper
                 if (customUi == "FluidMixerInfo")
                 {
                     XUiC_FluidMixerInfo.Open(localPlayer, blockPos);
+                    return;
+                }
+                if (customUi == "CasterInfo")
+                {
+                    XUiC_CasterInfo.Open(localPlayer, blockPos);
                     return;
                 }
                 Log.Error($"[NetPkg][MachineUI][SERVER] Unknown local-host UI key '{customUi}'");
@@ -673,6 +686,64 @@ public static class Helper
 
         te.ServerCycleRecipe(direction);
     }
+
+    public static void RequestCasterCycleRecipe(Vector3i blockPos, int direction)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[Caster][Helper] RequestCasterCycleRecipe world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageCasterControl>()
+                    .SetupCycleRecipe(blockPos, GetLocalRequesterEntityId(world), direction),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityCaster;
+        if (te == null)
+        {
+            Log.Error($"[Caster][Helper] No caster at pos={blockPos}");
+            return;
+        }
+
+        te.ServerCycleRecipe(direction);
+    }
+
+    public static void RequestCasterSelectOutput(Vector3i blockPos, Vector3i targetPos, int mode, string pipeGraphId)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[Caster][Helper] RequestCasterSelectOutput world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageCasterControl>()
+                    .SetupSelectOutput(blockPos, GetLocalRequesterEntityId(world), targetPos, mode, pipeGraphId),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityCaster;
+        if (te == null)
+        {
+            Log.Error($"[Caster][Helper] No caster at pos={blockPos}");
+            return;
+        }
+
+        te.ServerSelectOutputContainer(targetPos, (OutputTransportMode)mode, pipeGraphId);
+    }
     public static void RequestPipeProbeSnapshot(int clrIdx, Vector3i blockPos, int entityPlayerId)
     {
         var world = GameManager.Instance?.World;
@@ -734,7 +805,6 @@ public static class Helper
         );
     }
 }
-
 
 
 

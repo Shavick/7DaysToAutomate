@@ -40,7 +40,7 @@
 
 		<machineRecipe name="melt_clay_lump" machine="melter">
 			<heat value="15" />
-			<input item="resourceClayLump" count="100" />
+			<input item="resourceClayLump" count="25" />
 			<fluid_output type="molten_clay" gallons="1" />
 		</machineRecipe>
 
@@ -60,6 +60,22 @@
 			<fluid_input type="molten_iron" gallons="1" />
 			<fluid_input type="molten_clay" gallons="0.5" />
 			<fluid_output type="molten_iron_alloy" gallons="1.5" />
+		</machineRecipe>
+
+		<machineRecipe name="cast_forged_iron" machine="mold">
+			<fluid_input type="molten_iron_alloy" gallons="0.2" />
+			<output item="resourceForgedIron" count="5" />
+		</machineRecipe>
+
+		<machineRecipe name="mix_molten_lead_alloy" machine="fluid_mixer">
+			<fluid_input type="molten_lead" gallons="1" />
+			<fluid_input type="molten_clay" gallons="0.5" />
+			<fluid_output type="molten_lead_alloy" gallons="1.5" />
+		</machineRecipe>
+
+		<machineRecipe name="cast_bullet_tip" machine="mold">
+			<fluid_input type="molten_lead_alloy" gallons="0.2" />
+			<output item="resourceBulletTip" count="10" />
 		</machineRecipe>
 
 		<!-- ITEM PIPES: BASE -->
@@ -162,6 +178,15 @@
 			<ingredient name="resourceOil" count="20" />
 		</recipe>
 
+		<recipe name="universalClayExtractor" count="1" craft_area="workbench" craft_time="40" tags="learnable,workbenchCrafting,universalClayExtractor">
+			<ingredient name="resourceForgedIron" count="30" />
+			<ingredient name="resourceMechanicalParts" count="8" />
+			<ingredient name="resourceElectricParts" count="8" />
+			<ingredient name="smallEngine" count="1" />
+			<ingredient name="resourceDuctTape" count="4" />
+			<ingredient name="resourceOil" count="20" />
+		</recipe>
+
 		<!-- MACHINES: CRAFTER -->
 
 		<recipe name="universalCrafter" count="1" craft_area="workbench" craft_time="60" tags="learnable,workbenchCrafting,universalCrafter">
@@ -232,6 +257,48 @@
 		<recipe name="liquidPipeSmallJoint" count="8" craft_area="workbench" craft_time="12" tags="learnable,workbenchCrafting,liquidPipeSmallJoint">
 			<ingredient name="resourceScrapIron" count="24" />
 			<ingredient name="resourceMechanicalParts" count="1" />
+		</recipe>
+
+		<recipe name="liquidPipeT2" count="12" craft_area="workbench" craft_time="20" tags="learnable,workbenchCrafting,liquidPipeT2">
+			<ingredient name="liquidPipe" count="12" />
+			<ingredient name="resourceForgedIron" count="24" />
+			<ingredient name="resourceMechanicalParts" count="4" />
+			<ingredient name="resourceElectricParts" count="2" />
+		</recipe>
+
+		<recipe name="liquidPipeElbowT2" count="8" craft_area="workbench" craft_time="18" tags="learnable,workbenchCrafting,liquidPipeElbowT2">
+			<ingredient name="liquidPipeElbow" count="8" />
+			<ingredient name="resourceForgedIron" count="16" />
+			<ingredient name="resourceMechanicalParts" count="2" />
+			<ingredient name="resourceElectricParts" count="1" />
+		</recipe>
+
+		<recipe name="liquidPipeSmallJointT2" count="8" craft_area="workbench" craft_time="18" tags="learnable,workbenchCrafting,liquidPipeSmallJointT2">
+			<ingredient name="liquidPipeSmallJoint" count="8" />
+			<ingredient name="resourceForgedIron" count="16" />
+			<ingredient name="resourceMechanicalParts" count="2" />
+			<ingredient name="resourceElectricParts" count="1" />
+		</recipe>
+
+		<recipe name="liquidPipeT3" count="12" craft_area="workbench" craft_time="24" tags="learnable,workbenchCrafting,liquidPipeT3">
+			<ingredient name="liquidPipeT2" count="12" />
+			<ingredient name="resourceForgedSteel" count="18" />
+			<ingredient name="resourceMechanicalParts" count="5" />
+			<ingredient name="resourceElectricParts" count="4" />
+		</recipe>
+
+		<recipe name="liquidPipeElbowT3" count="8" craft_area="workbench" craft_time="22" tags="learnable,workbenchCrafting,liquidPipeElbowT3">
+			<ingredient name="liquidPipeElbowT2" count="8" />
+			<ingredient name="resourceForgedSteel" count="12" />
+			<ingredient name="resourceMechanicalParts" count="3" />
+			<ingredient name="resourceElectricParts" count="2" />
+		</recipe>
+
+		<recipe name="liquidPipeSmallJointT3" count="8" craft_area="workbench" craft_time="22" tags="learnable,workbenchCrafting,liquidPipeSmallJointT3">
+			<ingredient name="liquidPipeSmallJointT2" count="8" />
+			<ingredient name="resourceForgedSteel" count="12" />
+			<ingredient name="resourceMechanicalParts" count="3" />
+			<ingredient name="resourceElectricParts" count="2" />
 		</recipe>
 
 		<recipe name="fluidIntake" count="4" craft_area="workbench" craft_time="12" tags="learnable,workbenchCrafting,fluidIntake">
@@ -305,6 +372,22 @@
 		</recipe>
 
 		<recipe name="universalMelter" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalMelter">
+			<ingredient name="resourceForgedSteel" count="25" />
+			<ingredient name="resourceMechanicalParts" count="12" />
+			<ingredient name="resourceElectricParts" count="8" />
+			<ingredient name="resourceDuctTape" count="6" />
+			<ingredient name="resourceOil" count="20" />
+		</recipe>
+
+		<recipe name="universalFluidMixer" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalFluidMixer">
+			<ingredient name="resourceForgedSteel" count="25" />
+			<ingredient name="resourceMechanicalParts" count="12" />
+			<ingredient name="resourceElectricParts" count="8" />
+			<ingredient name="resourceDuctTape" count="6" />
+			<ingredient name="resourceOil" count="20" />
+		</recipe>
+
+		<recipe name="universalCaster" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalCaster">
 			<ingredient name="resourceForgedSteel" count="25" />
 			<ingredient name="resourceMechanicalParts" count="12" />
 			<ingredient name="resourceElectricParts" count="8" />

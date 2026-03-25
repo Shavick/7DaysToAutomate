@@ -93,7 +93,7 @@
                     return;
                 }
 
-                if (CustomUi != "ExtractorInfo" && CustomUi != "CrafterInfo" && CustomUi != "FluidDecanterInfo" && CustomUi != "FluidInfuserInfo" && CustomUi != "MelterInfo" && CustomUi != "FluidMixerInfo")
+                if (CustomUi != "ExtractorInfo" && CustomUi != "CrafterInfo" && CustomUi != "FluidDecanterInfo" && CustomUi != "FluidInfuserInfo" && CustomUi != "MelterInfo" && CustomUi != "FluidMixerInfo" && CustomUi != "CasterInfo")
                 {
                     Log.Error($"[NetPkg][MachineUI][SERVER] Unknown UI key '{CustomUi}'");
                     return;
@@ -238,6 +238,19 @@
                         localPlayer.AimingGun = false;
                         XUiC_FluidMixerInfo.Open(localPlayer, BlockPos);
                         Log.Out($"[NetPkg][MachineUI][CLIENT] Fluid Mixer UI open call executed");
+                        break;
+
+                    case "CasterInfo":
+                        if (!(te is TileEntityCaster))
+                        {
+                            Log.Error($"[NetPkg][MachineUI][CLIENT] TileEntity is not TileEntityCaster for UI {CustomUi}");
+                            return;
+                        }
+
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Opening Caster UI at {BlockPos}");
+                        localPlayer.AimingGun = false;
+                        XUiC_CasterInfo.Open(localPlayer, BlockPos);
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Caster UI open call executed");
                         break;
 
                     default:

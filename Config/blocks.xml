@@ -180,6 +180,32 @@
 			<property name="OutputCount" value="5" />
 		</block>
 
+		<!-- Universal Extractor - Clay -->
+
+		<block name="universalClayExtractor">
+			<property name="Class" value="UniversalExtractorBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="HeatMapStrength" value="0.5" />
+			<property name="HeatMapTime" value="1200" />
+			<property name="HeatMapFrequency" value="25" />
+			<property name="EconomicValue" value="500" />
+			<property name="DescriptionKey" value="universalClayExtractorDesc" />
+			<property name="UnlockedBy" value="craftingWorkstations" />
+			<!-- Custom Properties-->
+			<property name="BlockSource" value="terrForestGround" />
+			<property name="ResourceGenerated" value="resourceClayLump" />
+			<property name="ExtractionSpeed" value="1" />
+			<property name="OutputCount" value="1-5" />
+			<property name="DevLogs" value="false" />
+		</block>
+
 		<!-- MACHINES: CRAFTER -->
 
 		<block name="universalCrafter">
@@ -411,6 +437,66 @@
 			<property name="FluidPipeCapacityGps" value="250" />
 		</block>
 
+		<block name="liquidPipeT2">
+			<property name="Extends" value="liquidPipe" />
+			<property name="CustomIconTint" value="0F5FA8" />
+			<property name="MaxDamage" value="700" />
+			<property name="EconomicValue" value="45" />
+			<property name="DescriptionKey" value="liquidPipeT2Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidPipeCapacityGps" value="500" />
+		</block>
+
+		<block name="liquidPipeElbowT2">
+			<property name="Extends" value="liquidPipeElbow" />
+			<property name="CustomIconTint" value="0F5FA8" />
+			<property name="MaxDamage" value="700" />
+			<property name="EconomicValue" value="45" />
+			<property name="DescriptionKey" value="liquidPipeElbowT2Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidPipeCapacityGps" value="500" />
+		</block>
+
+		<block name="liquidPipeSmallJointT2">
+			<property name="Extends" value="liquidPipeSmallJoint" />
+			<property name="CustomIconTint" value="0F5FA8" />
+			<property name="MaxDamage" value="700" />
+			<property name="EconomicValue" value="45" />
+			<property name="DescriptionKey" value="liquidPipeSmallJointT2Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidPipeCapacityGps" value="500" />
+		</block>
+
+		<block name="liquidPipeT3">
+			<property name="Extends" value="liquidPipeT2" />
+			<property name="CustomIconTint" value="2EA85C" />
+			<property name="MaxDamage" value="850" />
+			<property name="EconomicValue" value="65" />
+			<property name="DescriptionKey" value="liquidPipeT3Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidPipeCapacityGps" value="1000" />
+		</block>
+
+		<block name="liquidPipeElbowT3">
+			<property name="Extends" value="liquidPipeElbowT2" />
+			<property name="CustomIconTint" value="2EA85C" />
+			<property name="MaxDamage" value="850" />
+			<property name="EconomicValue" value="65" />
+			<property name="DescriptionKey" value="liquidPipeElbowT3Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidPipeCapacityGps" value="1000" />
+		</block>
+
+		<block name="liquidPipeSmallJointT3">
+			<property name="Extends" value="liquidPipeSmallJointT2" />
+			<property name="CustomIconTint" value="2EA85C" />
+			<property name="MaxDamage" value="850" />
+			<property name="EconomicValue" value="65" />
+			<property name="DescriptionKey" value="liquidPipeSmallJointT3Desc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="FluidPipeCapacityGps" value="1000" />
+		</block>
+
 		<block name="fluidValve">
 			<property name="Class" value="LiquidPipeBlock, 7DaysToAutomate" />
 			<property name="Material" value="Mmetal_hard" />
@@ -595,7 +681,7 @@
 			<property name="EconomicValue" value="1400" />
 			<property name="DescriptionKey" value="universalMelterDesc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
-			<property name="InputSpeed" value="1" />
+			<property name="InputSpeed" value="10" />
 			<property name="MachineRecipes" value="melter" />
 			<property name="EnableHeatRequirement" value="true" />
 			<property name="HeatGainCapPerTick" value="0.25" />
@@ -616,9 +702,27 @@
 			<property name="EconomicValue" value="1500" />
 			<property name="DescriptionKey" value="fluidMixerDesc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
-			<property name="InputSpeed" value="1" />
+			<property name="InputSpeed" value="10" />
 			<property name="MachineRecipes" value="fluid_mixer" />
 			<property name="PendingFluidOutputCapacityGallons" value="5" />
+			<property name="DevLogs" value="false" />
+		</block>
+
+		<block name="universalCaster">
+			<property name="Class" value="CasterBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1500" />
+			<property name="DescriptionKey" value="universalCasterDesc" />
+			<property name="UnlockedBy" value="craftingWorkstations" />
+			<property name="InputSpeed" value="10" />
+			<property name="MachineRecipes" value="mold" />
 			<property name="DevLogs" value="false" />
 		</block>
 	</append>

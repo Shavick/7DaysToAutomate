@@ -125,17 +125,11 @@ public class XUiC_FluidInfuserInfo : XUiController
             case "powerbutton":
                 if (te == null)
                 {
-                    value = "Start";
+                    value = "Turn On";
                     return true;
                 }
 
-                if (!te.IsOn)
-                {
-                    value = "Start";
-                    return true;
-                }
-
-                value = te.AreAllRequirementsMet(world) ? "Turn Off" : "Waiting...";
+                value = te.IsOn ? "Turn Off" : "Turn On";
                 return true;
 
             case "machine_state":

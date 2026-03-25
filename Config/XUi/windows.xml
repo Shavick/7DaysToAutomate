@@ -559,6 +559,93 @@
 			</rect>
 		</window>
 
+		<window name="windowCasterInfo" controller="CasterInfo, 7DaysToAutomate" width="450" height="380" panel="Center" cursor_area="true">
+			<rect pos="0,-100">
+				<panel name="header" height="50" depth="1">
+					<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+					<label depth="6" pos="0,-6" width="450" height="40" text="{machinename}" font_size="36" justify="center" color="[limeGreen]" effect="outline" />
+				</panel>
+				<rect name="content" pos="0,-50" height="330">
+					<sprite depth="1" name="bg" width="450" height="500" type="sliced" color="[black]" alpha="0.8" />
+				</rect>
+				<button depth="10" name="closeButton" pos="415,-25" width="35" height="35" pivot="center" sprite="ui_game_symbol_x" defaultcolor="[white]" hovercolor="[red]" type="sliced" sound="[paging_click]" on_press="true" />
+				<rect pos="0,-78">
+					<label depth="6" pos="0,-6" width="450" height="34" text="RECIPE OUTPUT" font_size="30" justify="center" color="[limeGreen]" effect="outline" />
+					<button depth="6" name="recipeprevbutton" pos="138,-38" width="28" height="28" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
+					<label depth="6" name="recipeSelectedValue" pos="85,-36" width="280" height="28" text="{selected_recipe}" justify="center" font_size="20" color="[white]" />
+					<button depth="6" name="recipenextbutton" pos="284,-38" width="28" height="28" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
+				</rect>
+				<rect pos="22,-160">
+					<label depth="6" pos="0,0" width="420" height="26" text="State: {machine_state}" font_size="24" color="[white]" />
+					<label depth="6" pos="0,-26" width="420" height="26" text="Cycle: {cycle_timer}" font_size="22" color="[white]" />
+					<label depth="6" pos="0,-52" width="420" height="26" text="Selected Output: {selected_output}" font_size="20" color="[white]" />
+					<label depth="6" pos="0,-76" width="420" height="26" text="Fluid Graph: {selected_fluid_graph}" font_size="20" color="[white]" />
+					<label depth="6" pos="0,-100" width="420" height="26" text="Last Action: {last_action}" font_size="20" color="[white]" />
+					<label depth="6" pos="0,-124" width="420" height="26" text="Block Reason: {block_reason}" font_size="20" color="[white]" />
+				</rect>
+				<rect pos="225,-500">
+					<label depth="4" pos="5,0" pivot="center" width="120" height="30" text="{powerbutton}" font_size="32" color="[limeGreen]" effect="outline" />
+					<button depth="3" name="powerbutton" sprite="menu_empty" defaultcolor="[mediumGrey]" hoversprite="ui_game_select_row" hovercolor="[white]" pivot="center" type="sliced" hoverscale="1" sound="[paging_click]" width="150" height="30" />
+				</rect>
+				<rect pos="-310,0">
+					<panel name="pendingItemsHeader" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Outputs" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<panel name="pendingItemsPanel" pos="-2,-45" width="300" height="120" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<label depth="6" pos="27,-14" width="110" height="28" text="Primary" font_size="22" justify="center" color="[white]" />
+						<label depth="6" pos="164,-14" width="110" height="28" text="Byproduct" font_size="22" justify="center" color="[white]" />
+						<sprite depth="2" name="pendingPrimaryFrame" sprite="menu_empty3px" pos="51,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+						<sprite depth="3" name="pendingPrimaryBg" pos="54,-43" width="56" height="56" color="[mediumGrey]" type="sliced" />
+						<sprite depth="4" name="pendingPrimaryIcon" atlas="ItemIconAtlas" sprite="{pending_primary_output_icon}" pos="54,-43" width="56" height="56" foregroundlayer="true" visible="{pending_primary_output_has_item}" />
+						<label depth="5" name="pendingPrimaryCount" pos="82,-90" width="26" height="18" text="{pending_primary_output_count}" font_size="20" justify="right" color="[white]" effect="outline" visible="{pending_primary_output_has_item}" />
+						<label depth="5" name="pendingPrimaryName" pos="27,-102" width="110" height="18" text="{pending_primary_output_name}" font_size="16" justify="center" color="[white]" visible="{pending_primary_output_has_item}" />
+						<sprite depth="2" name="pendingSecondaryFrame" sprite="menu_empty3px" pos="188,-40" width="62" height="62" color="[black]" type="sliced" fillcenter="false" />
+						<sprite depth="3" name="pendingSecondaryBg" pos="191,-43" width="56" height="56" color="[mediumGrey]" type="sliced" />
+						<sprite depth="4" name="pendingSecondaryIcon" atlas="ItemIconAtlas" sprite="{pending_secondary_output_icon}" pos="191,-43" width="56" height="56" foregroundlayer="true" visible="{pending_secondary_output_has_item}" />
+						<label depth="5" name="pendingSecondaryCount" pos="219,-90" width="26" height="18" text="{pending_secondary_output_count}" font_size="20" justify="right" color="[white]" effect="outline" visible="{pending_secondary_output_has_item}" />
+						<label depth="5" name="pendingSecondaryName" pos="164,-102" width="110" height="18" text="{pending_secondary_output_name}" font_size="16" justify="center" color="[white]" visible="{pending_secondary_output_has_item}" />
+					</panel>
+				</rect>
+				<rect pos="-310,-175">
+					<panel name="pendingFluidHeader" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Fluid Input" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<panel name="pendingFluidPanel" pos="-2,-45" width="300" height="120" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<sprite depth="4" name="pendingInputFluidIcon" sprite="ui_game_symbol_water" pos="122,-36" width="56" height="56" foregroundlayer="true" />
+						<label depth="5" name="pendingInputFluidSummary" pos="39,-98" width="220" height="18" text="{pending_fluid_input_summary}" font_size="14" justify="center" color="[white]" effect="outline" />
+					</panel>
+				</rect>
+				<rect pos="460,0">
+					<panel name="outputContainerPanel" pos="-2,0" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Output Container" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<grid name="outputContainers" rows="2" cols="5" pos="0,-50" cell_width="60" cell_height="60" width="280" height="150" repeat_content="true" arrangement="horizontal" controller="CasterOutputContainerList, 7DaysToAutomate">
+						<caster_output_container_entry name="0" />
+					</grid>
+				</rect>
+				<rect pos="0,0">
+					<panel name="requirementsHeader" pos="460,-356" width="300" height="40" depth="1">
+						<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[black]" />
+						<label depth="6" pos="-75,-4" width="450" height="40" text="Requirements" font_size="32" justify="center" color="[limeGreen]" effect="outline" />
+					</panel>
+					<panel name="requirementsPanel" pos="460,-400" width="300" height="120" depth="1">
+						<sprite depth="1" name="bg" type="sliced" color="[black]" alpha="0.8" />
+						<label depth="6" pos="55,-10" text="Recipe" color="[green]" visible="{req_recipe}" />
+						<label depth="6" pos="55,-10" text="Recipe" color="[red]" visible="{req_not_recipe}" />
+						<label depth="6" pos="55,-40" text="Item Output" color="[green]" visible="{req_item_output}" />
+						<label depth="6" pos="55,-40" text="Item Output" color="[red]" visible="{req_not_item_output}" />
+						<label depth="6" pos="55,-70" text="Fluid Input" color="[green]" visible="{req_fluid_input}" />
+						<label depth="6" pos="55,-70" text="Fluid Input" color="[red]" visible="{req_not_fluid_input}" />
+					</panel>
+				</rect>
+			</rect>
+		</window>
+
 		<!-- HUD WINDOW: PIPE PROBE -->
 
 		<window name="windowPipeProbeHud" controller="PipeProbeHud, 7DaysToAutomate" width="460" height="200" panel="TopCenter" dynamic_position="true" open_sound="" close_sound="">

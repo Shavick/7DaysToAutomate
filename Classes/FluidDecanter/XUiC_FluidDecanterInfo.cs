@@ -114,17 +114,11 @@ public class XUiC_FluidDecanterInfo : XUiController
             case "powerbutton":
                 if (converter == null)
                 {
-                    value = "Start";
+                    value = "Turn On";
                     return true;
                 }
 
-                if (!converter.IsOn)
-                {
-                    value = "Start";
-                    return true;
-                }
-
-                value = converter.AreAllRequirementsMet(world) ? "Turn Off" : "Waiting...";
+                value = converter.IsOn ? "Turn Off" : "Turn On";
                 return true;
 
             case "req_item_input":

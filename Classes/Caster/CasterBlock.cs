@@ -1,8 +1,8 @@
-public class FluidMixerBlock : MachineBlock<TileEntityFluidMixer>
+public class CasterBlock : MachineBlock<TileEntityCaster>
 {
-    protected override TileEntityFluidMixer CreateTileEntity(Chunk chunk)
+    protected override TileEntityCaster CreateTileEntity(Chunk chunk)
     {
-        return new TileEntityFluidMixer(chunk);
+        return new TileEntityCaster(chunk);
     }
 
     public override void OnBlockLoaded(
@@ -16,7 +16,7 @@ public class FluidMixerBlock : MachineBlock<TileEntityFluidMixer>
         if (world.IsRemote())
             return;
 
-        TileEntityFluidMixer te = world.GetTileEntity(clrIdx, blockPos) as TileEntityFluidMixer;
+        TileEntityCaster te = world.GetTileEntity(clrIdx, blockPos) as TileEntityCaster;
         if (te == null)
             return;
 
@@ -24,7 +24,8 @@ public class FluidMixerBlock : MachineBlock<TileEntityFluidMixer>
         if (hlr != null && hlr.TryUnregisterMachine(te.MachineGuid, out IHLRSnapshot snapshot))
             te.ApplyHLRSnapshot(snapshot);
 
-        te.ResolveFluidOutputGraph(world);
+        te.RefreshAvailableOutputTargets(world);
+        te.ResolveFluidInputGraph(world);
         te.SetSimulatedByHLR(false);
     }
 
@@ -39,7 +40,7 @@ public class FluidMixerBlock : MachineBlock<TileEntityFluidMixer>
         if (world.IsRemote())
             return;
 
-        TileEntityFluidMixer te = world.GetTileEntity(clrIdx, blockPos) as TileEntityFluidMixer;
+        TileEntityCaster te = world.GetTileEntity(clrIdx, blockPos) as TileEntityCaster;
         if (te == null)
             return;
 
@@ -96,14 +97,9 @@ public class FluidMixerBlock : MachineBlock<TileEntityFluidMixer>
         if (player == null)
             return false;
 
-        Helper.RequestMachineUIOpen(clrIdx, blockPos, player.entityId, "FluidMixerInfo");
+        Helper.RequestMachineUIOpen(clrIdx, blockPos, player.entityId, "CasterInfo");
         return true;
     }
-
-    private readonly BlockActivationCommand[] cmds =
-    {
-        new BlockActivationCommand("open", "campfire", true, false, null)
-    };
 
     public override string GetActivationText(
         WorldBase world,
@@ -113,7 +109,7 @@ public class FluidMixerBlock : MachineBlock<TileEntityFluidMixer>
         EntityAlive entityFocusing)
     {
         if (!(entityFocusing is EntityPlayerLocal player))
-            return "[E] Open Fluid Mixer";
+            return "[E] Open Caster";
 
         string key =
             player.playerInput.Activate.GetBindingXuiMarkupString() +
@@ -122,4 +118,10 @@ public class FluidMixerBlock : MachineBlock<TileEntityFluidMixer>
         string name = blockValue.Block.GetLocalizedBlockName();
         return $"{key} Open {name}";
     }
+
+    private new readonly BlockActivationCommand[] cmds =
+    {
+        new BlockActivationCommand("open", "campfire", true, false, null)
+    };
 }
+
