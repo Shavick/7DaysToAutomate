@@ -2,6 +2,8 @@
 	<append xpath="/recipes">
 		<!-- MACHINE RECIPES -->
 
+		<!-- FLUID DECANTER -->
+
 		<machineRecipe name="water_from_boiled_jar" machine="fluiddecanter">
 			<input item="drinkJarBoiledWater" count="1" />
 			<output item="drinkJarEmpty" count="1" />
@@ -13,6 +15,8 @@
 			<output item="resourceScrapPolymers" count="10" />
 			<fluid_output type="gas" gallons="2" />
 		</machineRecipe>
+
+		<!-- FLUID INFUSER -->
 
 		<machineRecipe name="boiled_jar_from_water" machine="fluidinfuser">
 			<input item="drinkJarEmpty" count="1" />
@@ -26,56 +30,107 @@
 			<output item="ammoGasCan" count="1" />
 		</machineRecipe>
 
+		<machineRecipe name="oil_can_from_polymer" machine="fluidinfuser">
+			<input item="resourceScrapPolymers" count="10" />
+			<fluid_input type="molten_oil" gallons="0.5" />
+			<output item="resourceOil" count="1" />
+		</machineRecipe>
+
+		<!-- MELTER -->
+
+		<machineRecipe name="melt_oil_shale" machine="melter">
+			<heat value="30" />
+			<input item="resourceOilShale" count="5" />
+			<fluid_output type="molten_oil" gallons="0.25" />
+		</machineRecipe>
+
 		<machineRecipe name="melt_scrap_iron" machine="melter">
 			<heat value="20" />
-			<input item="resourceScrapIron" count="100" />
-			<fluid_output type="molten_iron" gallons="1" />
+			<input item="resourceScrapIron" count="10" />
+			<fluid_output type="molten_iron" gallons="0.1" />
+		</machineRecipe>
+
+		<machineRecipe name="melt_steel" machine="melter">
+			<heat value="50" />
+			<input item="resourceScrapIron" count="20" />
+			<fluid_output type="molten_steel" gallons="0.1" />
+		</machineRecipe>
+
+		<machineRecipe name="melt_stone" machine="melter">
+			<heat value="20" />
+			<input item="resourceRockSmall" count="2" />
+			<fluid_output type="molten_stone" gallons="0.2" />
 		</machineRecipe>
 
 		<machineRecipe name="melt_scrap_lead" machine="melter">
-			<heat value="22" />
-			<input item="resourceScrapLead" count="100" />
-			<fluid_output type="molten_lead" gallons="1" />
+			<heat value="25" />
+			<input item="resourceScrapLead" count="10" />
+			<fluid_output type="molten_lead" gallons=".1" />
 		</machineRecipe>
 
 		<machineRecipe name="melt_clay_lump" machine="melter">
-			<heat value="15" />
-			<input item="resourceClayLump" count="25" />
-			<fluid_output type="molten_clay" gallons="1" />
+			<heat value="10" />
+			<input item="resourceClayLump" count="3" />
+			<fluid_output type="molten_clay" gallons=".1" />
 		</machineRecipe>
 
 		<machineRecipe name="melt_sand" machine="melter">
 			<heat value="35" />
-			<input item="resourceSand" count="100" />
-			<fluid_output type="molten_glass" gallons="1" />
+			<input item="resourceSand" count="10" />
+			<fluid_output type="molten_glass" gallons=".1" />
 		</machineRecipe>
 
 		<machineRecipe name="melt_scrap_brass" machine="melter">
-			<heat value="55" />
-			<input item="resourceScrapBrass" count="100" />
-			<fluid_output type="molten_brass" gallons="1" />
+			<heat value="25" />
+			<input item="resourceScrapBrass" count="10" />
+			<fluid_output type="molten_brass" gallons=".1" />
 		</machineRecipe>
+
+		<!-- FLUID MIXER -->
 
 		<machineRecipe name="mix_molten_iron_alloy" machine="fluid_mixer">
-			<fluid_input type="molten_iron" gallons="1" />
-			<fluid_input type="molten_clay" gallons="0.5" />
-			<fluid_output type="molten_iron_alloy" gallons="1.5" />
+			<fluid_input type="molten_iron" gallons="0.2" />
+			<fluid_input type="molten_clay" gallons="0.1" /> 
+			<fluid_output type="molten_iron_alloy" gallons="0.3" />
 		</machineRecipe>
 
-		<machineRecipe name="cast_forged_iron" machine="mold">
-			<fluid_input type="molten_iron_alloy" gallons="0.2" />
-			<output item="resourceForgedIron" count="5" />
+		<machineRecipe name="mix_molten_steel_alloy" machine="fluid_mixer">
+			<fluid_input type="molten_steel" gallons="0.2" />
+			<fluid_input type="molten_clay" gallons="0.1" /> 
+			<fluid_output type="molten_steel_alloy" gallons="0.3" />
 		</machineRecipe>
 
 		<machineRecipe name="mix_molten_lead_alloy" machine="fluid_mixer">
-			<fluid_input type="molten_lead" gallons="1" />
-			<fluid_input type="molten_clay" gallons="0.5" />
-			<fluid_output type="molten_lead_alloy" gallons="1.5" />
+			<fluid_input type="molten_lead" gallons="0.2" />
+			<fluid_input type="molten_clay" gallons="0.1" />
+			<fluid_output type="molten_lead_alloy" gallons="0.3" />
+		</machineRecipe>
+
+		<!-- MOLD -->
+
+		<machineRecipe name="cast_scrap_polymer" machine="mold">
+			<fluid_input type="molten_oil" gallons="0.1" />
+			<output item="resourceScrapPolymers" count="5" />
+		</machineRecipe>
+
+		<machineRecipe name="cast_forged_iron" machine="mold">
+			<fluid_input type="molten_iron_alloy" gallons="0.04" />
+			<output item="resourceForgedIron" count="1" />
+		</machineRecipe>
+
+		<machineRecipe name="cast_forged_steel" machine="mold">
+			<fluid_input type="molten_steel_alloy" gallons=".2" />
+			<output item="resourceForgedSteel" count="1" />
 		</machineRecipe>
 
 		<machineRecipe name="cast_bullet_tip" machine="mold">
 			<fluid_input type="molten_lead_alloy" gallons="0.2" />
 			<output item="resourceBulletTip" count="10" />
+		</machineRecipe>
+
+		<machineRecipe name="cast_cement" machine="mold">
+			<fluid_input type="molten_stone" gallons="1" />
+			<output item="resourceCement" count="10" />
 		</machineRecipe>
 
 		<!-- ITEM PIPES: BASE -->
@@ -112,7 +167,6 @@
 			<ingredient name="resourceMechanicalParts" count="8" />
 			<ingredient name="resourceElectricParts" count="6" />
 			<ingredient name="resourceDuctTape" count="4" />
-			<ingredient name="resourceOil" count="20" />
 		</recipe>
 
 		<recipe name="universalIronExtractort3" count="1" craft_area="workbench" craft_time="55" tags="learnable,workbenchCrafting,universalIronExtractort3">
@@ -121,7 +175,6 @@
 			<ingredient name="resourceMechanicalParts" count="10" />
 			<ingredient name="resourceElectricParts" count="8" />
 			<ingredient name="resourceDuctTape" count="6" />
-			<ingredient name="resourceOil" count="25" />
 		</recipe>
 
 		<recipe name="universalIronExtractort4" count="1" craft_area="workbench" craft_time="65" tags="learnable,workbenchCrafting,universalIronExtractort4">
@@ -130,7 +183,6 @@
 			<ingredient name="resourceMechanicalParts" count="12" />
 			<ingredient name="resourceElectricParts" count="10" />
 			<ingredient name="resourceDuctTape" count="8" />
-			<ingredient name="resourceOil" count="30" />
 		</recipe>
 
 		<recipe name="universalIronExtractort5" count="1" craft_area="workbench" craft_time="75" tags="learnable,workbenchCrafting,universalIronExtractort5">
@@ -139,7 +191,6 @@
 			<ingredient name="resourceMechanicalParts" count="15" />
 			<ingredient name="resourceElectricParts" count="12" />
 			<ingredient name="resourceDuctTape" count="10" />
-			<ingredient name="resourceOil" count="35" />
 		</recipe>
 
 		<recipe name="universalCoalExtractor" count="1" craft_area="workbench" craft_time="40" tags="learnable,workbenchCrafting,universalCoalExtractor">
@@ -148,7 +199,6 @@
 			<ingredient name="resourceElectricParts" count="8" />
 			<ingredient name="smallEngine" count="1" />
 			<ingredient name="resourceDuctTape" count="4" />
-			<ingredient name="resourceOil" count="20" />
 		</recipe>
 
 		<recipe name="universalNitrateExtractor" count="1" craft_area="workbench" craft_time="40" tags="learnable,workbenchCrafting,universalNitrateExtractor">
@@ -157,7 +207,6 @@
 			<ingredient name="resourceElectricParts" count="8" />
 			<ingredient name="smallEngine" count="1" />
 			<ingredient name="resourceDuctTape" count="4" />
-			<ingredient name="resourceOil" count="20" />
 		</recipe>
 
 		<recipe name="universalLeadExtractor" count="1" craft_area="workbench" craft_time="40" tags="learnable,workbenchCrafting,universalLeadExtractor">
@@ -166,7 +215,6 @@
 			<ingredient name="resourceElectricParts" count="8" />
 			<ingredient name="smallEngine" count="1" />
 			<ingredient name="resourceDuctTape" count="4" />
-			<ingredient name="resourceOil" count="20" />
 		</recipe>
 
 		<recipe name="universalOilShaleExtractor" count="1" craft_area="workbench" craft_time="40" tags="learnable,workbenchCrafting,universalOilShaleExtractor">
@@ -175,7 +223,6 @@
 			<ingredient name="resourceElectricParts" count="8" />
 			<ingredient name="smallEngine" count="1" />
 			<ingredient name="resourceDuctTape" count="4" />
-			<ingredient name="resourceOil" count="20" />
 		</recipe>
 
 		<recipe name="universalClayExtractor" count="1" craft_area="workbench" craft_time="40" tags="learnable,workbenchCrafting,universalClayExtractor">
@@ -184,7 +231,6 @@
 			<ingredient name="resourceElectricParts" count="8" />
 			<ingredient name="smallEngine" count="1" />
 			<ingredient name="resourceDuctTape" count="4" />
-			<ingredient name="resourceOil" count="20" />
 		</recipe>
 
 		<!-- MACHINES: CRAFTER -->
@@ -195,7 +241,6 @@
 			<ingredient name="resourceElectricParts" count="20" />
 			<ingredient name="resourceDuctTape" count="8" />
 			<ingredient name="resourceScrapPolymers" count="40" />
-			<ingredient name="resourceOil" count="30" />
 		</recipe>
 
 		<!-- ITEM PIPES: UPGRADES -->
@@ -393,6 +438,12 @@
 			<ingredient name="resourceElectricParts" count="8" />
 			<ingredient name="resourceDuctTape" count="6" />
 			<ingredient name="resourceOil" count="20" />
+		</recipe>
+
+		<recipe name="heatSourceT2" count="1" craft_area="workbench" tags="learnable, ">
+			<ingredient name="resourceForgedIron" count="3"/>
+			<ingredient name="resourceWood" count="10"/>
+			<ingredient name="toolForgeCrucible" count="1"/>
 		</recipe>
 
 		<!-- WASHER RECIPES -->

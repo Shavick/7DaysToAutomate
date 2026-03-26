@@ -119,6 +119,7 @@
     <Compile Include="Classes\FluidInfuser\Containers\Output\XUiC_FluidInfuserOutputContainerEntry.cs" />
     <Compile Include="Classes\FluidInfuser\Containers\Output\XUiC_FluidInfuserOutputContainerList.cs" />
     <Compile Include="Classes\Melter\MelterBlock.cs" />
+    <Compile Include="Classes\Melter\MelterSnapshot.cs" />
     <Compile Include="Classes\Melter\TileEntityMelter.cs" />
     <Compile Include="Classes\Melter\XUiC_MelterInfo.cs" />
     <Compile Include="Classes\Melter\XUiC_MelterInputContainerEntry.cs" />

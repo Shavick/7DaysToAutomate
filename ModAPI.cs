@@ -56,6 +56,8 @@ namespace _7DaysToAutomate
                 Log.Out("[HLR][Lifecycle] No HLR found - nothing to save");
             }
 
+            PipeGraphManager.SaveToDisk(world);
+
             PipeTransportManager.ClearAll();
         }
 
@@ -95,7 +97,8 @@ namespace _7DaysToAutomate
                 Log.Out("[PipeGraphManager][Lifecycle] GameStartDone fired");
 
             PipeTransportManager.ClearAll();
-            PipeGraphManager.RebuildAllGraphs(world);
+            if (!PipeGraphManager.LoadFromDisk(world))
+                PipeGraphManager.RebuildAllGraphs(world);
             FluidGraphManager.RebuildAllGraphs(world);
         }
 

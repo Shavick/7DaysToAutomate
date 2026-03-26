@@ -424,7 +424,7 @@ public static class PipeTransportManager
             return false;
 
         // Resolve source availability from graph state (live storage or unload snapshot).
-        if (!PipeGraphManager.TryGetStorageItemCounts(world, clrIdx, pipeGraphId, sourceStoragePos, out Dictionary<string, int> sourceItemCounts))
+        if (!PipeGraphManager.TryGetStorageItemCounts(world, clrIdx, ref pipeGraphId, sourceStoragePos, out Dictionary<string, int> sourceItemCounts))
             return false;
 
         // Preserve the "don't touch while player is using" rule when the source chest is loaded.

@@ -192,7 +192,7 @@ public partial class HigherLogicRegistry
 
         for (int i = 0; i < count; i++)
         {
-            var ingredientCounts = new Dictionary<string, int>();            var owedResources = new Dictionary<string, int>();
+            var ingredientCounts = new Dictionary<string, int>(); var owedResources = new Dictionary<string, int>();
 
             foreach (var ingredient in recipe.ingredients)
             {
@@ -287,6 +287,12 @@ public partial class HigherLogicRegistry
                 isDirty = true;
                 break;
 
+            case MelterSnapshot melter:
+                HLRDevLog($"[HLR][Melter] Simulate @ {melter.Position} ticks={hlrTicksToSimulate}");
+                SimulateDecanter(melter, worldTime, hlrTicksToSimulate);
+                melter.LastHLRSimTime = worldTime;
+                isDirty = true;
+                break;
             case DecanterSnapshot decanter:
                 HLRDevLog($"[HLR][Decanter] Simulate @ {decanter.Position} ticks={hlrTicksToSimulate}");
                 SimulateDecanter(decanter, worldTime, hlrTicksToSimulate);
@@ -329,11 +335,9 @@ public partial class HigherLogicRegistry
             return;
         }
 
-        if (!HasValidGraphStorageEndpoint(extractor.SelectedOutputPipeGraphId, extractor.SelectedOutputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref extractor.SelectedOutputPipeGraphId, extractor.SelectedOutputChestPos))
         {
-            extractor.IsOn = false;
-            extractor.IsEnabledByPlayer = false;
-            HLRDevLog("[HLR][Extractor] STOP — Missing output graph/storage endpoint; shutting down extractor");
+            HLRDevLog("[HLR][Extractor] WAIT — Output graph/storage endpoint unavailable");
             return;
         }
 
@@ -418,11 +422,9 @@ public partial class HigherLogicRegistry
             return;
         }
 
-        if (!HasValidGraphStorageEndpoint(crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos))
         {
-            HLRDevLog("[HLR][Crafter] STOP — Input graph/storage endpoint unavailable");
-            crafter.IsCrafting = false;
-            crafter.DisabledByPlayer = true;
+            HLRDevLog("[HLR][Crafter] WAIT — Input graph/storage endpoint unavailable");
             return;
         }
 
@@ -434,11 +436,9 @@ public partial class HigherLogicRegistry
             return;
         }
 
-        if (!HasValidGraphStorageEndpoint(crafter.SelectedOutputPipeGraphId, crafter.SelectedOutputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref crafter.SelectedOutputPipeGraphId, crafter.SelectedOutputChestPos))
         {
-            HLRDevLog("[HLR][Crafter] STOP — Output graph/storage endpoint unavailable");
-            crafter.IsCrafting = false;
-            crafter.DisabledByPlayer = true;
+            HLRDevLog("[HLR][Crafter] WAIT — Output graph/storage endpoint unavailable");
             return;
         }
 
@@ -454,9 +454,7 @@ public partial class HigherLogicRegistry
 
         if (!TryGetSnapshotStorageItemCounts(crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos, out Dictionary<string, int> availableCounts))
         {
-            HLRDevLog("[HLR][Crafter] STOP — Input storage snapshot unavailable");
-            crafter.IsCrafting = false;
-            crafter.DisabledByPlayer = true;
+            HLRDevLog("[HLR][Crafter] WAIT — Input storage snapshot unavailable");
             return;
         }
 
@@ -533,14 +531,15 @@ public partial class HigherLogicRegistry
         if (decanter == null)
             return;
 
-        HLRDevLog($"[HLR][Decanter] SIMULATE BEGIN @ {decanter.Position} ticks={hlrTicksToSimulate} pendingIn={decanter.PendingItemInput} pendingItemOut={decanter.PendingItemOutput} pendingFluidOutMg={decanter.PendingFluidOutput}");
+        string machineTag = GetFluidConverterTag(decanter);
+        HLRDevLog($"[HLR][{machineTag}] SIMULATE BEGIN @ {decanter.Position} ticks={hlrTicksToSimulate} pendingIn={decanter.PendingItemInput} pendingItemOut={decanter.PendingItemOutput} pendingFluidOutMg={decanter.PendingFluidOutput}");
 
         if (!decanter.IsOn)
         {
             decanter.LastAction = "Idle";
             decanter.LastBlockReason = string.Empty;
             decanter.CycleTickCounter = 0;
-            HLRDevLog($"[HLR][Decanter] SKIP - OFF @ {decanter.Position}");
+            HLRDevLog($"[HLR][{machineTag}] SKIP - OFF @ {decanter.Position}");
             return;
         }
 
@@ -561,7 +560,7 @@ public partial class HigherLogicRegistry
             decanter.LastAction = "Waiting";
             decanter.LastBlockReason = requirementsReason;
             decanter.CycleTickCounter = 0;
-            HLRDevLog($"[HLR][Decanter] WAIT - reason='{requirementsReason}' @ {decanter.Position}");
+            HLRDevLog($"[HLR][{machineTag}] WAIT - reason='{requirementsReason}' @ {decanter.Position}");
             return;
         }
 
@@ -578,7 +577,7 @@ public partial class HigherLogicRegistry
             if (!ranCycle)
                 break;
 
-            HLRDevLog($"[HLR][Decanter] CYCLE - action='{cycleAction}' blocked='{cycleBlockedReason}' pendingIn={decanter.PendingItemInput} pendingItemOut={decanter.PendingItemOutput} pendingFluidOutMg={decanter.PendingFluidOutput}");
+            HLRDevLog($"[HLR][{machineTag}] CYCLE - action='{cycleAction}' blocked='{cycleBlockedReason}' pendingIn={decanter.PendingItemInput} pendingItemOut={decanter.PendingItemOutput} pendingFluidOutMg={decanter.PendingFluidOutput}");
 
             if (!TryFlushDecanterPendingItemOutput(decanter, out itemBlockedReason) && string.IsNullOrEmpty(runtimeBlockReason))
                 runtimeBlockReason = itemBlockedReason;
@@ -600,7 +599,7 @@ public partial class HigherLogicRegistry
             decanter.LastBlockReason = string.Empty;
 
         decanter.WorldTime = worldTime;
-        HLRDevLog($"[HLR][Decanter] SIMULATE END @ {decanter.Position} action='{decanter.LastAction}' reason='{decanter.LastBlockReason}' pendingIn={decanter.PendingItemInput} pendingItemOut={decanter.PendingItemOutput} pendingFluidOutMg={decanter.PendingFluidOutput}");
+        HLRDevLog($"[HLR][{machineTag}] SIMULATE END @ {decanter.Position} action='{decanter.LastAction}' reason='{decanter.LastBlockReason}' pendingIn={decanter.PendingItemInput} pendingItemOut={decanter.PendingItemOutput} pendingFluidOutMg={decanter.PendingFluidOutput}");
     }
 
     private void SimulateInfuser(FluidInfuserSnapshot infuser, ulong worldTime, int hlrTicksToSimulate)
@@ -708,7 +707,7 @@ public partial class HigherLogicRegistry
         if (infuser.SelectedInputPipeGraphId == Guid.Empty || infuser.SelectedInputChestPos == Vector3i.zero)
             return "Missing Item Input";
 
-        if (!HasValidGraphStorageEndpoint(infuser.SelectedInputPipeGraphId, infuser.SelectedInputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref infuser.SelectedInputPipeGraphId, infuser.SelectedInputChestPos))
             return "Missing Item Input";
 
         if (infuser.SelectedOutputChestPos == Vector3i.zero)
@@ -720,7 +719,7 @@ public partial class HigherLogicRegistry
         if (infuser.SelectedOutputPipeGraphId == Guid.Empty)
             return "Missing Item Output";
 
-        if (!HasValidGraphStorageEndpoint(infuser.SelectedOutputPipeGraphId, infuser.SelectedOutputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref infuser.SelectedOutputPipeGraphId, infuser.SelectedOutputChestPos))
             return "Missing Item Output";
 
         if (!TryGetInfuserRule(
@@ -1132,15 +1131,52 @@ public partial class HigherLogicRegistry
         return itemName;
     }
 
+    private static string GetFluidConverterTag(DecanterSnapshot snapshot)
+    {
+        return snapshot is MelterSnapshot ? "Melter" : "Decanter";
+    }
+
+    private static int GetMelterRequiredHeatForSelection(DecanterSnapshot snapshot, int defaultCraftTicks)
+    {
+        if (!(snapshot is MelterSnapshot))
+            return 0;
+
+        if (snapshot == null || string.IsNullOrEmpty(snapshot.SelectedRecipeKey))
+            return 0;
+
+        if (!MachineRecipeRegistry.TryGetRecipeByKey(snapshot.SelectedRecipeKey, out MachineRecipe recipe) || recipe == null)
+            return 0;
+
+        if (!TileEntityMelter.TryReadMachineRecipeAsMelterRule(
+                recipe,
+                defaultCraftTicks,
+                out _,
+                out _,
+                out int requiredHeat,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _))
+        {
+            return 0;
+        }
+
+        return Math.Max(0, requiredHeat);
+    }
+
     private string GetDecanterMissingRequirementReason(DecanterSnapshot decanter)
     {
         if (decanter == null)
             return "World unavailable";
 
+        bool isMelter = decanter is MelterSnapshot;
+
         if (decanter.SelectedInputPipeGraphId == Guid.Empty || decanter.SelectedInputChestPos == Vector3i.zero)
             return "Missing Item Input";
 
-        if (!HasValidGraphStorageEndpoint(decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos))
             return "Missing Item Input";
 
         if (string.IsNullOrEmpty(decanter.SelectedRecipeKey) && string.IsNullOrEmpty(decanter.SelectedFluidType))
@@ -1148,24 +1184,55 @@ public partial class HigherLogicRegistry
 
         if (string.IsNullOrEmpty(decanter.SelectedFluidType) &&
             !string.IsNullOrEmpty(decanter.SelectedRecipeKey) &&
-            MachineRecipeRegistry.TryGetRecipeByKey(decanter.SelectedRecipeKey, out MachineRecipe selectedRecipe) &&
-            TileEntityFluidDecanter.TryReadMachineRecipeAsDecanterRule(
-                selectedRecipe,
-                Math.Max(1, decanter.CycleTickLength),
-                out _,
-                out _,
-                out string recipeFluidType,
-                out _,
-                out _,
-                out _,
-                out _,
-                out _))
+            MachineRecipeRegistry.TryGetRecipeByKey(decanter.SelectedRecipeKey, out MachineRecipe selectedRecipe))
         {
-            decanter.SelectedFluidType = recipeFluidType ?? string.Empty;
+            string recipeFluidType = string.Empty;
+            bool parsed = false;
+            int defaultCraftTicks = Math.Max(1, decanter.CycleTickLength);
+
+            if (isMelter)
+            {
+                parsed = TileEntityMelter.TryReadMachineRecipeAsMelterRule(
+                    selectedRecipe,
+                    defaultCraftTicks,
+                    out _,
+                    out _,
+                    out _,
+                    out recipeFluidType,
+                    out _,
+                    out _,
+                    out _,
+                    out _,
+                    out _);
+            }
+            else
+            {
+                parsed = TileEntityFluidDecanter.TryReadMachineRecipeAsDecanterRule(
+                    selectedRecipe,
+                    defaultCraftTicks,
+                    out _,
+                    out _,
+                    out recipeFluidType,
+                    out _,
+                    out _,
+                    out _,
+                    out _,
+                    out _);
+            }
+
+            if (parsed)
+                decanter.SelectedFluidType = recipeFluidType ?? string.Empty;
         }
 
         if (string.IsNullOrEmpty(decanter.SelectedFluidType))
             return "No fluid selected";
+
+        if (isMelter && decanter is MelterSnapshot melter)
+        {
+            int requiredHeat = GetMelterRequiredHeatForSelection(decanter, Math.Max(1, decanter.CycleTickLength));
+            if (requiredHeat > 0 && melter.CurrentHeat < requiredHeat)
+                return $"Insufficient Heat ({melter.CurrentHeat}/{requiredHeat})";
+        }
 
         if (decanter.SelectedOutputChestPos == Vector3i.zero)
             return "Missing Item Output";
@@ -1176,7 +1243,7 @@ public partial class HigherLogicRegistry
         if (decanter.SelectedOutputPipeGraphId == Guid.Empty)
             return "Missing Item Output";
 
-        if (!HasValidGraphStorageEndpoint(decanter.SelectedOutputPipeGraphId, decanter.SelectedOutputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref decanter.SelectedOutputPipeGraphId, decanter.SelectedOutputChestPos))
             return "Missing Item Output";
 
         if (!TryResolveDecanterFluidGraph(decanter, out Guid resolvedFluidGraphId))
@@ -1195,6 +1262,7 @@ public partial class HigherLogicRegistry
             if (!TryFindDecanterInputCandidate(
                     decanter,
                     availableCounts,
+                    out _,
                     out _,
                     out _,
                     out _,
@@ -1357,6 +1425,7 @@ public partial class HigherLogicRegistry
         Dictionary<string, int> availableCounts,
         out string matchedItemName,
         out int requiredInputCount,
+        out int requiredHeat,
         out int fluidAmountMg,
         out string returnItemName,
         out int returnItemAmount,
@@ -1364,6 +1433,7 @@ public partial class HigherLogicRegistry
     {
         matchedItemName = string.Empty;
         requiredInputCount = 0;
+        requiredHeat = 0;
         fluidAmountMg = 0;
         returnItemName = string.Empty;
         returnItemAmount = 1;
@@ -1372,8 +1442,10 @@ public partial class HigherLogicRegistry
         if (decanter == null || availableCounts == null || availableCounts.Count == 0)
             return false;
 
+        bool isMelter = decanter is MelterSnapshot;
+
         string groupsCsv = string.IsNullOrWhiteSpace(decanter.MachineRecipeGroupsCsv)
-            ? "fluiddecanter"
+            ? (isMelter ? "melter" : "fluiddecanter")
             : decanter.MachineRecipeGroupsCsv.Trim();
 
         int defaultCraftTicks = Math.Max(1, decanter.CycleTickLength);
@@ -1384,6 +1456,7 @@ public partial class HigherLogicRegistry
             bool requireSelectedFluid,
             out string inputItem,
             out int inputCount,
+            out int outputRequiredHeat,
             out int outputFluidMg,
             out string outputItem,
             out int outputItemCount,
@@ -1391,6 +1464,7 @@ public partial class HigherLogicRegistry
         {
             inputItem = string.Empty;
             inputCount = 0;
+            outputRequiredHeat = 0;
             outputFluidMg = 0;
             outputItem = string.Empty;
             outputItemCount = 1;
@@ -1399,22 +1473,47 @@ public partial class HigherLogicRegistry
             if (machineRecipe == null)
                 return false;
 
-            if (!TileEntityFluidDecanter.IsRecipeAllowedForMachineGroups(machineRecipe, groupsCsv))
-                return false;
-
-            if (!TileEntityFluidDecanter.TryReadMachineRecipeAsDecanterRule(
-                    machineRecipe,
-                    defaultCraftTicks,
-                    out inputItem,
-                    out inputCount,
-                    out string fluidType,
-                    out outputFluidMg,
-                    out outputItem,
-                    out outputItemCount,
-                    out resolvedCraftTicks,
-                    out _))
+            string fluidType;
+            if (isMelter)
             {
-                return false;
+                if (!TileEntityMelter.IsMelterRecipeAllowedForMachineGroups(machineRecipe, groupsCsv))
+                    return false;
+
+                if (!TileEntityMelter.TryReadMachineRecipeAsMelterRule(
+                        machineRecipe,
+                        defaultCraftTicks,
+                        out inputItem,
+                        out inputCount,
+                        out outputRequiredHeat,
+                        out fluidType,
+                        out outputFluidMg,
+                        out outputItem,
+                        out outputItemCount,
+                        out resolvedCraftTicks,
+                        out _))
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                if (!TileEntityFluidDecanter.IsRecipeAllowedForMachineGroups(machineRecipe, groupsCsv))
+                    return false;
+
+                if (!TileEntityFluidDecanter.TryReadMachineRecipeAsDecanterRule(
+                        machineRecipe,
+                        defaultCraftTicks,
+                        out inputItem,
+                        out inputCount,
+                        out fluidType,
+                        out outputFluidMg,
+                        out outputItem,
+                        out outputItemCount,
+                        out resolvedCraftTicks,
+                        out _))
+                {
+                    return false;
+                }
             }
 
             if (requireSelectedFluid &&
@@ -1431,6 +1530,9 @@ public partial class HigherLogicRegistry
             if (available < inputCount)
                 return false;
 
+            if (isMelter && decanter is MelterSnapshot melter && outputRequiredHeat > 0 && melter.CurrentHeat < outputRequiredHeat)
+                return false;
+
             decanter.SelectedRecipeKey = machineRecipe.NormalizedKey ?? string.Empty;
             decanter.SelectedFluidType = fluidType ?? string.Empty;
             return true;
@@ -1443,6 +1545,7 @@ public partial class HigherLogicRegistry
                 true,
                 out matchedItemName,
                 out requiredInputCount,
+                out requiredHeat,
                 out fluidAmountMg,
                 out returnItemName,
                 out returnItemAmount,
@@ -1459,6 +1562,7 @@ public partial class HigherLogicRegistry
                     true,
                     out matchedItemName,
                     out requiredInputCount,
+                    out requiredHeat,
                     out fluidAmountMg,
                     out returnItemName,
                     out returnItemAmount,
@@ -1475,6 +1579,7 @@ public partial class HigherLogicRegistry
                     false,
                     out matchedItemName,
                     out requiredInputCount,
+                    out requiredHeat,
                     out fluidAmountMg,
                     out returnItemName,
                     out returnItemAmount,
@@ -1767,6 +1872,7 @@ public partial class HigherLogicRegistry
                 availableCounts,
                 out string matchedItemName,
                 out int requiredInputCount,
+                out int requiredHeat,
                 out int fluidAmountMg,
                 out string returnItemName,
                 out int returnItemAmount,
@@ -1781,6 +1887,13 @@ public partial class HigherLogicRegistry
         {
             blockedReason = "Pending item output full";
             HLRDevLog($"[HLR][Decanter][Cycle] BLOCKED - {blockedReason}");
+            return false;
+        }
+
+        if (decanter is MelterSnapshot melter && requiredHeat > 0 && melter.CurrentHeat < requiredHeat)
+        {
+            blockedReason = $"Insufficient Heat ({melter.CurrentHeat}/{requiredHeat})";
+            HLRDevLog($"[HLR][Melter][Cycle] BLOCKED - {blockedReason}");
             return false;
         }
 
@@ -1925,7 +2038,7 @@ public partial class HigherLogicRegistry
         if (pipeGraphId == Guid.Empty || storagePos == Vector3i.zero)
             return false;
 
-        bool ok = PipeGraphManager.TryGetStorageItemCounts(world, 0, pipeGraphId, storagePos, out itemCounts);
+        bool ok = PipeGraphManager.TryGetStorageItemCounts(world, 0, ref pipeGraphId, storagePos, out itemCounts);
         if (ok)
             HLRDevLog($"[HLR][PipeIO][Counts] OK graph={pipeGraphId} pos={storagePos} counts={FormatItemMapForLog(itemCounts)}");
         else
@@ -1934,13 +2047,31 @@ public partial class HigherLogicRegistry
         return ok;
     }
 
-    private bool HasValidGraphStorageEndpoint(Guid pipeGraphId, Vector3i storagePos)
+    private bool HasValidGraphStorageEndpoint(ref Guid pipeGraphId, Vector3i storagePos)
     {
         if (pipeGraphId == Guid.Empty || storagePos == Vector3i.zero)
+        {
+            HLRDevLog($"[HLR][PipeIO][Validate] INVALID graph={pipeGraphId} pos={storagePos}");
             return false;
+        }
 
-        return TryGetSnapshotStorageItemCounts(pipeGraphId, storagePos, out _);
+        // Fast path: current ID still valid
+        if (TryGetSnapshotStorageItemCounts(pipeGraphId, storagePos, out _))
+            return true;
+
+        // Fallback: search all pipe graphs for one that contains this storage endpoint
+        if (PipeGraphManager.TryResolveGraphIdByStorageEndpoint(storagePos, out Guid resolvedGraphId))
+        {
+            HLRDevLog($"[HLR][PipeIO][Validate] REBOUND graph {pipeGraphId} -> {resolvedGraphId} for pos={storagePos}");
+            pipeGraphId = resolvedGraphId; // this updates the HLR snapshot field
+            isDirty = true;                // ensure remapped ID gets saved
+            return TryGetSnapshotStorageItemCounts(pipeGraphId, storagePos, out _);
+        }
+
+        HLRDevLog($"[HLR][PipeIO][Validate] MISS graph={pipeGraphId} pos={storagePos}");
+        return false;
     }
+
 
     private static void AddToOwedDictionary(Dictionary<string, int> map, string itemName, int amount)
     {
@@ -1984,6 +2115,8 @@ public partial class HigherLogicRegistry
             lastSimTime = extractor.LastHLRSimTime;
         else if (snapshot is CrafterSnapshot crafter)
             lastSimTime = crafter.LastHLRSimTime;
+        else if (snapshot is MelterSnapshot melter)
+            lastSimTime = melter.LastHLRSimTime;
         else if (snapshot is DecanterSnapshot decanter)
             lastSimTime = decanter.LastHLRSimTime;
         else if (snapshot is FluidInfuserSnapshot infuser)
@@ -2090,6 +2223,9 @@ public partial class HigherLogicRegistry
 
             case CrafterSnapshot crafter:
                 return CloneCrafterSnapshot(crafter);
+
+            case MelterSnapshot melter:
+                return CloneMelterSnapshot(melter);
 
             case DecanterSnapshot decanter:
                 return CloneDecanterSnapshot(decanter);
@@ -2225,6 +2361,43 @@ public partial class HigherLogicRegistry
             PendingFluidOutputCapacityMg = source.PendingFluidOutputCapacityMg,
             LastAction = source.LastAction,
             LastBlockReason = source.LastBlockReason
+        };
+    }
+
+    private MelterSnapshot CloneMelterSnapshot(MelterSnapshot source)
+    {
+        return new MelterSnapshot
+        {
+            MachineId = source.MachineId,
+            Position = source.Position,
+            WorldTime = source.WorldTime,
+            LastHLRSimTime = source.LastHLRSimTime,
+            IsOn = source.IsOn,
+            SelectedInputChestPos = source.SelectedInputChestPos,
+            SelectedInputPipeGraphId = source.SelectedInputPipeGraphId,
+            SelectedOutputChestPos = source.SelectedOutputChestPos,
+            SelectedOutputMode = source.SelectedOutputMode,
+            SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
+            SelectedFluidType = source.SelectedFluidType,
+            SelectedRecipeKey = source.SelectedRecipeKey,
+            MachineRecipeGroupsCsv = source.MachineRecipeGroupsCsv,
+            SelectedFluidGraphId = source.SelectedFluidGraphId,
+            PendingItemInput = source.PendingItemInput,
+            PendingItemOutput = source.PendingItemOutput,
+            PendingFluidInput = source.PendingFluidInput,
+            PendingFluidOutput = source.PendingFluidOutput,
+            PendingItemInputName = source.PendingItemInputName,
+            PendingItemInputFluidAmountMg = source.PendingItemInputFluidAmountMg,
+            PendingItemInputReturnItemName = source.PendingItemInputReturnItemName,
+            PendingItemInputReturnItemAmount = source.PendingItemInputReturnItemAmount,
+            PendingItemOutputName = source.PendingItemOutputName,
+            CycleTickCounter = source.CycleTickCounter,
+            CycleTickLength = source.CycleTickLength,
+            PendingFluidOutputCapacityMg = source.PendingFluidOutputCapacityMg,
+            LastAction = source.LastAction,
+            LastBlockReason = source.LastBlockReason,
+            CurrentHeat = source.CurrentHeat,
+            CurrentHeatSourceMax = source.CurrentHeatSourceMax
         };
     }
 
@@ -2490,6 +2663,14 @@ public partial class HigherLogicRegistry
                 HLRDevLog($"[HLR][Factory] Unsupported Decanter version {version}");
                 return null;
 
+            case "Melter":
+                if (version == 1)
+                {
+                    return new MelterSnapshot();
+                }
+                HLRDevLog($"[HLR][Factory] Unsupported Melter version {version}");
+                return null;
+
             case "FluidInfuser":
                 if (version == 1 || version == 2)
                 {
@@ -2601,7 +2782,10 @@ public partial class HigherLogicRegistry
                     if (snapshot is CrafterSnapshot crafter)
                         SaveCrafterSnapshot(bw, crafter);
 
-                    if (snapshot is DecanterSnapshot decanter)
+                    if (snapshot is MelterSnapshot melter)
+                        SaveMelterSnapshot(bw, melter);
+
+                    else if (snapshot is DecanterSnapshot decanter)
                         SaveDecanterSnapshot(bw, decanter);
 
                     if (snapshot is FluidInfuserSnapshot infuser)
@@ -2803,6 +2987,13 @@ public partial class HigherLogicRegistry
         bw.Write(decanter.LastBlockReason ?? string.Empty);
     }
 
+    private void SaveMelterSnapshot(BinaryWriter bw, MelterSnapshot melter)
+    {
+        SaveDecanterSnapshot(bw, melter);
+        bw.Write(melter.CurrentHeat);
+        bw.Write(melter.CurrentHeatSourceMax);
+    }
+
     private void SaveFluidInfuserSnapshot(BinaryWriter bw, FluidInfuserSnapshot infuser)
     {
         bw.Write(infuser.WorldTime);
@@ -2929,7 +3120,9 @@ public partial class HigherLogicRegistry
                         LoadExtractorSnapshot(br, extractor, snapshotVersion);
                     if (snapshot is CrafterSnapshot crafter)
                         LoadCrafterSnapshot(br, crafter, snapshotVersion);
-                    if (snapshot is DecanterSnapshot decanter)
+                    if (snapshot is MelterSnapshot melter)
+                        LoadMelterSnapshot(br, melter, snapshotVersion);
+                    else if (snapshot is DecanterSnapshot decanter)
                         LoadDecanterSnapshot(br, decanter, snapshotVersion);
                     if (snapshot is FluidInfuserSnapshot infuser)
                         LoadFluidInfuserSnapshot(br, infuser, snapshotVersion);
@@ -3198,6 +3391,25 @@ public partial class HigherLogicRegistry
 
         if (string.IsNullOrWhiteSpace(decanter.MachineRecipeGroupsCsv))
             decanter.MachineRecipeGroupsCsv = "fluiddecanter";
+    }
+
+    private void LoadMelterSnapshot(BinaryReader br, MelterSnapshot melter, int snapshotVersion)
+    {
+        LoadDecanterSnapshot(br, melter, snapshotVersion);
+        melter.MachineRecipeGroupsCsv = string.IsNullOrWhiteSpace(melter.MachineRecipeGroupsCsv)
+            ? "melter"
+            : melter.MachineRecipeGroupsCsv;
+
+        if (snapshotVersion >= 1)
+        {
+            melter.CurrentHeat = Math.Max(0, br.ReadInt32());
+            melter.CurrentHeatSourceMax = Math.Max(0, br.ReadInt32());
+        }
+        else
+        {
+            melter.CurrentHeat = 0;
+            melter.CurrentHeatSourceMax = 0;
+        }
     }
 
     private void LoadFluidInfuserSnapshot(BinaryReader br, FluidInfuserSnapshot infuser, int snapshotVersion)

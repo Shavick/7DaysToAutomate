@@ -121,7 +121,7 @@ public class TileEntityMelter : TileEntityMachine
 
         ulong now = world?.GetWorldTime() ?? 0UL;
 
-        return new DecanterSnapshot
+        return new MelterSnapshot
         {
             MachineId = MachineGuid,
             Position = ToWorldPos(),
@@ -149,6 +149,8 @@ public class TileEntityMelter : TileEntityMachine
             CycleTickCounter = cycleTickCounter,
             CycleTickLength = cycleTickLength,
             PendingFluidOutputCapacityMg = pendingFluidOutputCapacityMg,
+            CurrentHeat = CurrentHeat,
+            CurrentHeatSourceMax = CurrentHeatSourceMax,
             LastAction = LastAction ?? string.Empty,
             LastBlockReason = LastBlockReason ?? string.Empty
         };
@@ -156,7 +158,11 @@ public class TileEntityMelter : TileEntityMachine
 
     public override void ApplyHLRSnapshot(object snapshotObj)
     {
-        if (!(snapshotObj is DecanterSnapshot snapshot))
+        DecanterSnapshot snapshot = snapshotObj as MelterSnapshot;
+        if (snapshot == null)
+            snapshot = snapshotObj as DecanterSnapshot;
+
+        if (snapshot == null)
             return;
 
         EnsureConfigLoaded();
@@ -188,6 +194,17 @@ public class TileEntityMelter : TileEntityMachine
         cycleTickCounter = Math.Max(0, snapshot.CycleTickCounter);
         cycleTickLength = Math.Max(1, snapshot.CycleTickLength);
         pendingFluidOutputCapacityMg = Math.Max(0, snapshot.PendingFluidOutputCapacityMg);
+        if (snapshot is MelterSnapshot melterSnapshot)
+        {
+            CurrentHeat = Math.Max(0, melterSnapshot.CurrentHeat);
+            CurrentHeatSourceMax = Math.Max(0, melterSnapshot.CurrentHeatSourceMax);
+        }
+        else
+        {
+            CurrentHeat = 0;
+            CurrentHeatSourceMax = 0;
+        }
+        heatFraction = 0f;
 
         LastAction = snapshot.LastAction ?? string.Empty;
         LastBlockReason = snapshot.LastBlockReason ?? string.Empty;

@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using UnityEngine;
 
 public class TileEntityFluidInfuser : TileEntityMachine
 {
@@ -1792,7 +1790,7 @@ public class TileEntityFluidInfuser : TileEntityMachine
             return true;
         }
 
-        if (!PipeGraphManager.TryGetStorageItemCounts(world, 0, SelectedInputPipeGraphId, SelectedInputChestPos, out Dictionary<string, int> itemCounts) ||
+        if (!PipeGraphManager.TryGetStorageItemCounts(world, 0, ref SelectedInputPipeGraphId, SelectedInputChestPos, out Dictionary<string, int> itemCounts) ||
             itemCounts == null)
         {
             blockedReason = "Input storage unavailable";

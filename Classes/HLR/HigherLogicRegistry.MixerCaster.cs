@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 
 public partial class HigherLogicRegistry
 {
@@ -674,7 +673,7 @@ public partial class HigherLogicRegistry
         if (caster.SelectedOutputPipeGraphId == Guid.Empty)
             return "Missing Item Output";
 
-        if (!HasValidGraphStorageEndpoint(caster.SelectedOutputPipeGraphId, caster.SelectedOutputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref caster.SelectedOutputPipeGraphId, caster.SelectedOutputChestPos))
             return "Missing Item Output";
 
         if (!TryResolveCasterFluidInputGraph(caster, fluidType, out Guid graphId))

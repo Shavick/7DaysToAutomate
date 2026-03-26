@@ -2,8 +2,8 @@
 
 public class DecanterSnapshot : IHLRSnapshot
 {
-    public string SnapshotKind => "Decanter";
-    public int SnapshotVersion => 5;
+    public virtual string SnapshotKind => "Decanter";
+    public virtual int SnapshotVersion => 5;
 
     public Guid MachineId { get; set; }
     public Vector3i Position { get; set; }

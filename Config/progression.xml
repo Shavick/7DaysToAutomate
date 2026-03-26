@@ -38,7 +38,7 @@
 
 		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="50,100" value="1" tags="universalIronExtractort4" />
 
-		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="56,100" value="1" tags="universalIronExtractort5,universalCaster" />
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="56,100" value="1" tags="universalIronExtractort5,universalCaster,heatSourceT2" />
 	</append>
 	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='cntDewCollector,toolAnvil,toolDewGatherer']">
 		<unlock_entry item="universalIronExtractort1,universalCoalExtractor,universalNitrateExtractor,universalLeadExtractor,universalOilShaleExtractor,universalClayExtractor" unlock_tier="2" />
@@ -52,6 +52,6 @@
 		<unlock_entry item="universalIronExtractort4" unlock_tier="4" />
 	</append>
 	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='toolApiarySmoker,toolForgeCrucible']">
-		<unlock_entry item="universalIronExtractort5,universalCaster" unlock_tier="1" />
+		<unlock_entry item="universalIronExtractort5,universalCaster,heatSourceT2" unlock_tier="1" />
 	</append>
 </configs>

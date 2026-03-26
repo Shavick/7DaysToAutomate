@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 
 public static class PipeGraphManager
@@ -12,6 +13,11 @@ public static class PipeGraphManager
     private static readonly Dictionary<Guid, ulong> lastGraphRebuildWorldTime = new Dictionary<Guid, ulong>();
     private const int MaxRouteCacheEntriesPerGraph = 256;
     private const ulong GraphRebuildCooldownTicks = 20UL;
+    private const string PIPE_GRAPH_FOLDER = "PipeGraph";
+    private const string PIPE_GRAPH_FILE = "pipe_graphs.dat";
+    private const int PIPE_GRAPH_VERSION = 1;
+    private static string pipeGraphDir;
+    private static string pipeGraphFile;
     private struct RouteCacheKey : IEquatable<RouteCacheKey>
     {
         public int ClrIdx;
@@ -47,6 +53,254 @@ public static class PipeGraphManager
     {
         public int GraphVersion;
         public List<Vector3i> Route;
+    }
+
+    private static void EnsureSavePaths()
+    {
+        if (!string.IsNullOrEmpty(pipeGraphFile))
+            return;
+
+        try
+        {
+            string saveRoot = GameIO.GetSaveGameDir();
+            pipeGraphDir = Path.Combine(saveRoot, PIPE_GRAPH_FOLDER);
+            pipeGraphFile = Path.Combine(pipeGraphDir, PIPE_GRAPH_FILE);
+
+            if (!Directory.Exists(pipeGraphDir))
+                Directory.CreateDirectory(pipeGraphDir);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[PipeGraphManager][IO] EnsureSavePaths FAILED: {ex}");
+        }
+    }
+
+    public static void SaveToDisk(WorldBase world)
+    {
+        if (world == null || world.IsRemote())
+            return;
+
+        EnsureSavePaths();
+        if (string.IsNullOrEmpty(pipeGraphFile))
+            return;
+
+        string tempFile = pipeGraphFile + ".tmp";
+        int persistedGraphCount = 0;
+
+        try
+        {
+            using (var fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var bw = new BinaryWriter(fs))
+            {
+                bw.Write(new[] { 'P', 'G', 'R' });
+                bw.Write(PIPE_GRAPH_VERSION);
+
+                persistedGraphCount = 0;
+                foreach (var kvp in graphsById)
+                {
+                    PipeGraphData graph = kvp.Value;
+                    if (graph != null && graph.PipeGraphId != Guid.Empty)
+                        persistedGraphCount++;
+                }
+
+                bw.Write(persistedGraphCount);
+
+                foreach (var kvp in graphsById)
+                {
+                    PipeGraphData graph = kvp.Value;
+                    if (graph == null || graph.PipeGraphId == Guid.Empty)
+                        continue;
+
+                    bw.Write(graph.PipeGraphId.ToByteArray());
+
+                    bw.Write(graph.PipePositions.Count);
+                    foreach (Vector3i pipePos in graph.PipePositions)
+                        WriteVector3i(bw, pipePos);
+
+                    bw.Write(graph.StorageEndpoints.Count);
+                    foreach (Vector3i endpointPos in graph.StorageEndpoints)
+                        WriteVector3i(bw, endpointPos);
+
+                    int snapshotCount = graph.UnloadedStorageSnapshots?.Count ?? 0;
+                    bw.Write(snapshotCount);
+                    if (graph.UnloadedStorageSnapshots != null)
+                    {
+                        foreach (var snapshotKvp in graph.UnloadedStorageSnapshots)
+                        {
+                            WriteVector3i(bw, snapshotKvp.Key);
+                            WriteSlotSnapshot(bw, snapshotKvp.Value);
+                        }
+                    }
+                }
+            }
+
+            if (File.Exists(pipeGraphFile))
+                File.Delete(pipeGraphFile);
+
+            File.Move(tempFile, pipeGraphFile);
+
+            Log.Out($"[PipeGraphManager][IO] Saved {persistedGraphCount} graph(s) to disk");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[PipeGraphManager][IO] SaveToDisk FAILED: {ex}");
+            try
+            {
+                if (File.Exists(tempFile))
+                    File.Delete(tempFile);
+            }
+            catch { }
+        }
+    }
+
+    public static bool LoadFromDisk(WorldBase world)
+    {
+        if (world == null || world.IsRemote())
+            return false;
+
+        EnsureSavePaths();
+        bool devLoggingEnabled = IsDevLoggingEnabled(world);
+        ClearAll(devLoggingEnabled);
+
+        if (string.IsNullOrEmpty(pipeGraphFile) || !File.Exists(pipeGraphFile))
+            return false;
+
+        List<PipeGraphData> loadedGraphs = new List<PipeGraphData>();
+
+        try
+        {
+            using (var fs = new FileStream(pipeGraphFile, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var br = new BinaryReader(fs))
+            {
+                string magic = new string(br.ReadChars(3));
+                if (!string.Equals(magic, "PGR", StringComparison.Ordinal))
+                {
+                    Log.Error($"[PipeGraphManager][IO] LoadFromDisk FAILED - bad magic '{magic}'");
+                    return false;
+                }
+
+                int version = br.ReadInt32();
+                if (version != PIPE_GRAPH_VERSION)
+                {
+                    Log.Error($"[PipeGraphManager][IO] LoadFromDisk FAILED - unsupported version {version}");
+                    return false;
+                }
+
+                int graphCount = Math.Max(0, br.ReadInt32());
+                for (int i = 0; i < graphCount; i++)
+                {
+                    Guid graphId = new Guid(br.ReadBytes(16));
+                    PipeGraphData graph = new PipeGraphData(graphId);
+
+                    int pipeCount = Math.Max(0, br.ReadInt32());
+                    for (int p = 0; p < pipeCount; p++)
+                        graph.AddPipe(ReadVector3i(br));
+
+                    int endpointCount = Math.Max(0, br.ReadInt32());
+                    for (int e = 0; e < endpointCount; e++)
+                        graph.AddStorageEndpoint(ReadVector3i(br));
+
+                    int snapshotCount = Math.Max(0, br.ReadInt32());
+                    for (int s = 0; s < snapshotCount; s++)
+                    {
+                        Vector3i storagePos = ReadVector3i(br);
+                        ItemStack[] snapshot = ReadSlotSnapshot(br);
+                        if (storagePos != Vector3i.zero && snapshot != null)
+                            graph.SetStorageSnapshot(storagePos, snapshot);
+                    }
+
+                    graph.PruneStorageSnapshotsToEndpoints();
+                    if (graph.PipePositions.Count > 0)
+                        loadedGraphs.Add(graph);
+                }
+            }
+
+            HashSet<Vector3i> assignedPipePositions = new HashSet<Vector3i>();
+            ulong worldTime = world.GetWorldTime();
+
+            for (int i = 0; i < loadedGraphs.Count; i++)
+            {
+                PipeGraphData graph = loadedGraphs[i];
+                if (!ApplyLoadedGraphToWorld(world, 0, graph, assignedPipePositions))
+                    continue;
+
+                graph.PruneStorageSnapshotsToEndpoints();
+                graphsById[graph.PipeGraphId] = graph;
+                BumpGraphRouteVersion(graph.PipeGraphId);
+                lastGraphRebuildWorldTime[graph.PipeGraphId] = worldTime;
+            }
+
+            List<Vector3i> livePipePositions = CollectAllPipePositions(world);
+            for (int i = 0; i < livePipePositions.Count; i++)
+            {
+                Vector3i pipePos = livePipePositions[i];
+                if (assignedPipePositions.Contains(pipePos))
+                    continue;
+
+                if (SafeWorldRead.TryGetTileEntity(world, 0, pipePos, out TileEntity tileEntity) && tileEntity is TileEntityItemPipe pipe)
+                {
+                    pipe.MarkPipeGraphDirty();
+                    pipe.MarkNetworkDirty();
+                }
+
+                MarkPipeDirty(pipePos);
+            }
+
+            while (HasDirtyPipes())
+                ProcessDirtyGraphs(world, int.MaxValue);
+
+            Log.Out($"[PipeGraphManager][IO] Loaded {graphsById.Count} graph(s) from disk");
+            return true;
+        }
+        catch (EndOfStreamException)
+        {
+            Log.Error("[PipeGraphManager][IO] LoadFromDisk FAILED - file truncated");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[PipeGraphManager][IO] LoadFromDisk FAILED: {ex}");
+        }
+
+        ClearAll(devLoggingEnabled);
+        return false;
+    }
+
+    public static bool TryResolveGraphIdByStorageEndpoint(Vector3i storagePos, out Guid graphId)
+    {
+        graphId = Guid.Empty;
+        if (storagePos == Vector3i.zero)
+        {
+            Log.Out("[PipeGraphManager] TryResolveGraphIdByStorageEndpoint called with zero position");
+            return false;
+        }
+
+        Guid found = Guid.Empty;
+        int matches = 0;
+
+        foreach (var kvp in graphsById)
+        {
+            PipeGraphData graph = kvp.Value;
+            if (graph == null)
+                continue;
+
+            if (!graph.ContainsStorageEndpoint(storagePos))
+                continue;
+
+            found = kvp.Key;
+            matches++;
+
+            if (matches > 1)
+                break; // ambiguous
+        }
+
+        if (matches == 1)
+        {
+            graphId = found;
+            return true;
+        }
+        if (matches > 1)
+            Log.Warning($"[PipeGraphManager] Ambiguous graph ID by storage endpoint {storagePos}; matches={matches}");
+        return false;
     }
 
     private static int GetGraphRouteVersion(Guid graphId)
@@ -925,15 +1179,54 @@ public static class PipeGraphManager
         }
     }
 
-    public static bool TryGetStorageItemCounts(WorldBase world, int clrIdx, Guid pipeGraphId, Vector3i storagePos, out Dictionary<string, int> itemCounts)
+    public static bool TryGetStorageItemCounts(
+    WorldBase world,
+    int clrIdx,
+    ref Guid pipeGraphId,
+    Vector3i storagePos,
+    out Dictionary<string, int> itemCounts)
     {
         itemCounts = new Dictionary<string, int>();
 
-        if (world == null || pipeGraphId == Guid.Empty || storagePos == Vector3i.zero)
+        if (world == null || storagePos == Vector3i.zero)
+        {
+            Log.Warning($"[PipeGraphManager] Invalid storage count request world={world} storagePos={storagePos}");
             return false;
+        }
 
-        if (!graphsById.TryGetValue(pipeGraphId, out PipeGraphData graph) || graph == null)
-            return false;
+        PipeGraphData graph = null;
+        bool hadPreferredGraph = pipeGraphId != Guid.Empty &&
+                                 graphsById.TryGetValue(pipeGraphId, out graph) &&
+                                 graph != null &&
+                                 graph.ContainsStorageEndpoint(storagePos);
+
+        if (!hadPreferredGraph)
+        {
+            Guid oldGraphId = pipeGraphId;
+
+            if (!TryResolveGraphIdByStorageEndpoint(storagePos, out Guid resolvedGraphId))
+            {
+                Log.Out($"[PipeGraphManager] No graph endpoint match for storagePos={storagePos} requestedGraphId={pipeGraphId}");
+                return false;
+            }
+
+            pipeGraphId = resolvedGraphId;
+
+            if (!graphsById.TryGetValue(pipeGraphId, out graph) || graph == null)
+            {
+                Log.Warning($"[PipeGraphManager] Resolved graph missing for pipeGraphId={pipeGraphId} storagePos={storagePos}");
+                return false;
+            }
+
+            if (!graph.ContainsStorageEndpoint(storagePos))
+            {
+                Log.Warning($"[PipeGraphManager] Resolved graph {pipeGraphId} does not contain endpoint {storagePos}");
+                return false;
+            }
+
+            if (oldGraphId != Guid.Empty && oldGraphId != pipeGraphId)
+                Log.Out($"[PipeGraphManager] Rebound stale graph id {oldGraphId} -> {pipeGraphId} for storagePos={storagePos}");
+        }
 
         if (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] snapshotSlots) && snapshotSlots != null)
         {
@@ -945,18 +1238,29 @@ public static class PipeGraphManager
         }
 
         if (!graph.ContainsStorageEndpoint(storagePos))
+        {
+            Log.Warning($"[PipeGraphManager] storagePos {storagePos} is not an endpoint in graph {pipeGraphId}");
             return false;
+        }
 
-        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, storagePos, out TileEntity storageEntity) || !(storageEntity is TileEntityComposite comp))
+        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, storagePos, out TileEntity storageEntity) ||
+            !(storageEntity is TileEntityComposite comp))
+        {
+            Log.Warning($"[PipeGraphManager] storage TE not found or not composite for storagePos={storagePos}");
             return false;
+        }
 
         TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
         if (storage == null || storage.items == null)
+        {
+            Log.Warning($"[PipeGraphManager] storage TE or items null for storagePos={storagePos}");
             return false;
+        }
 
         itemCounts = BuildItemCountsFromSlots(storage.items);
         return true;
     }
+
 
     public static bool TryFindFirstMatchingStorageItem(
         WorldBase world,
@@ -990,7 +1294,7 @@ public static class PipeGraphManager
             return false;
         }
 
-        if (!TryGetStorageItemCounts(world, clrIdx, pipeGraphId, storagePos, out Dictionary<string, int> itemCounts))
+        if (!TryGetStorageItemCounts(world, clrIdx, ref pipeGraphId, storagePos, out Dictionary<string, int> itemCounts))
         {
             blockedReason = "Input storage unavailable";
             return false;
@@ -1407,6 +1711,155 @@ public static class PipeGraphManager
         }
 
         return graphIds;
+    }
+
+    private static bool ApplyLoadedGraphToWorld(
+        WorldBase world,
+        int clrIdx,
+        PipeGraphData graph,
+        HashSet<Vector3i> assignedPipePositions)
+    {
+        if (world == null || graph == null || graph.PipeGraphId == Guid.Empty || graph.PipePositions.Count == 0)
+            return false;
+
+        List<Vector3i> validPipes = new List<Vector3i>();
+
+        foreach (Vector3i pipePos in graph.PipePositions)
+        {
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity tileEntity) || !(tileEntity is TileEntityItemPipe pipe))
+                continue;
+
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, pipePos, out BlockValue pipeValue) || !(pipeValue.Block is ItemPipeBlock))
+                continue;
+
+            pipe.SetPipeGraphId(graph.PipeGraphId);
+            pipe.setModified();
+
+            validPipes.Add(pipePos);
+            assignedPipePositions?.Add(pipePos);
+        }
+
+        graph.PipePositions.Clear();
+        for (int i = 0; i < validPipes.Count; i++)
+            graph.AddPipe(validPipes[i]);
+
+        if (graph.PipePositions.Count == 0)
+            return false;
+
+        List<Vector3i> invalidEndpoints = null;
+        foreach (Vector3i endpoint in graph.StorageEndpoints)
+        {
+            if (IsPositionConnectedToGraphPipe(world, clrIdx, graph, endpoint))
+                continue;
+
+            if (invalidEndpoints == null)
+                invalidEndpoints = new List<Vector3i>();
+
+            invalidEndpoints.Add(endpoint);
+        }
+
+        if (invalidEndpoints != null)
+        {
+            for (int i = 0; i < invalidEndpoints.Count; i++)
+                graph.StorageEndpoints.Remove(invalidEndpoints[i]);
+        }
+
+        return true;
+    }
+
+    private static List<Vector3i> CollectAllPipePositions(WorldBase world)
+    {
+        List<Vector3i> pipePositions = new List<Vector3i>();
+        if (world == null)
+            return pipePositions;
+
+        foreach (Chunk chunk in SafeWorldRead.GetChunkArraySnapshot(world))
+        {
+            if (chunk == null)
+                continue;
+
+            List<TileEntity> snapshot = SnapshotTileEntities(chunk);
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                if (snapshot[i] is TileEntityItemPipe pipe)
+                    pipePositions.Add(pipe.ToWorldPos());
+            }
+        }
+
+        return pipePositions;
+    }
+
+    private static void WriteVector3i(BinaryWriter writer, Vector3i value)
+    {
+        writer.Write(value.x);
+        writer.Write(value.y);
+        writer.Write(value.z);
+    }
+
+    private static Vector3i ReadVector3i(BinaryReader reader)
+    {
+        int x = reader.ReadInt32();
+        int y = reader.ReadInt32();
+        int z = reader.ReadInt32();
+        return new Vector3i(x, y, z);
+    }
+
+    private static void WriteSlotSnapshot(BinaryWriter writer, ItemStack[] slots)
+    {
+        if (slots == null)
+        {
+            writer.Write(0);
+            return;
+        }
+
+        writer.Write(slots.Length);
+        for (int i = 0; i < slots.Length; i++)
+        {
+            ItemStack slot = slots[i];
+            bool hasItem = !(slot.IsEmpty() || slot.count <= 0 || slot.itemValue?.ItemClass == null);
+            writer.Write(hasItem);
+            if (!hasItem)
+                continue;
+
+            writer.Write(slot.itemValue.ItemClass.GetItemName() ?? string.Empty);
+            writer.Write(slot.count);
+        }
+    }
+
+    private static ItemStack[] ReadSlotSnapshot(BinaryReader reader)
+    {
+        int slotCount = Math.Max(0, reader.ReadInt32());
+        ItemStack[] slots = new ItemStack[slotCount];
+
+        for (int i = 0; i < slotCount; i++)
+        {
+            bool hasItem = reader.ReadBoolean();
+            if (!hasItem)
+            {
+                slots[i] = ItemStack.Empty;
+                continue;
+            }
+
+            string itemName = reader.ReadString();
+            int count = reader.ReadInt32();
+
+            if (string.IsNullOrEmpty(itemName) || count <= 0)
+            {
+                slots[i] = ItemStack.Empty;
+                continue;
+            }
+
+            ItemValue itemValue = ItemClass.GetItem(itemName, false);
+            if (itemValue == null || itemValue.type == ItemValue.None.type || itemValue.ItemClass == null)
+            {
+                slots[i] = ItemStack.Empty;
+                continue;
+            }
+
+            slots[i] = new ItemStack(itemValue.Clone(), count);
+        }
+
+        return slots;
     }
 
     private static int ComparePositions(Vector3i a, Vector3i b)
