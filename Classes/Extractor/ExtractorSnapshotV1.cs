@@ -6,7 +6,7 @@ public class ExtractorSnapshotV1 : IHLRSnapshot
     public string SnapshotKind => "Extractor";
     public bool IsPhantom;
     public ulong LastHLRSimTime;
-    int IHLRSnapshot.SnapshotVersion => 3;
+    int IHLRSnapshot.SnapshotVersion => 4;
     Guid IHLRSnapshot.MachineId
     {
         get => MachineId;

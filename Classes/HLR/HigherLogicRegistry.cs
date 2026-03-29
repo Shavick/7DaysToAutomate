@@ -289,7 +289,7 @@ public partial class HigherLogicRegistry
 
             case MelterSnapshot melter:
                 HLRDevLog($"[HLR][Melter] Simulate @ {melter.Position} ticks={hlrTicksToSimulate}");
-                SimulateDecanter(melter, worldTime, hlrTicksToSimulate);
+                SimulateMelter(melter, worldTime, hlrTicksToSimulate);
                 melter.LastHLRSimTime = worldTime;
                 isDirty = true;
                 break;
@@ -337,8 +337,14 @@ public partial class HigherLogicRegistry
 
         if (!HasValidGraphStorageEndpoint(ref extractor.SelectedOutputPipeGraphId, extractor.SelectedOutputChestPos))
         {
-            HLRDevLog("[HLR][Extractor] WAIT — Output graph/storage endpoint unavailable");
-            return;
+            bool refreshedFromLive = TryRefreshExtractorPipeOutputFromLiveWorld(extractor);
+            if (!refreshedFromLive || !HasValidGraphStorageEndpoint(ref extractor.SelectedOutputPipeGraphId, extractor.SelectedOutputChestPos))
+            {
+                HLRDevLog("[HLR][Extractor] WAIT — Output graph/storage endpoint unavailable");
+                return;
+            }
+
+            HLRDevLog("[HLR][Extractor] Recovered output endpoint from live machine state");
         }
 
         HLRDevLog($"[HLR][Extractor] Simulate BEGIN @ {extractor.Position} ticks={hlrTicksToSimulate}");
@@ -393,6 +399,82 @@ public partial class HigherLogicRegistry
 
         extractor.WorldTime = worldTime;
         HLRDevLog($"[HLR][Extractor] Simulate END @ {extractor.Position}");
+    }
+
+    private bool TryRefreshExtractorPipeOutputFromLiveWorld(ExtractorSnapshotV1 extractor)
+    {
+        if (extractor == null || extractor.Position == Vector3i.zero)
+            return false;
+
+        if (!SafeWorldRead.TryGetTileEntity(world, 0, extractor.Position, out TileEntity tileEntity) ||
+            !(tileEntity is TileEntityUniversalExtractor liveExtractor))
+        {
+            return false;
+        }
+
+        List<OutputTargetInfo> outputs = MachineOutputDiscovery.GetAvailableOutputs(world, 0, extractor.Position, 8);
+        if (outputs == null || outputs.Count == 0)
+            return false;
+
+        OutputTargetInfo exactMatch = null;
+        OutputTargetInfo liveSelectionMatch = null;
+        OutputTargetInfo firstPipeTarget = null;
+
+        for (int i = 0; i < outputs.Count; i++)
+        {
+            OutputTargetInfo target = outputs[i];
+            if (target == null || target.TransportMode != OutputTransportMode.Pipe || target.PipeGraphId == Guid.Empty)
+                continue;
+
+            if (firstPipeTarget == null)
+                firstPipeTarget = target;
+
+            if (target.BlockPos == extractor.SelectedOutputChestPos)
+            {
+                if (exactMatch == null)
+                    exactMatch = target;
+
+                if (extractor.SelectedOutputPipeGraphId != Guid.Empty &&
+                    target.PipeGraphId == extractor.SelectedOutputPipeGraphId)
+                {
+                    exactMatch = target;
+                    break;
+                }
+            }
+
+            if (liveExtractor.SelectedOutputMode == OutputTransportMode.Pipe &&
+                target.BlockPos == liveExtractor.SelectedOutputChestPos &&
+                target.PipeGraphId == liveExtractor.SelectedPipeGraphId)
+            {
+                liveSelectionMatch = target;
+            }
+        }
+
+        OutputTargetInfo selectedTarget = exactMatch ?? liveSelectionMatch ?? firstPipeTarget;
+        if (selectedTarget == null)
+            return false;
+
+        bool changed = false;
+
+        if (extractor.SelectedOutputChestPos != selectedTarget.BlockPos)
+        {
+            extractor.SelectedOutputChestPos = selectedTarget.BlockPos;
+            changed = true;
+        }
+
+        if (extractor.SelectedOutputPipeGraphId != selectedTarget.PipeGraphId)
+        {
+            extractor.SelectedOutputPipeGraphId = selectedTarget.PipeGraphId;
+            changed = true;
+        }
+
+        if (changed)
+        {
+            isDirty = true;
+            HLRDevLog($"[HLR][Extractor] Refreshed output selection from live TE -> graph={extractor.SelectedOutputPipeGraphId} pos={extractor.SelectedOutputChestPos}");
+        }
+
+        return changed;
     }
 
     private void SimulateCrafter(CrafterSnapshot crafter, ulong worldTime, int hlrTicksToSimulate)
@@ -600,6 +682,81 @@ public partial class HigherLogicRegistry
 
         decanter.WorldTime = worldTime;
         HLRDevLog($"[HLR][{machineTag}] SIMULATE END @ {decanter.Position} action='{decanter.LastAction}' reason='{decanter.LastBlockReason}' pendingIn={decanter.PendingItemInput} pendingItemOut={decanter.PendingItemOutput} pendingFluidOutMg={decanter.PendingFluidOutput}");
+    }
+
+    private void SimulateMelter(MelterSnapshot melter, ulong worldTime, int hlrTicksToSimulate)
+    {
+        if (melter == null)
+            return;
+
+        HLRDevLog($"[HLR][Melter] SIMULATE BEGIN @ {melter.Position} ticks={hlrTicksToSimulate} pendingIn={melter.PendingItemInput} pendingItemOut={melter.PendingItemOutput} pendingFluidOutMg={melter.PendingFluidOutput} heat={melter.CurrentHeat}");
+
+        if (!melter.IsOn)
+        {
+            melter.LastAction = "Idle";
+            melter.LastBlockReason = string.Empty;
+            melter.CycleTickCounter = 0;
+            HLRDevLog($"[HLR][Melter] SKIP - OFF @ {melter.Position}");
+            return;
+        }
+
+        if (melter.CycleTickLength <= 0)
+            melter.CycleTickLength = 1;
+
+        string runtimeBlockReason = string.Empty;
+
+        if (!TryFlushDecanterPendingItemOutput(melter, out string itemBlockedReason) && string.IsNullOrEmpty(runtimeBlockReason))
+            runtimeBlockReason = itemBlockedReason;
+
+        if (!TryFlushDecanterPendingFluidOutput(melter, out string fluidBlockedReason) && string.IsNullOrEmpty(runtimeBlockReason))
+            runtimeBlockReason = fluidBlockedReason;
+
+        string requirementsReason = GetMelterMissingRequirementReason(melter);
+        if (!string.IsNullOrEmpty(requirementsReason))
+        {
+            melter.LastAction = "Waiting";
+            melter.LastBlockReason = requirementsReason;
+            melter.CycleTickCounter = 0;
+            HLRDevLog($"[HLR][Melter] WAIT - reason='{requirementsReason}' @ {melter.Position}");
+            return;
+        }
+
+        melter.CycleTickCounter += Math.Max(1, hlrTicksToSimulate);
+
+        string cycleAction = "Running";
+        string cycleBlockedReason = string.Empty;
+
+        while (melter.CycleTickCounter >= melter.CycleTickLength)
+        {
+            melter.CycleTickCounter -= melter.CycleTickLength;
+
+            bool ranCycle = TryRunMelterCycle(melter, out cycleAction, out cycleBlockedReason);
+            if (!ranCycle)
+                break;
+
+            HLRDevLog($"[HLR][Melter] CYCLE - action='{cycleAction}' blocked='{cycleBlockedReason}' pendingIn={melter.PendingItemInput} pendingItemOut={melter.PendingItemOutput} pendingFluidOutMg={melter.PendingFluidOutput} heat={melter.CurrentHeat}");
+
+            if (!TryFlushDecanterPendingItemOutput(melter, out itemBlockedReason) && string.IsNullOrEmpty(runtimeBlockReason))
+                runtimeBlockReason = itemBlockedReason;
+
+            if (!TryFlushDecanterPendingFluidOutput(melter, out fluidBlockedReason) && string.IsNullOrEmpty(runtimeBlockReason))
+                runtimeBlockReason = fluidBlockedReason;
+
+            if (!string.IsNullOrEmpty(cycleBlockedReason))
+                break;
+        }
+
+        melter.LastAction = string.IsNullOrEmpty(cycleAction) ? "Running" : cycleAction;
+
+        if (!string.IsNullOrEmpty(cycleBlockedReason))
+            melter.LastBlockReason = cycleBlockedReason;
+        else if (!string.IsNullOrEmpty(runtimeBlockReason))
+            melter.LastBlockReason = runtimeBlockReason;
+        else
+            melter.LastBlockReason = string.Empty;
+
+        melter.WorldTime = worldTime;
+        HLRDevLog($"[HLR][Melter] SIMULATE END @ {melter.Position} action='{melter.LastAction}' reason='{melter.LastBlockReason}' pendingIn={melter.PendingItemInput} pendingItemOut={melter.PendingItemOutput} pendingFluidOutMg={melter.PendingFluidOutput} heat={melter.CurrentHeat}");
     }
 
     private void SimulateInfuser(FluidInfuserSnapshot infuser, ulong worldTime, int hlrTicksToSimulate)
@@ -1275,6 +1432,90 @@ public partial class HigherLogicRegistry
         return string.Empty;
     }
 
+    private string GetMelterMissingRequirementReason(MelterSnapshot melter)
+    {
+        if (melter == null)
+            return "World unavailable";
+
+        if (melter.SelectedInputPipeGraphId == Guid.Empty || melter.SelectedInputChestPos == Vector3i.zero)
+            return "Missing Item Input";
+
+        if (!HasValidGraphStorageEndpoint(ref melter.SelectedInputPipeGraphId, melter.SelectedInputChestPos))
+            return "Missing Item Input";
+
+        if (string.IsNullOrEmpty(melter.SelectedRecipeKey) && string.IsNullOrEmpty(melter.SelectedFluidType))
+            return "No recipe selected";
+
+        if (string.IsNullOrEmpty(melter.SelectedFluidType) &&
+            !string.IsNullOrEmpty(melter.SelectedRecipeKey) &&
+            MachineRecipeRegistry.TryGetRecipeByKey(melter.SelectedRecipeKey, out MachineRecipe selectedRecipe))
+        {
+            int defaultCraftTicks = Math.Max(1, melter.CycleTickLength);
+            if (TileEntityMelter.TryReadMachineRecipeAsMelterRule(
+                    selectedRecipe,
+                    defaultCraftTicks,
+                    out _,
+                    out _,
+                    out _,
+                    out string recipeFluidType,
+                    out _,
+                    out _,
+                    out _,
+                    out _,
+                    out _))
+            {
+                melter.SelectedFluidType = recipeFluidType ?? string.Empty;
+            }
+        }
+
+        if (string.IsNullOrEmpty(melter.SelectedFluidType))
+            return "No fluid selected";
+
+        int requiredHeat = GetMelterRequiredHeatForSelection(melter, Math.Max(1, melter.CycleTickLength));
+        if (requiredHeat > 0 && melter.CurrentHeat < requiredHeat)
+            return $"Insufficient Heat ({melter.CurrentHeat}/{requiredHeat})";
+
+        if (melter.SelectedOutputChestPos == Vector3i.zero)
+            return "Missing Item Output";
+
+        if (melter.SelectedOutputMode != OutputTransportMode.Pipe)
+            return "HLR requires pipe item output";
+
+        if (melter.SelectedOutputPipeGraphId == Guid.Empty)
+            return "Missing Item Output";
+
+        if (!HasValidGraphStorageEndpoint(ref melter.SelectedOutputPipeGraphId, melter.SelectedOutputChestPos))
+            return "Missing Item Output";
+
+        if (!TryResolveDecanterFluidGraph(melter, out Guid resolvedFluidGraphId))
+            return "Missing/Invalid Fluid Output";
+
+        melter.SelectedFluidGraphId = resolvedFluidGraphId;
+
+        if (melter.PendingItemInput <= 0)
+        {
+            if (!TryGetSnapshotStorageItemCounts(melter.SelectedInputPipeGraphId, melter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
+                availableCounts == null)
+            {
+                return "Input item unavailable";
+            }
+
+            if (!TryFindMelterInputCandidate(
+                    melter,
+                    availableCounts,
+                    out _,
+                    out _,
+                    out _,
+                    out _,
+                    out _,
+                    out _,
+                    out _))
+                return "No matching input item";
+        }
+
+        return string.Empty;
+    }
+
     private bool TryResolveDecanterFluidGraph(DecanterSnapshot decanter, out Guid graphId)
     {
         graphId = Guid.Empty;
@@ -1420,6 +1661,152 @@ public partial class HigherLogicRegistry
         return false;
     }
 
+    private bool TryFindMelterInputCandidate(
+        MelterSnapshot melter,
+        Dictionary<string, int> availableCounts,
+        out string matchedItemName,
+        out int requiredInputCount,
+        out int requiredHeat,
+        out int fluidAmountMg,
+        out string returnItemName,
+        out int returnItemAmount,
+        out int craftTimeTicks)
+    {
+        matchedItemName = string.Empty;
+        requiredInputCount = 0;
+        requiredHeat = 0;
+        fluidAmountMg = 0;
+        returnItemName = string.Empty;
+        returnItemAmount = 1;
+        craftTimeTicks = 1;
+
+        if (melter == null || availableCounts == null || availableCounts.Count == 0)
+            return false;
+
+        string groupsCsv = string.IsNullOrWhiteSpace(melter.MachineRecipeGroupsCsv)
+            ? "melter"
+            : melter.MachineRecipeGroupsCsv.Trim();
+
+        int defaultCraftTicks = Math.Max(1, melter.CycleTickLength);
+        string normalizedSelectedFluid = (melter.SelectedFluidType ?? string.Empty).Trim().ToLowerInvariant();
+
+        bool TryMatchRecipe(
+            MachineRecipe machineRecipe,
+            bool requireSelectedFluid,
+            out string inputItem,
+            out int inputCount,
+            out int outputRequiredHeat,
+            out int outputFluidMg,
+            out string outputItem,
+            out int outputItemCount,
+            out int resolvedCraftTicks)
+        {
+            inputItem = string.Empty;
+            inputCount = 0;
+            outputRequiredHeat = 0;
+            outputFluidMg = 0;
+            outputItem = string.Empty;
+            outputItemCount = 1;
+            resolvedCraftTicks = defaultCraftTicks;
+
+            if (machineRecipe == null)
+                return false;
+
+            if (!TileEntityMelter.IsMelterRecipeAllowedForMachineGroups(machineRecipe, groupsCsv))
+                return false;
+
+            if (!TileEntityMelter.TryReadMachineRecipeAsMelterRule(
+                    machineRecipe,
+                    defaultCraftTicks,
+                    out inputItem,
+                    out inputCount,
+                    out outputRequiredHeat,
+                    out string fluidType,
+                    out outputFluidMg,
+                    out outputItem,
+                    out outputItemCount,
+                    out resolvedCraftTicks,
+                    out _))
+            {
+                return false;
+            }
+
+            if (requireSelectedFluid &&
+                !string.IsNullOrEmpty(normalizedSelectedFluid) &&
+                !string.Equals(fluidType, normalizedSelectedFluid, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(inputItem) || inputCount <= 0 || outputFluidMg <= 0)
+                return false;
+
+            int available = availableCounts.TryGetValue(inputItem, out int value) ? value : 0;
+            if (available < inputCount)
+                return false;
+
+            if (outputRequiredHeat > 0 && melter.CurrentHeat < outputRequiredHeat)
+                return false;
+
+            melter.SelectedRecipeKey = machineRecipe.NormalizedKey ?? string.Empty;
+            melter.SelectedFluidType = fluidType ?? string.Empty;
+            return true;
+        }
+
+        if (!string.IsNullOrEmpty(melter.SelectedRecipeKey) &&
+            MachineRecipeRegistry.TryGetRecipeByKey(melter.SelectedRecipeKey, out MachineRecipe selectedRecipe) &&
+            TryMatchRecipe(
+                selectedRecipe,
+                true,
+                out matchedItemName,
+                out requiredInputCount,
+                out requiredHeat,
+                out fluidAmountMg,
+                out returnItemName,
+                out returnItemAmount,
+                out craftTimeTicks))
+        {
+            return true;
+        }
+
+        List<MachineRecipe> recipes = MachineRecipeRegistry.GetRecipesForMachineGroups(groupsCsv, false);
+        for (int i = 0; i < recipes.Count; i++)
+        {
+            if (TryMatchRecipe(
+                    recipes[i],
+                    true,
+                    out matchedItemName,
+                    out requiredInputCount,
+                    out requiredHeat,
+                    out fluidAmountMg,
+                    out returnItemName,
+                    out returnItemAmount,
+                    out craftTimeTicks))
+            {
+                return true;
+            }
+        }
+
+        for (int i = 0; i < recipes.Count; i++)
+        {
+            if (TryMatchRecipe(
+                    recipes[i],
+                    false,
+                    out matchedItemName,
+                    out requiredInputCount,
+                    out requiredHeat,
+                    out fluidAmountMg,
+                    out returnItemName,
+                    out returnItemAmount,
+                    out craftTimeTicks))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private bool TryFindDecanterInputCandidate(
         DecanterSnapshot decanter,
         Dictionary<string, int> availableCounts,
@@ -1442,10 +1829,8 @@ public partial class HigherLogicRegistry
         if (decanter == null || availableCounts == null || availableCounts.Count == 0)
             return false;
 
-        bool isMelter = decanter is MelterSnapshot;
-
         string groupsCsv = string.IsNullOrWhiteSpace(decanter.MachineRecipeGroupsCsv)
-            ? (isMelter ? "melter" : "fluiddecanter")
+            ? "fluiddecanter"
             : decanter.MachineRecipeGroupsCsv.Trim();
 
         int defaultCraftTicks = Math.Max(1, decanter.CycleTickLength);
@@ -1474,46 +1859,22 @@ public partial class HigherLogicRegistry
                 return false;
 
             string fluidType;
-            if (isMelter)
-            {
-                if (!TileEntityMelter.IsMelterRecipeAllowedForMachineGroups(machineRecipe, groupsCsv))
-                    return false;
+            if (!TileEntityFluidDecanter.IsRecipeAllowedForMachineGroups(machineRecipe, groupsCsv))
+                return false;
 
-                if (!TileEntityMelter.TryReadMachineRecipeAsMelterRule(
-                        machineRecipe,
-                        defaultCraftTicks,
-                        out inputItem,
-                        out inputCount,
-                        out outputRequiredHeat,
-                        out fluidType,
-                        out outputFluidMg,
-                        out outputItem,
-                        out outputItemCount,
-                        out resolvedCraftTicks,
-                        out _))
-                {
-                    return false;
-                }
-            }
-            else
+            if (!TileEntityFluidDecanter.TryReadMachineRecipeAsDecanterRule(
+                    machineRecipe,
+                    defaultCraftTicks,
+                    out inputItem,
+                    out inputCount,
+                    out fluidType,
+                    out outputFluidMg,
+                    out outputItem,
+                    out outputItemCount,
+                    out resolvedCraftTicks,
+                    out _))
             {
-                if (!TileEntityFluidDecanter.IsRecipeAllowedForMachineGroups(machineRecipe, groupsCsv))
-                    return false;
-
-                if (!TileEntityFluidDecanter.TryReadMachineRecipeAsDecanterRule(
-                        machineRecipe,
-                        defaultCraftTicks,
-                        out inputItem,
-                        out inputCount,
-                        out fluidType,
-                        out outputFluidMg,
-                        out outputItem,
-                        out outputItemCount,
-                        out resolvedCraftTicks,
-                        out _))
-                {
-                    return false;
-                }
+                return false;
             }
 
             if (requireSelectedFluid &&
@@ -1528,9 +1889,6 @@ public partial class HigherLogicRegistry
 
             int available = availableCounts.TryGetValue(inputItem, out int value) ? value : 0;
             if (available < inputCount)
-                return false;
-
-            if (isMelter && decanter is MelterSnapshot melter && outputRequiredHeat > 0 && melter.CurrentHeat < outputRequiredHeat)
                 return false;
 
             decanter.SelectedRecipeKey = machineRecipe.NormalizedKey ?? string.Empty;
@@ -1774,6 +2132,147 @@ public partial class HigherLogicRegistry
             return false;
         }
 
+        return true;
+    }
+
+    private bool TryRunMelterCycle(MelterSnapshot melter, out string cycleAction, out string blockedReason)
+    {
+        cycleAction = "Running";
+        blockedReason = string.Empty;
+
+        if (melter == null)
+        {
+            blockedReason = "World unavailable";
+            HLRDevLog($"[HLR][Melter][Cycle] BLOCKED - {blockedReason}");
+            return false;
+        }
+
+        if (melter.PendingItemInput > 0)
+        {
+            if (melter.PendingItemOutput > 0)
+            {
+                blockedReason = "Pending item output full";
+                HLRDevLog($"[HLR][Melter][Cycle] BLOCKED - {blockedReason}");
+                return false;
+            }
+
+            if (string.IsNullOrEmpty(melter.PendingItemInputName) || melter.PendingItemInputFluidAmountMg <= 0)
+            {
+                melter.PendingItemInput = 0;
+                melter.PendingItemInputName = string.Empty;
+                melter.PendingItemInputFluidAmountMg = 0;
+                melter.PendingItemInputReturnItemName = string.Empty;
+                melter.PendingItemInputReturnItemAmount = 1;
+                blockedReason = "Pending input invalid";
+                HLRDevLog($"[HLR][Melter][Cycle] RESET - {blockedReason}");
+                return true;
+            }
+
+            int freeCapacity = melter.PendingFluidOutputCapacityMg - melter.PendingFluidOutput;
+            if (freeCapacity < melter.PendingItemInputFluidAmountMg)
+            {
+                blockedReason = "Pending fluid output full";
+                HLRDevLog($"[HLR][Melter][Cycle] BLOCKED - {blockedReason} freeMg={freeCapacity} requiredMg={melter.PendingItemInputFluidAmountMg}");
+                return false;
+            }
+
+            int convertedFluidMg = melter.PendingItemInputFluidAmountMg;
+            string returnItem = melter.PendingItemInputReturnItemName;
+            int pendingReturnItemAmount = Math.Max(1, melter.PendingItemInputReturnItemAmount);
+
+            melter.PendingItemInput = 0;
+            melter.PendingItemInputName = string.Empty;
+            melter.PendingItemInputFluidAmountMg = 0;
+            melter.PendingItemInputReturnItemName = string.Empty;
+            melter.PendingItemInputReturnItemAmount = 1;
+
+            melter.PendingFluidOutput += Math.Max(0, convertedFluidMg);
+
+            if (!string.IsNullOrEmpty(returnItem))
+            {
+                ItemValue returnValue = ItemClass.GetItem(returnItem, false);
+                if (returnValue != null && returnValue.type != ItemValue.None.type)
+                {
+                    melter.PendingItemOutput = pendingReturnItemAmount;
+                    melter.PendingItemOutputName = returnItem;
+                }
+            }
+
+            cycleAction = "Converted";
+            HLRDevLog($"[HLR][Melter][Cycle] CONVERTED fluidMg={convertedFluidMg} returnItem={returnItem} returnItemAmount={pendingReturnItemAmount} pendingFluidOutMg={melter.PendingFluidOutput} pendingItemOut={melter.PendingItemOutput}");
+            return true;
+        }
+
+        if (melter.PendingItemOutput > 0)
+        {
+            blockedReason = "Pending item output full";
+            HLRDevLog($"[HLR][Melter][Cycle] BLOCKED - {blockedReason}");
+            return false;
+        }
+
+        if (melter.PendingFluidOutput >= melter.PendingFluidOutputCapacityMg)
+        {
+            blockedReason = "Pending fluid output full";
+            HLRDevLog($"[HLR][Melter][Cycle] BLOCKED - {blockedReason} currentMg={melter.PendingFluidOutput} capacityMg={melter.PendingFluidOutputCapacityMg}");
+            return false;
+        }
+
+        if (!TryGetSnapshotStorageItemCounts(melter.SelectedInputPipeGraphId, melter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
+            availableCounts == null)
+        {
+            blockedReason = "Input item unavailable";
+            HLRDevLog($"[HLR][Melter][Cycle] BLOCKED - {blockedReason} graph={melter.SelectedInputPipeGraphId} pos={melter.SelectedInputChestPos}");
+            return false;
+        }
+
+        if (!TryFindMelterInputCandidate(
+                melter,
+                availableCounts,
+                out string matchedItemName,
+                out int requiredInputCount,
+                out int requiredHeat,
+                out int fluidAmountMg,
+                out string returnItemName,
+                out int returnItemAmount,
+                out int craftTimeTicks))
+        {
+            blockedReason = "No matching input item";
+            HLRDevLog($"[HLR][Melter][Cycle] BLOCKED - {blockedReason} fluid={melter.SelectedFluidType}");
+            return false;
+        }
+
+        if (requiredHeat > 0 && melter.CurrentHeat < requiredHeat)
+        {
+            blockedReason = $"Insufficient Heat ({melter.CurrentHeat}/{requiredHeat})";
+            HLRDevLog($"[HLR][Melter][Cycle] BLOCKED - {blockedReason}");
+            return false;
+        }
+
+        Dictionary<string, int> request = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            { matchedItemName, requiredInputCount }
+        };
+
+        HLRDevLog($"[HLR][Melter][Cycle] CONSUME ATTEMPT graph={melter.SelectedInputPipeGraphId} pos={melter.SelectedInputChestPos} request={FormatItemMapForLog(request)}");
+        if (!TryConsumeSnapshotStorageItems(melter.SelectedInputPipeGraphId, melter.SelectedInputChestPos, request, out Dictionary<string, int> consumed) ||
+            consumed == null ||
+            !consumed.TryGetValue(matchedItemName, out int consumedCount) ||
+            consumedCount <= 0)
+        {
+            blockedReason = "Input item unavailable";
+            HLRDevLog($"[HLR][Melter][Cycle] CONSUME BLOCKED graph={melter.SelectedInputPipeGraphId} pos={melter.SelectedInputChestPos} item={matchedItemName}");
+            return false;
+        }
+
+        melter.PendingItemInput = Math.Max(1, consumedCount);
+        melter.PendingItemInputName = matchedItemName;
+        melter.PendingItemInputFluidAmountMg = Math.Max(0, fluidAmountMg);
+        melter.PendingItemInputReturnItemName = returnItemName ?? string.Empty;
+        melter.PendingItemInputReturnItemAmount = Math.Max(1, returnItemAmount);
+        melter.CycleTickLength = Math.Max(1, craftTimeTicks);
+
+        cycleAction = "Requested Input";
+        HLRDevLog($"[HLR][Melter][Cycle] CONSUME SUCCESS item={matchedItemName} consumed={consumedCount} fluidMg={melter.PendingItemInputFluidAmountMg} returnItem={melter.PendingItemInputReturnItemName} returnItemAmount={melter.PendingItemInputReturnItemAmount}");
         return true;
     }
 
@@ -2257,6 +2756,7 @@ public partial class HigherLogicRegistry
             WorldTime = source.WorldTime,
             LastHLRSimTime = source.LastHLRSimTime,
             SelectedOutputChestPos = source.SelectedOutputChestPos,
+            SelectedOutputMode = source.SelectedOutputMode,
             SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
             Timers = new List<ResourceTimer>(),
             OwedResources = new Dictionary<string, int>()
@@ -2874,9 +3374,10 @@ public partial class HigherLogicRegistry
         bw.Write(extractor.SelectedOutputChestPos.x);
         bw.Write(extractor.SelectedOutputChestPos.y);
         bw.Write(extractor.SelectedOutputChestPos.z);
+        bw.Write((int)extractor.SelectedOutputMode);
         bw.Write(extractor.SelectedOutputPipeGraphId.ToString());
 
-        HLRDevLog($"[HLR][Extractor][Save] PipeGraph={extractor.SelectedOutputPipeGraphId} OutputPos={extractor.SelectedOutputChestPos}");
+        HLRDevLog($"[HLR][Extractor][Save] OutputMode={extractor.SelectedOutputMode} PipeGraph={extractor.SelectedOutputPipeGraphId} OutputPos={extractor.SelectedOutputChestPos}");
         HLRDevLog($"[HLR][Extractor][Save] END");
     }
 
@@ -3060,6 +3561,8 @@ public partial class HigherLogicRegistry
             return;
         }
 
+        snapshots.Clear();
+
         try
         {
             using (var fs = new FileStream(hlrFile, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -3137,13 +3640,35 @@ public partial class HigherLogicRegistry
 
         catch (EndOfStreamException)
         {
-            Log.Error("[HLR][IO] Load FAILED — file truncated");
+            Log.Error($"[HLR][IO] Load FAILED — file truncated: {hlrFile}");
+            HandleCorruptLoadFile("file truncated");
         }
         catch (Exception ex)
         {
             Log.Error($"[HLR][IO] Load FAILED — exception: {ex}");
+            HandleCorruptLoadFile("exception");
         }
         HLRDevLog($"[HLR] Load Called! file={hlrFile}");
+    }
+
+    private void HandleCorruptLoadFile(string reason)
+    {
+        snapshots.Clear();
+
+        if (string.IsNullOrEmpty(hlrFile) || !File.Exists(hlrFile))
+            return;
+
+        try
+        {
+            string quarantineName = $"{HLR_FILE}.corrupt-{DateTime.UtcNow:yyyyMMdd-HHmmss-fff}";
+            string quarantinePath = Path.Combine(hlrDir, quarantineName);
+            File.Move(hlrFile, quarantinePath);
+            Log.Warning($"[HLR][IO] Corrupt save quarantined ({reason}) => {quarantinePath}");
+        }
+        catch (Exception quarantineEx)
+        {
+            Log.Error($"[HLR][IO] Failed to quarantine corrupt file ({reason}): {quarantineEx}");
+        }
     }
 
     private void LoadExtractorSnapshot(BinaryReader br, ExtractorSnapshotV1 extractor, int snapshotVersion)
@@ -3200,6 +3725,7 @@ public partial class HigherLogicRegistry
         }
 
         extractor.SelectedOutputChestPos = Vector3i.zero;
+        extractor.SelectedOutputMode = OutputTransportMode.Adjacent;
         extractor.SelectedOutputPipeGraphId = Guid.Empty;
 
         if (snapshotVersion >= 2)
@@ -3209,12 +3735,24 @@ public partial class HigherLogicRegistry
             int outZ = br.ReadInt32();
             extractor.SelectedOutputChestPos = new Vector3i(outX, outY, outZ);
 
+            if (snapshotVersion >= 4)
+            {
+                extractor.SelectedOutputMode = (OutputTransportMode)br.ReadInt32();
+            }
+
             string outputGraph = br.ReadString();
             if (!Guid.TryParse(outputGraph, out extractor.SelectedOutputPipeGraphId))
                 extractor.SelectedOutputPipeGraphId = Guid.Empty;
+
+            if (snapshotVersion < 4)
+            {
+                extractor.SelectedOutputMode = extractor.SelectedOutputPipeGraphId != Guid.Empty
+                    ? OutputTransportMode.Pipe
+                    : OutputTransportMode.Adjacent;
+            }
         }
 
-        HLRDevLog($"[HLR][Extractor][Load] PipeGraph={extractor.SelectedOutputPipeGraphId} OutputPos={extractor.SelectedOutputChestPos}");
+        HLRDevLog($"[HLR][Extractor][Load] OutputMode={extractor.SelectedOutputMode} PipeGraph={extractor.SelectedOutputPipeGraphId} OutputPos={extractor.SelectedOutputChestPos}");
         HLRDevLog($"[HLR][Extractor][Load] END");
     }
 
