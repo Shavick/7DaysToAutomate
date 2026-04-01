@@ -32,6 +32,10 @@
 			<window name="windowFluidMixerInfo" />
 		</window_group>
 
+		<window_group name="BoilerInfo" open_backpack_on_open="false" close_compass_on_open="true" defaultSelected="bp.content">
+			<window name="windowBoilerInfo" />
+		</window_group>
+
 		<window_group name="CasterInfo" open_backpack_on_open="false" close_compass_on_open="true" defaultSelected="bp.content">
 			<window name="windowCasterInfo" />
 		</window_group>

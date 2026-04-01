@@ -796,7 +796,7 @@
 			<property name="EconomicValue" value="1400" />
 			<property name="DescriptionKey" value="universalMelterDesc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
-			<property name="InputSpeed" value="10" />
+			<property name="InputSpeed" value="5" />
 			<property name="MachineRecipes" value="melter" />
 			<property name="EnableHeatRequirement" value="true" />
 			<property name="HeatGainCapPerTick" value="0.25" />
@@ -820,6 +820,27 @@
 			<property name="InputSpeed" value="10" />
 			<property name="MachineRecipes" value="fluid_mixer" />
 			<property name="PendingFluidOutputCapacityGallons" value="5" />
+			<property name="DevLogs" value="false" />
+		</block>
+
+		<block name="universalBoiler">
+			<property name="Class" value="BoilerBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1500" />
+			<property name="DescriptionKey" value="universalBoilerDesc" />
+			<property name="UnlockedBy" value="craftingElectrician" />
+			<property name="InputSpeed" value="10" />
+			<property name="MachineRecipes" value="boiler" />
+			<property name="PendingFluidOutputCapacityGallons" value="5" />
+			<property name="HeatGainCapPerTick" value="0.25" />
+			<property name="HeatLossPerTick" value="0.25" />
 			<property name="DevLogs" value="false" />
 		</block>
 

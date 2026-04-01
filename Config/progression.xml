@@ -15,7 +15,7 @@
 
 		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="45,100" value="1" tags="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2,liquidPipeT2,liquidPipeElbowT2,liquidPipeSmallJointT2,fluidIntakeT2,fluidValveT2,universalFluidDecanter,universalFluidInfuser" />
 
-		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="55,100" value="1" tags="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3,liquidPipeT3,liquidPipeElbowT3,liquidPipeSmallJointT3,fluidIntakeT3,fluidValveT3,universalMelter,universalFluidMixer" />
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="55,100" value="1" tags="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3,liquidPipeT3,liquidPipeElbowT3,liquidPipeSmallJointT3,fluidIntakeT3,fluidValveT3,universalMelter,universalFluidMixer,universalBoiler" />
 	</append>
 	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='generatorBankA']">
 		<unlock_entry item="itemPipe,itemPipeElbow,itemPipeSmallJoint,liquidPipe,liquidPipeElbow,liquidPipeSmallJoint,fluidIntake,fluidValve,fluidPump,fluidStorageTank" unlock_tier="1" />
@@ -24,7 +24,7 @@
 		<unlock_entry item="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2,liquidPipeT2,liquidPipeElbowT2,liquidPipeSmallJointT2,fluidIntakeT2,fluidValveT2,universalFluidDecanter,universalFluidInfuser" unlock_tier="1" />
 	</append>
 	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingElectrician']/display_entry[@icon='batterybank']">
-		<unlock_entry item="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3,liquidPipeT3,liquidPipeElbowT3,liquidPipeSmallJointT3,fluidIntakeT3,fluidValveT3,universalMelter,universalFluidMixer" unlock_tier="1" />
+		<unlock_entry item="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3,liquidPipeT3,liquidPipeElbowT3,liquidPipeSmallJointT3,fluidIntakeT3,fluidValveT3,universalMelter,universalFluidMixer,universalBoiler" unlock_tier="1" />
 	</append>
 
 	<!-- WORKSTATIONS: RECIPE UNLOCKS -->

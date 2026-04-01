@@ -36,6 +36,8 @@ universalMelter,"Universal Melter"
 universalMelterDesc,"Melts configured item inputs into molten fluids when heated from below."
 universalFluidMixer,"Universal Fluid Mixer"
 fluidMixerDesc,"Mixes two fluid inputs from adjacent fluid networks into a new output fluid."
+universalBoiler,"Universal Boiler"
+universalBoilerDesc,"Converts one fluid into another using configured recipes and heat from below."
 universalCaster,"Universal Caster"
 universalCasterDesc,"Casts solid items from configured molten fluid recipes and outputs to selected storage."
 

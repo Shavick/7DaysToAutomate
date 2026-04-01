@@ -112,6 +112,20 @@
 			<fluid_output type="molten_lead_alloy" gallons="0.3" />
 		</machineRecipe>
 
+		<!-- BOILER -->
+
+		<machineRecipe name="boil_murky_water" machine="boiler">
+			<heat value="20" />
+			<fluid_input type="murky_water" gallons="1" />
+			<fluid_output type="water" gallons="1" />
+		</machineRecipe>
+
+		<machineRecipe name="boil_gas" machine="boiler">
+			<heat value="20" />
+			<fluid_input type="molten_oil" gallons="1" />
+			<fluid_output type="gas" gallons=".2" />
+		</machineRecipe>
+
 		<!-- MOLD -->
 
 		<machineRecipe name="cast_scrap_polymer" machine="mold">
@@ -431,6 +445,14 @@
 		</recipe>
 
 		<recipe name="universalFluidMixer" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalFluidMixer">
+			<ingredient name="resourceForgedSteel" count="25" />
+			<ingredient name="resourceMechanicalParts" count="12" />
+			<ingredient name="resourceElectricParts" count="8" />
+			<ingredient name="resourceDuctTape" count="6" />
+			<ingredient name="resourceOil" count="20" />
+		</recipe>
+
+		<recipe name="universalBoiler" count="1" craft_area="workbench" craft_time="45" tags="learnable,workbenchCrafting,universalBoiler">
 			<ingredient name="resourceForgedSteel" count="25" />
 			<ingredient name="resourceMechanicalParts" count="12" />
 			<ingredient name="resourceElectricParts" count="8" />

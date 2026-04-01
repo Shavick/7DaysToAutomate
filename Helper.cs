@@ -61,6 +61,13 @@ public static class Helper
             mixer.NeedsUiRefresh = true;
         }
 
+        if (te is TileEntityBoiler boiler)
+        {
+            boiler.ResolveFluidOutputGraph(world);
+            boiler.setModified();
+            boiler.NeedsUiRefresh = true;
+        }
+
         if (te is TileEntityCaster caster)
         {
             caster.RefreshAvailableOutputTargets(world);
@@ -136,6 +143,11 @@ public static class Helper
                 if (customUi == "FluidMixerInfo")
                 {
                     XUiC_FluidMixerInfo.Open(localPlayer, blockPos);
+                    return;
+                }
+                if (customUi == "BoilerInfo")
+                {
+                    XUiC_BoilerInfo.Open(localPlayer, blockPos);
                     return;
                 }
                 if (customUi == "CasterInfo")
@@ -687,6 +699,35 @@ public static class Helper
         te.ServerCycleRecipe(direction);
     }
 
+    public static void RequestBoilerCycleRecipe(Vector3i blockPos, int direction)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[Boiler][Helper] RequestBoilerCycleRecipe world is null");
+            return;
+        }
+
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageBoilerControl>()
+                    .SetupCycleRecipe(blockPos, GetLocalRequesterEntityId(world), direction),
+                false
+            );
+            return;
+        }
+
+        var te = world.GetTileEntity(blockPos) as TileEntityBoiler;
+        if (te == null)
+        {
+            Log.Error($"[Boiler][Helper] No boiler at pos={blockPos}");
+            return;
+        }
+
+        te.ServerCycleRecipe(direction);
+    }
+
     public static void RequestCasterCycleRecipe(Vector3i blockPos, int direction)
     {
         var world = GameManager.Instance.World;
@@ -805,7 +846,6 @@ public static class Helper
         );
     }
 }
-
 
 
 
