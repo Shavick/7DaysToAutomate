@@ -194,8 +194,8 @@ public class TileEntityFluidMixer : TileEntityMachine
         if (world.IsRemote())
             return true;
 
-        return TryResolveInputGraph(world, rule.InputAType, out _, out _) &&
-               TryResolveInputGraph(world, rule.InputBType, out _, out _);
+        return TryResolveInputGraph(world, rule.InputAType, Math.Max(1, rule.InputAAmountMg), out _, out _) &&
+               TryResolveInputGraph(world, rule.InputBType, Math.Max(1, rule.InputBAmountMg), out _, out _);
     }
 
     public bool HasFluidOutputRequirement(WorldBase world)
@@ -244,10 +244,10 @@ public class TileEntityFluidMixer : TileEntityMachine
             return false;
         }
 
-        if (!TryResolveInputGraph(world, rule.InputAType, out _, out blockedReason))
+        if (!TryResolveInputGraph(world, rule.InputAType, Math.Max(1, rule.InputAAmountMg), out _, out blockedReason))
             return false;
 
-        if (!TryResolveInputGraph(world, rule.InputBType, out _, out blockedReason))
+        if (!TryResolveInputGraph(world, rule.InputBType, Math.Max(1, rule.InputBAmountMg), out _, out blockedReason))
             return false;
 
         if (!TryGetCompatibleFluidGraph(world, rule.OutputType, out Guid outputGraphId))
@@ -513,10 +513,10 @@ public class TileEntityFluidMixer : TileEntityMachine
             return false;
         }
 
-        if (!TryResolveInputGraph(world, rule.InputAType, out Guid graphA, out blockedReason))
+        if (!TryResolveInputGraph(world, rule.InputAType, Math.Max(1, rule.InputAAmountMg), out Guid graphA, out blockedReason))
             return false;
 
-        if (!TryResolveInputGraph(world, rule.InputBType, out Guid graphB, out blockedReason))
+        if (!TryResolveInputGraph(world, rule.InputBType, Math.Max(1, rule.InputBAmountMg), out Guid graphB, out blockedReason))
             return false;
 
         if (!FluidGraphManager.TryConsumeFluid(world, 0, graphA, rule.InputAType, rule.InputAAmountMg, out int consumedA) ||
@@ -661,7 +661,7 @@ public class TileEntityFluidMixer : TileEntityMachine
         return false;
     }
 
-    private bool TryResolveInputGraph(WorldBase world, string inputFluidType, out Guid graphId, out string blockedReason)
+    private bool TryResolveInputGraph(WorldBase world, string inputFluidType, int requiredMg, out Guid graphId, out string blockedReason)
     {
         graphId = Guid.Empty;
         blockedReason = string.Empty;
@@ -680,17 +680,37 @@ public class TileEntityFluidMixer : TileEntityMachine
             return false;
         }
 
+        Guid bestAvailableGraph = Guid.Empty;
+        int bestAvailableMg = -1;
+        int normalizedRequiredMg = Math.Max(1, requiredMg);
+
         for (int i = 0; i < candidates.Count; i++)
         {
             Guid candidate = candidates[i];
             if (!IsGraphCompatible(candidate, normalized))
                 continue;
 
-            graphId = candidate;
-            return true;
+            if (!FluidGraphManager.TryGetAvailableFluidAmount(world, 0, candidate, normalized, out int availableMg))
+                continue;
+
+            if (availableMg >= normalizedRequiredMg)
+            {
+                graphId = candidate;
+                return true;
+            }
+
+            if (availableMg > bestAvailableMg)
+            {
+                bestAvailableMg = availableMg;
+                bestAvailableGraph = candidate;
+            }
         }
 
-        blockedReason = $"Need {ToFluidDisplayName(normalized)}";
+        if (bestAvailableGraph != Guid.Empty)
+            blockedReason = $"Need {FormatGallons(normalizedRequiredMg)} gal {ToFluidDisplayName(normalized)}";
+        else
+            blockedReason = $"Need {ToFluidDisplayName(normalized)}";
+
         return false;
     }
 

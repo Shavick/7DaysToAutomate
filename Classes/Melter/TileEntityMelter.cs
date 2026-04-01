@@ -121,7 +121,7 @@ public class TileEntityMelter : TileEntityMachine
 
         ulong now = world?.GetWorldTime() ?? 0UL;
 
-        return new MelterSnapshot
+        MelterSnapshot snapshot = new MelterSnapshot
         {
             MachineId = MachineGuid,
             Position = ToWorldPos(),
@@ -154,6 +154,21 @@ public class TileEntityMelter : TileEntityMachine
             LastAction = LastAction ?? string.Empty,
             LastBlockReason = LastBlockReason ?? string.Empty
         };
+        PipeGraphManager.TryResolveMachinePipeAnchorPosition(
+            world,
+            0,
+            snapshot.Position,
+            snapshot.SelectedInputPipeGraphId,
+            snapshot.SelectedInputChestPos,
+            out snapshot.SelectedInputPipeAnchorPos);
+        PipeGraphManager.TryResolveMachinePipeAnchorPosition(
+            world,
+            0,
+            snapshot.Position,
+            snapshot.SelectedOutputPipeGraphId,
+            snapshot.SelectedOutputChestPos,
+            out snapshot.SelectedOutputPipeAnchorPos);
+        return snapshot;
     }
 
     public override void ApplyHLRSnapshot(object snapshotObj)

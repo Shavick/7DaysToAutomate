@@ -6,7 +6,7 @@ public class ExtractorSnapshotV1 : IHLRSnapshot
     public string SnapshotKind => "Extractor";
     public bool IsPhantom;
     public ulong LastHLRSimTime;
-    int IHLRSnapshot.SnapshotVersion => 4;
+    int IHLRSnapshot.SnapshotVersion => 5;
     Guid IHLRSnapshot.MachineId
     {
         get => MachineId;
@@ -29,6 +29,7 @@ public class ExtractorSnapshotV1 : IHLRSnapshot
     public Vector3i SelectedOutputChestPos;
     public OutputTransportMode SelectedOutputMode;
     public Guid SelectedOutputPipeGraphId;
+    public Vector3i SelectedOutputPipeAnchorPos;
 
     // Production State
     public List<TileEntityUniversalExtractor.ResourceTimer> Timers;

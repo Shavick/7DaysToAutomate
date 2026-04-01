@@ -121,10 +121,10 @@ public partial class HigherLogicRegistry
         mixer.SelectedFluidType = outputType ?? string.Empty;
         mixer.CycleTickLength = Math.Max(1, craftTimeTicks);
 
-        if (!TryResolveFluidMixerInputGraph(mixer.Position, inputAType, out Guid graphA, out string blockedA))
+        if (!TryResolveFluidMixerInputGraph(mixer.Position, inputAType, Math.Max(1, inputAAmountMg), out Guid graphA, out string blockedA))
             return blockedA;
 
-        if (!TryResolveFluidMixerInputGraph(mixer.Position, inputBType, out Guid graphB, out string blockedB))
+        if (!TryResolveFluidMixerInputGraph(mixer.Position, inputBType, Math.Max(1, inputBAmountMg), out Guid graphB, out string blockedB))
             return blockedB;
 
         if (!TryResolveFluidMixerOutputGraph(mixer, outputType, out Guid outputGraph))
@@ -172,10 +172,10 @@ public partial class HigherLogicRegistry
             return false;
         }
 
-        if (!TryResolveFluidMixerInputGraph(mixer.Position, inputAType, out Guid graphA, out blockedReason))
+        if (!TryResolveFluidMixerInputGraph(mixer.Position, inputAType, Math.Max(1, inputAAmountMg), out Guid graphA, out blockedReason))
             return false;
 
-        if (!TryResolveFluidMixerInputGraph(mixer.Position, inputBType, out Guid graphB, out blockedReason))
+        if (!TryResolveFluidMixerInputGraph(mixer.Position, inputBType, Math.Max(1, inputBAmountMg), out Guid graphB, out blockedReason))
             return false;
 
         if (!FluidGraphManager.TryConsumeFluid(world, 0, graphA, inputAType, inputAAmountMg, out int consumedA) || consumedA < inputAAmountMg)
@@ -340,7 +340,7 @@ public partial class HigherLogicRegistry
         return false;
     }
 
-    private bool TryResolveFluidMixerInputGraph(Vector3i mixerPos, string inputFluidType, out Guid graphId, out string blockedReason)
+    private bool TryResolveFluidMixerInputGraph(Vector3i mixerPos, string inputFluidType, int requiredMg, out Guid graphId, out string blockedReason)
     {
         graphId = Guid.Empty;
         blockedReason = string.Empty;
@@ -358,17 +358,37 @@ public partial class HigherLogicRegistry
             return false;
         }
 
+        Guid bestAvailableGraph = Guid.Empty;
+        int bestAvailableMg = -1;
+        int normalizedRequiredMg = Math.Max(1, requiredMg);
+
         for (int i = 0; i < candidates.Count; i++)
         {
             Guid candidate = candidates[i];
             if (!IsDecanterFluidGraphCompatible(candidate, normalized))
                 continue;
 
-            graphId = candidate;
-            return true;
+            if (!FluidGraphManager.TryGetAvailableFluidAmount(world, 0, candidate, normalized, out int availableMg))
+                continue;
+
+            if (availableMg >= normalizedRequiredMg)
+            {
+                graphId = candidate;
+                return true;
+            }
+
+            if (availableMg > bestAvailableMg)
+            {
+                bestAvailableMg = availableMg;
+                bestAvailableGraph = candidate;
+            }
         }
 
-        blockedReason = $"Need {ToFluidDisplayName(normalized)}";
+        if (bestAvailableGraph != Guid.Empty)
+            blockedReason = $"Need {FormatGallons(normalizedRequiredMg)} gal {ToFluidDisplayName(normalized)}";
+        else
+            blockedReason = $"Need {ToFluidDisplayName(normalized)}";
+
         return false;
     }
 
@@ -673,7 +693,7 @@ public partial class HigherLogicRegistry
         if (caster.SelectedOutputPipeGraphId == Guid.Empty)
             return "Missing Item Output";
 
-        if (!HasValidGraphStorageEndpoint(ref caster.SelectedOutputPipeGraphId, caster.SelectedOutputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref caster.SelectedOutputPipeGraphId, ref caster.SelectedOutputPipeAnchorPos, caster.Position, caster.SelectedOutputChestPos))
             return "Missing Item Output";
 
         if (!TryResolveCasterFluidInputGraph(caster, fluidType, out Guid graphId))

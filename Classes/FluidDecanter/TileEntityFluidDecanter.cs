@@ -113,7 +113,7 @@ public class TileEntityFluidDecanter : TileEntityMachine
 
         ulong now = world?.GetWorldTime() ?? 0UL;
 
-        return new DecanterSnapshot
+        DecanterSnapshot snapshot = new DecanterSnapshot
         {
             MachineId = MachineGuid,
             Position = ToWorldPos(),
@@ -144,6 +144,21 @@ public class TileEntityFluidDecanter : TileEntityMachine
             LastAction = LastAction ?? string.Empty,
             LastBlockReason = LastBlockReason ?? string.Empty
         };
+        PipeGraphManager.TryResolveMachinePipeAnchorPosition(
+            world,
+            0,
+            snapshot.Position,
+            snapshot.SelectedInputPipeGraphId,
+            snapshot.SelectedInputChestPos,
+            out snapshot.SelectedInputPipeAnchorPos);
+        PipeGraphManager.TryResolveMachinePipeAnchorPosition(
+            world,
+            0,
+            snapshot.Position,
+            snapshot.SelectedOutputPipeGraphId,
+            snapshot.SelectedOutputChestPos,
+            out snapshot.SelectedOutputPipeAnchorPos);
+        return snapshot;
     }
 
     public override void ApplyHLRSnapshot(object snapshotObj)

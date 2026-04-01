@@ -87,7 +87,7 @@ public class TileEntityCaster : TileEntityMachine
             }
         }
 
-        return new CasterSnapshot
+        CasterSnapshot snapshot = new CasterSnapshot
         {
             MachineId = MachineGuid,
             Position = ToWorldPos(),
@@ -111,6 +111,14 @@ public class TileEntityCaster : TileEntityMachine
             LastAction = LastAction ?? string.Empty,
             LastBlockReason = LastBlockReason ?? string.Empty
         };
+        PipeGraphManager.TryResolveMachinePipeAnchorPosition(
+            world,
+            0,
+            snapshot.Position,
+            snapshot.SelectedOutputPipeGraphId,
+            snapshot.SelectedOutputChestPos,
+            out snapshot.SelectedOutputPipeAnchorPos);
+        return snapshot;
     }
 
     public override void ApplyHLRSnapshot(object snapshotObj)

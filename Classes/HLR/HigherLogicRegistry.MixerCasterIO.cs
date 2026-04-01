@@ -45,6 +45,7 @@ public partial class HigherLogicRegistry
             SelectedOutputChestPos = source.SelectedOutputChestPos,
             SelectedOutputMode = source.SelectedOutputMode,
             SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
+            SelectedOutputPipeAnchorPos = source.SelectedOutputPipeAnchorPos,
             SelectedRecipeKey = source.SelectedRecipeKey,
             SelectedFluidType = source.SelectedFluidType,
             SelectedFluidGraphId = source.SelectedFluidGraphId,
@@ -103,6 +104,9 @@ public partial class HigherLogicRegistry
         bw.Write(caster.SelectedOutputChestPos.z);
         bw.Write((int)caster.SelectedOutputMode);
         bw.Write(caster.SelectedOutputPipeGraphId.ToString());
+        bw.Write(caster.SelectedOutputPipeAnchorPos.x);
+        bw.Write(caster.SelectedOutputPipeAnchorPos.y);
+        bw.Write(caster.SelectedOutputPipeAnchorPos.z);
         bw.Write(caster.SelectedRecipeKey ?? string.Empty);
         bw.Write(caster.SelectedFluidType ?? string.Empty);
         bw.Write(caster.SelectedFluidGraphId.ToString());
@@ -184,6 +188,9 @@ public partial class HigherLogicRegistry
         string outputGraph = br.ReadString();
         if (!Guid.TryParse(outputGraph, out caster.SelectedOutputPipeGraphId))
             caster.SelectedOutputPipeGraphId = Guid.Empty;
+        caster.SelectedOutputPipeAnchorPos = Vector3i.zero;
+        if (snapshotVersion >= 2)
+            caster.SelectedOutputPipeAnchorPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
 
         caster.SelectedRecipeKey = br.ReadString() ?? string.Empty;
         caster.SelectedFluidType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();

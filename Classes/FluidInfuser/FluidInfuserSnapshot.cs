@@ -4,7 +4,7 @@ using System.Collections.Generic;
 public class FluidInfuserSnapshot : IHLRSnapshot
 {
     public string SnapshotKind => "FluidInfuser";
-    public int SnapshotVersion => 2;
+    public int SnapshotVersion => 3;
 
     public Guid MachineId { get; set; }
     public Vector3i Position { get; set; }
@@ -15,10 +15,12 @@ public class FluidInfuserSnapshot : IHLRSnapshot
 
     public Vector3i SelectedInputChestPos;
     public Guid SelectedInputPipeGraphId;
+    public Vector3i SelectedInputPipeAnchorPos;
 
     public Vector3i SelectedOutputChestPos;
     public OutputTransportMode SelectedOutputMode;
     public Guid SelectedOutputPipeGraphId;
+    public Vector3i SelectedOutputPipeAnchorPos;
 
     public string SelectedRecipeKey;
     public string SelectedFluidType;

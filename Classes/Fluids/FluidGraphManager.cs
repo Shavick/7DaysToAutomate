@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 
 public static class FluidGraphManager
@@ -23,6 +24,11 @@ public static class FluidGraphManager
     private static readonly HashSet<Vector3i> dirtyPipePositions = new HashSet<Vector3i>();
     private static readonly Dictionary<Guid, ulong> lastGraphRebuildWorldTime = new Dictionary<Guid, ulong>();
     private const ulong GraphRebuildCooldownTicks = 20UL;
+    private const string FLUID_GRAPH_FOLDER = "FluidGraph";
+    private const string FLUID_GRAPH_FILE = "fluid_graphs.dat";
+    private const int FLUID_GRAPH_VERSION = 1;
+    private static string fluidGraphDir;
+    private static string fluidGraphFile;
 
     public static ulong LastRebuildWorldTime { get; private set; } = 0UL;
 
@@ -44,6 +50,265 @@ public static class FluidGraphManager
     public static bool TryGetGraph(Guid fluidGraphId, out FluidGraphData graph)
     {
         return graphsById.TryGetValue(fluidGraphId, out graph);
+    }
+
+    private static void EnsureSavePaths()
+    {
+        if (!string.IsNullOrEmpty(fluidGraphFile))
+            return;
+
+        try
+        {
+            string saveRoot = GameIO.GetSaveGameDir();
+            fluidGraphDir = Path.Combine(saveRoot, FLUID_GRAPH_FOLDER);
+            fluidGraphFile = Path.Combine(fluidGraphDir, FLUID_GRAPH_FILE);
+
+            if (!Directory.Exists(fluidGraphDir))
+                Directory.CreateDirectory(fluidGraphDir);
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[FluidGraphManager][IO] EnsureSavePaths FAILED: {ex}");
+        }
+    }
+
+    public static void SaveToDisk(WorldBase world)
+    {
+        if (world == null || world.IsRemote())
+            return;
+
+        EnsureSavePaths();
+        if (string.IsNullOrEmpty(fluidGraphFile))
+            return;
+
+        string tempFile = fluidGraphFile + ".tmp";
+        int persistedGraphCount = 0;
+
+        try
+        {
+            using (var fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
+            using (var bw = new BinaryWriter(fs))
+            {
+                bw.Write(new[] { 'F', 'G', 'R' });
+                bw.Write(FLUID_GRAPH_VERSION);
+
+                foreach (var kvp in graphsById)
+                {
+                    FluidGraphData graph = kvp.Value;
+                    if (graph != null && graph.FluidGraphId != Guid.Empty)
+                        persistedGraphCount++;
+                }
+
+                bw.Write(persistedGraphCount);
+
+                foreach (var kvp in graphsById)
+                {
+                    FluidGraphData graph = kvp.Value;
+                    if (graph == null || graph.FluidGraphId == Guid.Empty)
+                        continue;
+
+                    bw.Write(graph.FluidGraphId.ToByteArray());
+                    bw.Write(graph.FluidType ?? string.Empty);
+                    bw.Write(graph.LastBlockedReason ?? string.Empty);
+                    bw.Write(graph.LastBlockedCount);
+
+                    bw.Write(graph.PipePositions.Count);
+                    foreach (Vector3i pipePos in graph.PipePositions)
+                        WriteVector3i(bw, pipePos);
+
+                    bw.Write(graph.PumpEndpoints.Count);
+                    foreach (Vector3i pumpPos in graph.PumpEndpoints)
+                        WriteVector3i(bw, pumpPos);
+
+                    bw.Write(graph.StorageEndpoints.Count);
+                    foreach (Vector3i storagePos in graph.StorageEndpoints)
+                        WriteVector3i(bw, storagePos);
+
+                    bw.Write(graph.IntakeEndpoints.Count);
+                    foreach (Vector3i intakePos in graph.IntakeEndpoints)
+                        WriteVector3i(bw, intakePos);
+
+                    int pumpSnapshotCount = graph.UnloadedPumpSnapshots?.Count ?? 0;
+                    bw.Write(pumpSnapshotCount);
+                    if (graph.UnloadedPumpSnapshots != null)
+                    {
+                        foreach (var snapshotKvp in graph.UnloadedPumpSnapshots)
+                        {
+                            WriteVector3i(bw, snapshotKvp.Key);
+                            WritePumpSnapshot(bw, snapshotKvp.Value);
+                        }
+                    }
+
+                    int storageSnapshotCount = graph.UnloadedStorageSnapshots?.Count ?? 0;
+                    bw.Write(storageSnapshotCount);
+                    if (graph.UnloadedStorageSnapshots != null)
+                    {
+                        foreach (var snapshotKvp in graph.UnloadedStorageSnapshots)
+                        {
+                            WriteVector3i(bw, snapshotKvp.Key);
+                            WriteStorageSnapshot(bw, snapshotKvp.Value);
+                        }
+                    }
+                }
+            }
+
+            if (File.Exists(fluidGraphFile))
+                File.Delete(fluidGraphFile);
+
+            File.Move(tempFile, fluidGraphFile);
+            Log.Out($"[FluidGraphManager][IO] Saved {persistedGraphCount} graph(s) to disk");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[FluidGraphManager][IO] SaveToDisk FAILED: {ex}");
+            try
+            {
+                if (File.Exists(tempFile))
+                    File.Delete(tempFile);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    public static bool LoadFromDisk(WorldBase world)
+    {
+        if (world == null || world.IsRemote())
+            return false;
+
+        EnsureSavePaths();
+        ClearAll();
+
+        if (string.IsNullOrEmpty(fluidGraphFile) || !File.Exists(fluidGraphFile))
+            return false;
+
+        List<FluidGraphData> loadedGraphs = new List<FluidGraphData>();
+
+        try
+        {
+            using (var fs = new FileStream(fluidGraphFile, FileMode.Open, FileAccess.Read, FileShare.Read))
+            using (var br = new BinaryReader(fs))
+            {
+                string magic = new string(br.ReadChars(3));
+                if (!string.Equals(magic, "FGR", StringComparison.Ordinal))
+                {
+                    Log.Error($"[FluidGraphManager][IO] LoadFromDisk FAILED - bad magic '{magic}'");
+                    return false;
+                }
+
+                int version = br.ReadInt32();
+                if (version != FLUID_GRAPH_VERSION)
+                {
+                    Log.Error($"[FluidGraphManager][IO] LoadFromDisk FAILED - unsupported version {version}");
+                    return false;
+                }
+
+                int graphCount = Math.Max(0, br.ReadInt32());
+                for (int i = 0; i < graphCount; i++)
+                {
+                    byte[] graphBytes = br.ReadBytes(16);
+                    if (graphBytes == null || graphBytes.Length != 16)
+                        throw new EndOfStreamException("Fluid graph id truncated");
+
+                    FluidGraphData graph = new FluidGraphData
+                    {
+                        FluidGraphId = new Guid(graphBytes),
+                        FluidType = br.ReadString() ?? string.Empty,
+                        LastBlockedReason = br.ReadString() ?? string.Empty,
+                        LastBlockedCount = Math.Max(0, br.ReadInt32())
+                    };
+
+                    int pipeCount = Math.Max(0, br.ReadInt32());
+                    for (int p = 0; p < pipeCount; p++)
+                        graph.AddPipe(ReadVector3i(br));
+
+                    int pumpEndpointCount = Math.Max(0, br.ReadInt32());
+                    for (int p = 0; p < pumpEndpointCount; p++)
+                        graph.AddPumpEndpoint(ReadVector3i(br));
+
+                    int storageEndpointCount = Math.Max(0, br.ReadInt32());
+                    for (int s = 0; s < storageEndpointCount; s++)
+                        graph.AddStorageEndpoint(ReadVector3i(br));
+
+                    int intakeEndpointCount = Math.Max(0, br.ReadInt32());
+                    for (int p = 0; p < intakeEndpointCount; p++)
+                        graph.AddIntakeEndpoint(ReadVector3i(br));
+
+                    int pumpSnapshotCount = Math.Max(0, br.ReadInt32());
+                    for (int ps = 0; ps < pumpSnapshotCount; ps++)
+                    {
+                        Vector3i pumpPos = ReadVector3i(br);
+                        FluidGraphData.PumpSnapshot snapshot = ReadPumpSnapshot(br);
+                        if (pumpPos != Vector3i.zero && snapshot != null)
+                            graph.SetPumpSnapshot(pumpPos, snapshot);
+                    }
+
+                    int storageSnapshotCount = Math.Max(0, br.ReadInt32());
+                    for (int ss = 0; ss < storageSnapshotCount; ss++)
+                    {
+                        Vector3i storagePos = ReadVector3i(br);
+                        FluidGraphData.StorageSnapshot snapshot = ReadStorageSnapshot(br);
+                        if (storagePos != Vector3i.zero && snapshot != null)
+                            graph.SetStorageSnapshot(storagePos, snapshot);
+                    }
+
+                    graph.PrunePumpSnapshotsToEndpoints();
+                    graph.PruneStorageSnapshotsToEndpoints();
+
+                    if (graph.PipePositions.Count > 0)
+                        loadedGraphs.Add(graph);
+                }
+            }
+
+            HashSet<Vector3i> assignedPipePositions = new HashSet<Vector3i>();
+            ulong worldTime = world.GetWorldTime();
+
+            for (int i = 0; i < loadedGraphs.Count; i++)
+            {
+                FluidGraphData graph = loadedGraphs[i];
+                if (!ApplyLoadedGraphToWorld(world, 0, graph, assignedPipePositions))
+                    continue;
+
+                graph.PrunePumpSnapshotsToEndpoints();
+                graph.PruneStorageSnapshotsToEndpoints();
+                graphsById[graph.FluidGraphId] = graph;
+                lastGraphRebuildWorldTime[graph.FluidGraphId] = worldTime;
+            }
+
+            List<Vector3i> livePipePositions = CollectAllPipePositions(world);
+            for (int i = 0; i < livePipePositions.Count; i++)
+            {
+                Vector3i pipePos = livePipePositions[i];
+                if (assignedPipePositions.Contains(pipePos))
+                    continue;
+
+                if (SafeWorldRead.TryGetTileEntity(world, 0, pipePos, out TileEntity tileEntity) && tileEntity is TileEntityLiquidPipe pipe)
+                {
+                    pipe.SetFluidGraphId(Guid.Empty);
+                    pipe.setModified();
+                }
+
+                MarkPipeDirty(pipePos);
+            }
+
+            while (dirtyPipePositions.Count > 0)
+                ProcessDirtyGraphs(world, int.MaxValue);
+
+            Log.Out($"[FluidGraphManager][IO] Loaded {graphsById.Count} graph(s) from disk");
+            return true;
+        }
+        catch (EndOfStreamException)
+        {
+            Log.Error("[FluidGraphManager][IO] LoadFromDisk FAILED - file truncated");
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"[FluidGraphManager][IO] LoadFromDisk FAILED: {ex}");
+        }
+
+        ClearAll();
+        return false;
     }
 
     public static bool TryGetGraphFromAdjacentPipe(WorldBase world, int clrIdx, Vector3i machinePos, out Guid fluidGraphId, out FluidGraphData graph)
@@ -774,6 +1039,54 @@ public static class FluidGraphManager
         while (dirtyPipePositions.Count > 0)
             ProcessDirtyGraphs(world, int.MaxValue);
     }
+
+    private static bool ApplyLoadedGraphToWorld(
+        WorldBase world,
+        int clrIdx,
+        FluidGraphData graph,
+        HashSet<Vector3i> assignedPipePositions)
+    {
+        if (world == null || graph == null || graph.FluidGraphId == Guid.Empty || graph.PipePositions.Count == 0)
+            return false;
+
+        foreach (Vector3i pipePos in graph.PipePositions)
+        {
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity tileEntity) || !(tileEntity is TileEntityLiquidPipe pipe))
+                continue;
+
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, pipePos, out BlockValue pipeValue) || !(pipeValue.Block is LiquidPipeBlock))
+                continue;
+
+            pipe.SetFluidGraphId(graph.FluidGraphId);
+            pipe.setModified();
+            assignedPipePositions?.Add(pipePos);
+        }
+
+        return true;
+    }
+
+    private static List<Vector3i> CollectAllPipePositions(WorldBase world)
+    {
+        List<Vector3i> pipePositions = new List<Vector3i>();
+        if (world == null)
+            return pipePositions;
+
+        foreach (Chunk chunk in SafeWorldRead.GetChunkArraySnapshot(world))
+        {
+            if (chunk == null)
+                continue;
+
+            List<TileEntity> snapshot = SnapshotTileEntities(chunk);
+            for (int i = 0; i < snapshot.Count; i++)
+            {
+                if (snapshot[i] is TileEntityLiquidPipe pipe)
+                    pipePositions.Add(pipe.ToWorldPos());
+            }
+        }
+
+        return pipePositions;
+    }
+
     public static void ClearAll()
     {
         graphsById.Clear();
@@ -1458,6 +1771,80 @@ public static class FluidGraphManager
             return cmp;
 
         return a.z.CompareTo(b.z);
+    }
+
+    private static void WriteVector3i(BinaryWriter writer, Vector3i value)
+    {
+        writer.Write(value.x);
+        writer.Write(value.y);
+        writer.Write(value.z);
+    }
+
+    private static Vector3i ReadVector3i(BinaryReader reader)
+    {
+        int x = reader.ReadInt32();
+        int y = reader.ReadInt32();
+        int z = reader.ReadInt32();
+        return new Vector3i(x, y, z);
+    }
+
+    private static void WritePumpSnapshot(BinaryWriter writer, FluidGraphData.PumpSnapshot snapshot)
+    {
+        if (snapshot == null)
+        {
+            writer.Write(false);
+            writer.Write(0);
+            return;
+        }
+
+        writer.Write(snapshot.PumpEnabled);
+        writer.Write(Math.Max(0, snapshot.OutputCapMgPerTick));
+    }
+
+    private static FluidGraphData.PumpSnapshot ReadPumpSnapshot(BinaryReader reader)
+    {
+        return new FluidGraphData.PumpSnapshot
+        {
+            PumpEnabled = reader.ReadBoolean(),
+            OutputCapMgPerTick = Math.Max(0, reader.ReadInt32())
+        };
+    }
+
+    private static void WriteStorageSnapshot(BinaryWriter writer, FluidGraphData.StorageSnapshot snapshot)
+    {
+        if (snapshot == null)
+        {
+            writer.Write(string.Empty);
+            writer.Write(0);
+            writer.Write(0);
+            writer.Write(0);
+            writer.Write(0);
+            writer.Write(0);
+            writer.Write(0UL);
+            return;
+        }
+
+        writer.Write(snapshot.FluidType ?? string.Empty);
+        writer.Write(Math.Max(0, snapshot.FluidAmountMg));
+        writer.Write(Math.Max(0, snapshot.CapacityMg));
+        writer.Write(Math.Max(0, snapshot.InputCapMgPerTick));
+        writer.Write(Math.Max(0, snapshot.OutputCapMgPerTick));
+        writer.Write(Math.Max(0, snapshot.AcceptedThisTickMg));
+        writer.Write(snapshot.LastInputBudgetWorldTime);
+    }
+
+    private static FluidGraphData.StorageSnapshot ReadStorageSnapshot(BinaryReader reader)
+    {
+        return new FluidGraphData.StorageSnapshot
+        {
+            FluidType = reader.ReadString() ?? string.Empty,
+            FluidAmountMg = Math.Max(0, reader.ReadInt32()),
+            CapacityMg = Math.Max(0, reader.ReadInt32()),
+            InputCapMgPerTick = Math.Max(0, reader.ReadInt32()),
+            OutputCapMgPerTick = Math.Max(0, reader.ReadInt32()),
+            AcceptedThisTickMg = Math.Max(0, reader.ReadInt32()),
+            LastInputBudgetWorldTime = reader.ReadUInt64()
+        };
     }
 }
 

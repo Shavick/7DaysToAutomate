@@ -7,7 +7,7 @@ public class CrafterSnapshot : IHLRSnapshot
     // IHLRSnapshot identity
     // -------------------------
     public string SnapshotKind => "Crafter";
-    public int SnapshotVersion => 2;
+    public int SnapshotVersion => 3;
     public Guid MachineId { get; set; }
     public Vector3i Position { get; set; }
     public ulong LastHLRSimTime;
@@ -28,8 +28,10 @@ public class CrafterSnapshot : IHLRSnapshot
     // Pipe graph context for HLR pull/push planning.
     public Vector3i SelectedInputChestPos;
     public Guid SelectedInputPipeGraphId;
+    public Vector3i SelectedInputPipeAnchorPos;
     public Vector3i SelectedOutputChestPos;
     public Guid SelectedOutputPipeGraphId;
+    public Vector3i SelectedOutputPipeAnchorPos;
 
     public Dictionary<string, int> IngredientCount;
     public Dictionary<string, int> OwedResources;

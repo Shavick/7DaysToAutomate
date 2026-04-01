@@ -57,6 +57,7 @@ namespace _7DaysToAutomate
             }
 
             PipeGraphManager.SaveToDisk(world);
+            FluidGraphManager.SaveToDisk(world);
 
             PipeTransportManager.ClearAll();
         }
@@ -99,7 +100,8 @@ namespace _7DaysToAutomate
             PipeTransportManager.ClearAll();
             if (!PipeGraphManager.LoadFromDisk(world))
                 PipeGraphManager.RebuildAllGraphs(world);
-            FluidGraphManager.RebuildAllGraphs(world);
+            if (!FluidGraphManager.LoadFromDisk(world))
+                FluidGraphManager.RebuildAllGraphs(world);
         }
 
         private void OnGameUpdate(ref ModEvents.SGameUpdateData _data)

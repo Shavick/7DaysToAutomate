@@ -4,7 +4,7 @@ using System.Collections.Generic;
 public class CasterSnapshot : IHLRSnapshot
 {
     public string SnapshotKind => "Caster";
-    public int SnapshotVersion => 1;
+    public int SnapshotVersion => 2;
 
     public Guid MachineId { get; set; }
     public Vector3i Position { get; set; }
@@ -16,6 +16,7 @@ public class CasterSnapshot : IHLRSnapshot
     public Vector3i SelectedOutputChestPos;
     public OutputTransportMode SelectedOutputMode;
     public Guid SelectedOutputPipeGraphId;
+    public Vector3i SelectedOutputPipeAnchorPos;
 
     public string SelectedRecipeKey;
     public string SelectedFluidType;

@@ -399,6 +399,13 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         };
 
         DevLog("HLR SNAPSHOT BUILD — END");
+        PipeGraphManager.TryResolveMachinePipeAnchorPosition(
+            world,
+            0,
+            snapshot.Position,
+            snapshot.SelectedOutputPipeGraphId,
+            snapshot.SelectedOutputChestPos,
+            out snapshot.SelectedOutputPipeAnchorPos);
         return snapshot;
     }
 

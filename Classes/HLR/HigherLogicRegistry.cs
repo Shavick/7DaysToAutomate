@@ -335,10 +335,10 @@ public partial class HigherLogicRegistry
             return;
         }
 
-        if (!HasValidGraphStorageEndpoint(ref extractor.SelectedOutputPipeGraphId, extractor.SelectedOutputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref extractor.SelectedOutputPipeGraphId, ref extractor.SelectedOutputPipeAnchorPos, extractor.Position, extractor.SelectedOutputChestPos))
         {
-            bool refreshedFromLive = TryRefreshExtractorPipeOutputFromLiveWorld(extractor);
-            if (!refreshedFromLive || !HasValidGraphStorageEndpoint(ref extractor.SelectedOutputPipeGraphId, extractor.SelectedOutputChestPos))
+            //bool refreshedFromLive = TryRefreshExtractorPipeOutputFromLiveWorld(extractor);
+            if (!HasValidGraphStorageEndpoint(ref extractor.SelectedOutputPipeGraphId, ref extractor.SelectedOutputPipeAnchorPos, extractor.Position, extractor.SelectedOutputChestPos))
             {
                 HLRDevLog("[HLR][Extractor] WAIT — Output graph/storage endpoint unavailable");
                 return;
@@ -504,7 +504,7 @@ public partial class HigherLogicRegistry
             return;
         }
 
-        if (!HasValidGraphStorageEndpoint(ref crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref crafter.SelectedInputPipeGraphId, ref crafter.SelectedInputPipeAnchorPos, crafter.Position, crafter.SelectedInputChestPos))
         {
             HLRDevLog("[HLR][Crafter] WAIT — Input graph/storage endpoint unavailable");
             return;
@@ -518,7 +518,7 @@ public partial class HigherLogicRegistry
             return;
         }
 
-        if (!HasValidGraphStorageEndpoint(ref crafter.SelectedOutputPipeGraphId, crafter.SelectedOutputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref crafter.SelectedOutputPipeGraphId, ref crafter.SelectedOutputPipeAnchorPos, crafter.Position, crafter.SelectedOutputChestPos))
         {
             HLRDevLog("[HLR][Crafter] WAIT — Output graph/storage endpoint unavailable");
             return;
@@ -864,7 +864,7 @@ public partial class HigherLogicRegistry
         if (infuser.SelectedInputPipeGraphId == Guid.Empty || infuser.SelectedInputChestPos == Vector3i.zero)
             return "Missing Item Input";
 
-        if (!HasValidGraphStorageEndpoint(ref infuser.SelectedInputPipeGraphId, infuser.SelectedInputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref infuser.SelectedInputPipeGraphId, ref infuser.SelectedInputPipeAnchorPos, infuser.Position, infuser.SelectedInputChestPos))
             return "Missing Item Input";
 
         if (infuser.SelectedOutputChestPos == Vector3i.zero)
@@ -876,7 +876,7 @@ public partial class HigherLogicRegistry
         if (infuser.SelectedOutputPipeGraphId == Guid.Empty)
             return "Missing Item Output";
 
-        if (!HasValidGraphStorageEndpoint(ref infuser.SelectedOutputPipeGraphId, infuser.SelectedOutputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref infuser.SelectedOutputPipeGraphId, ref infuser.SelectedOutputPipeAnchorPos, infuser.Position, infuser.SelectedOutputChestPos))
             return "Missing Item Output";
 
         if (!TryGetInfuserRule(
@@ -1333,7 +1333,7 @@ public partial class HigherLogicRegistry
         if (decanter.SelectedInputPipeGraphId == Guid.Empty || decanter.SelectedInputChestPos == Vector3i.zero)
             return "Missing Item Input";
 
-        if (!HasValidGraphStorageEndpoint(ref decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref decanter.SelectedInputPipeGraphId, ref decanter.SelectedInputPipeAnchorPos, decanter.Position, decanter.SelectedInputChestPos))
             return "Missing Item Input";
 
         if (string.IsNullOrEmpty(decanter.SelectedRecipeKey) && string.IsNullOrEmpty(decanter.SelectedFluidType))
@@ -1400,7 +1400,7 @@ public partial class HigherLogicRegistry
         if (decanter.SelectedOutputPipeGraphId == Guid.Empty)
             return "Missing Item Output";
 
-        if (!HasValidGraphStorageEndpoint(ref decanter.SelectedOutputPipeGraphId, decanter.SelectedOutputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref decanter.SelectedOutputPipeGraphId, ref decanter.SelectedOutputPipeAnchorPos, decanter.Position, decanter.SelectedOutputChestPos))
             return "Missing Item Output";
 
         if (!TryResolveDecanterFluidGraph(decanter, out Guid resolvedFluidGraphId))
@@ -1440,7 +1440,7 @@ public partial class HigherLogicRegistry
         if (melter.SelectedInputPipeGraphId == Guid.Empty || melter.SelectedInputChestPos == Vector3i.zero)
             return "Missing Item Input";
 
-        if (!HasValidGraphStorageEndpoint(ref melter.SelectedInputPipeGraphId, melter.SelectedInputChestPos))
+        if (!HasValidGraphStorageEndpoint(ref melter.SelectedInputPipeGraphId, ref melter.SelectedInputPipeAnchorPos, melter.Position, melter.SelectedInputChestPos))
             return "Missing Item Input";
 
         if (string.IsNullOrEmpty(melter.SelectedRecipeKey) && string.IsNullOrEmpty(melter.SelectedFluidType))
@@ -1475,17 +1475,17 @@ public partial class HigherLogicRegistry
         if (requiredHeat > 0 && melter.CurrentHeat < requiredHeat)
             return $"Insufficient Heat ({melter.CurrentHeat}/{requiredHeat})";
 
-        if (melter.SelectedOutputChestPos == Vector3i.zero)
-            return "Missing Item Output";
+        //if (melter.SelectedOutputChestPos == Vector3i.zero)
+        //    return "Missing Item Output";
 
-        if (melter.SelectedOutputMode != OutputTransportMode.Pipe)
-            return "HLR requires pipe item output";
+        //if (melter.SelectedOutputMode != OutputTransportMode.Pipe)
+        //    return "HLR requires pipe item output";
 
-        if (melter.SelectedOutputPipeGraphId == Guid.Empty)
-            return "Missing Item Output";
+        //if (melter.SelectedOutputPipeGraphId == Guid.Empty)
+        //    return "Missing Item Output";
 
-        if (!HasValidGraphStorageEndpoint(ref melter.SelectedOutputPipeGraphId, melter.SelectedOutputChestPos))
-            return "Missing Item Output";
+        //if (!HasValidGraphStorageEndpoint(ref melter.SelectedOutputPipeGraphId, melter.SelectedOutputChestPos))
+        //    return "Missing Item Output";
 
         if (!TryResolveDecanterFluidGraph(melter, out Guid resolvedFluidGraphId))
             return "Missing/Invalid Fluid Output";
@@ -2546,28 +2546,46 @@ public partial class HigherLogicRegistry
         return ok;
     }
 
-    private bool HasValidGraphStorageEndpoint(ref Guid pipeGraphId, Vector3i storagePos)
+    private bool HasValidGraphStorageEndpoint(ref Guid pipeGraphId, ref Vector3i machinePipeAnchorPos, Vector3i machinePos, Vector3i storagePos)
     {
-        if (pipeGraphId == Guid.Empty || storagePos == Vector3i.zero)
+        if (pipeGraphId == Guid.Empty || machinePos == Vector3i.zero || storagePos == Vector3i.zero)
         {
-            HLRDevLog($"[HLR][PipeIO][Validate] INVALID graph={pipeGraphId} pos={storagePos}");
+            HLRDevLog($"[HLR][PipeIO][Validate] INVALID graph={pipeGraphId} machinePos={machinePos} anchor={machinePipeAnchorPos} pos={storagePos}");
             return false;
+        }
+
+        if (machinePipeAnchorPos == Vector3i.zero &&
+            PipeGraphManager.TryResolveMachinePipeAnchorPosition(world, 0, machinePos, pipeGraphId, storagePos, out Vector3i resolvedAnchor))
+        {
+            machinePipeAnchorPos = resolvedAnchor;
+            isDirty = true;
+            HLRDevLog($"[HLR][PipeIO][Validate] ANCHOR graph={pipeGraphId} machinePos={machinePos} anchor={machinePipeAnchorPos} pos={storagePos}");
         }
 
         // Fast path: current ID still valid
         if (TryGetSnapshotStorageItemCounts(pipeGraphId, storagePos, out _))
             return true;
 
-        // Fallback: search all pipe graphs for one that contains this storage endpoint
-        if (PipeGraphManager.TryResolveGraphIdByStorageEndpoint(storagePos, out Guid resolvedGraphId))
+        // Fallback: prefer anchor+storage match; otherwise fallback to machine+storage.
+        Guid resolvedGraphId = Guid.Empty;
+        bool resolved = machinePipeAnchorPos != Vector3i.zero &&
+                        PipeGraphManager.TryResolveGraphIdForMachineAnchorAndStorage(machinePos, machinePipeAnchorPos, storagePos, out resolvedGraphId);
+
+        if (!resolved)
+            resolved = PipeGraphManager.TryResolveGraphIdForMachineAndStorage(machinePos, storagePos, out resolvedGraphId);
+
+        if (resolved)
         {
-            HLRDevLog($"[HLR][PipeIO][Validate] REBOUND graph {pipeGraphId} -> {resolvedGraphId} for pos={storagePos}");
+            HLRDevLog($"[HLR][PipeIO][Validate] REBOUND graph {pipeGraphId} -> {resolvedGraphId} machinePos={machinePos} anchor={machinePipeAnchorPos} pos={storagePos}");
             pipeGraphId = resolvedGraphId; // this updates the HLR snapshot field
+            if (machinePipeAnchorPos == Vector3i.zero &&
+                PipeGraphManager.TryResolveMachinePipeAnchorPosition(world, 0, machinePos, pipeGraphId, storagePos, out Vector3i reboundAnchor))
+                machinePipeAnchorPos = reboundAnchor;
             isDirty = true;                // ensure remapped ID gets saved
             return TryGetSnapshotStorageItemCounts(pipeGraphId, storagePos, out _);
         }
 
-        HLRDevLog($"[HLR][PipeIO][Validate] MISS graph={pipeGraphId} pos={storagePos}");
+        HLRDevLog($"[HLR][PipeIO][Validate] MISS graph={pipeGraphId} machinePos={machinePos} anchor={machinePipeAnchorPos} pos={storagePos}");
         return false;
     }
 
@@ -2758,6 +2776,7 @@ public partial class HigherLogicRegistry
             SelectedOutputChestPos = source.SelectedOutputChestPos,
             SelectedOutputMode = source.SelectedOutputMode,
             SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
+            SelectedOutputPipeAnchorPos = source.SelectedOutputPipeAnchorPos,
             Timers = new List<ResourceTimer>(),
             OwedResources = new Dictionary<string, int>()
         };
@@ -2804,8 +2823,10 @@ public partial class HigherLogicRegistry
             LastHLRSimTime = source.LastHLRSimTime,
             SelectedInputChestPos = source.SelectedInputChestPos,
             SelectedInputPipeGraphId = source.SelectedInputPipeGraphId,
+            SelectedInputPipeAnchorPos = source.SelectedInputPipeAnchorPos,
             SelectedOutputChestPos = source.SelectedOutputChestPos,
             SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
+            SelectedOutputPipeAnchorPos = source.SelectedOutputPipeAnchorPos,
             IngredientCount = new Dictionary<string, int>(),
             OwedResources = new Dictionary<string, int>()
         };
@@ -2840,9 +2861,11 @@ public partial class HigherLogicRegistry
             IsOn = source.IsOn,
             SelectedInputChestPos = source.SelectedInputChestPos,
             SelectedInputPipeGraphId = source.SelectedInputPipeGraphId,
+            SelectedInputPipeAnchorPos = source.SelectedInputPipeAnchorPos,
             SelectedOutputChestPos = source.SelectedOutputChestPos,
             SelectedOutputMode = source.SelectedOutputMode,
             SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
+            SelectedOutputPipeAnchorPos = source.SelectedOutputPipeAnchorPos,
             SelectedFluidType = source.SelectedFluidType,
             SelectedRecipeKey = source.SelectedRecipeKey,
             MachineRecipeGroupsCsv = source.MachineRecipeGroupsCsv,
@@ -2875,9 +2898,11 @@ public partial class HigherLogicRegistry
             IsOn = source.IsOn,
             SelectedInputChestPos = source.SelectedInputChestPos,
             SelectedInputPipeGraphId = source.SelectedInputPipeGraphId,
+            SelectedInputPipeAnchorPos = source.SelectedInputPipeAnchorPos,
             SelectedOutputChestPos = source.SelectedOutputChestPos,
             SelectedOutputMode = source.SelectedOutputMode,
             SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
+            SelectedOutputPipeAnchorPos = source.SelectedOutputPipeAnchorPos,
             SelectedFluidType = source.SelectedFluidType,
             SelectedRecipeKey = source.SelectedRecipeKey,
             MachineRecipeGroupsCsv = source.MachineRecipeGroupsCsv,
@@ -2912,9 +2937,11 @@ public partial class HigherLogicRegistry
             IsOn = source.IsOn,
             SelectedInputChestPos = source.SelectedInputChestPos,
             SelectedInputPipeGraphId = source.SelectedInputPipeGraphId,
+            SelectedInputPipeAnchorPos = source.SelectedInputPipeAnchorPos,
             SelectedOutputChestPos = source.SelectedOutputChestPos,
             SelectedOutputMode = source.SelectedOutputMode,
             SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
+            SelectedOutputPipeAnchorPos = source.SelectedOutputPipeAnchorPos,
             SelectedRecipeKey = source.SelectedRecipeKey,
             SelectedFluidType = source.SelectedFluidType,
             SelectedFluidGraphId = source.SelectedFluidGraphId,
@@ -3140,7 +3167,7 @@ public partial class HigherLogicRegistry
         switch (kind)
         {
             case "Extractor":
-                if (version == 1 || version == 2 || version == 3)
+                if (version >= 1)
                 {
                     return new ExtractorSnapshotV1();
                 }
@@ -3148,7 +3175,7 @@ public partial class HigherLogicRegistry
                 return null;
 
             case "Crafter":
-                if (version == 1 || version == 2)
+                if (version >= 1)
                 {
                     return new CrafterSnapshot();
                 }
@@ -3156,7 +3183,7 @@ public partial class HigherLogicRegistry
                 return null;
 
             case "Decanter":
-                if (version == 1 || version == 2 || version == 3 || version == 4 || version == 5)
+                if (version >= 1)
                 {
                     return new DecanterSnapshot();
                 }
@@ -3164,7 +3191,7 @@ public partial class HigherLogicRegistry
                 return null;
 
             case "Melter":
-                if (version == 1)
+                if (version >= 1)
                 {
                     return new MelterSnapshot();
                 }
@@ -3172,7 +3199,7 @@ public partial class HigherLogicRegistry
                 return null;
 
             case "FluidInfuser":
-                if (version == 1 || version == 2)
+                if (version >= 1)
                 {
                     return new FluidInfuserSnapshot();
                 }
@@ -3180,7 +3207,7 @@ public partial class HigherLogicRegistry
                 return null;
 
             case "FluidMixer":
-                if (version == 1)
+                if (version >= 1)
                 {
                     return new FluidMixerSnapshot();
                 }
@@ -3188,7 +3215,7 @@ public partial class HigherLogicRegistry
                 return null;
 
             case "Caster":
-                if (version == 1)
+                if (version >= 1)
                 {
                     return new CasterSnapshot();
                 }
@@ -3376,6 +3403,9 @@ public partial class HigherLogicRegistry
         bw.Write(extractor.SelectedOutputChestPos.z);
         bw.Write((int)extractor.SelectedOutputMode);
         bw.Write(extractor.SelectedOutputPipeGraphId.ToString());
+        bw.Write(extractor.SelectedOutputPipeAnchorPos.x);
+        bw.Write(extractor.SelectedOutputPipeAnchorPos.y);
+        bw.Write(extractor.SelectedOutputPipeAnchorPos.z);
 
         HLRDevLog($"[HLR][Extractor][Save] OutputMode={extractor.SelectedOutputMode} PipeGraph={extractor.SelectedOutputPipeGraphId} OutputPos={extractor.SelectedOutputChestPos}");
         HLRDevLog($"[HLR][Extractor][Save] END");
@@ -3436,11 +3466,17 @@ public partial class HigherLogicRegistry
         bw.Write(crafter.SelectedInputChestPos.y);
         bw.Write(crafter.SelectedInputChestPos.z);
         bw.Write(crafter.SelectedInputPipeGraphId.ToString());
+        bw.Write(crafter.SelectedInputPipeAnchorPos.x);
+        bw.Write(crafter.SelectedInputPipeAnchorPos.y);
+        bw.Write(crafter.SelectedInputPipeAnchorPos.z);
 
         bw.Write(crafter.SelectedOutputChestPos.x);
         bw.Write(crafter.SelectedOutputChestPos.y);
         bw.Write(crafter.SelectedOutputChestPos.z);
         bw.Write(crafter.SelectedOutputPipeGraphId.ToString());
+        bw.Write(crafter.SelectedOutputPipeAnchorPos.x);
+        bw.Write(crafter.SelectedOutputPipeAnchorPos.y);
+        bw.Write(crafter.SelectedOutputPipeAnchorPos.z);
 
         HLRDevLog($"[HLR][Crafter][Save] InputGraph={crafter.SelectedInputPipeGraphId} InputPos={crafter.SelectedInputChestPos}");
         HLRDevLog($"[HLR][Crafter][Save] OutputGraph={crafter.SelectedOutputPipeGraphId} OutputPos={crafter.SelectedOutputChestPos}");
@@ -3457,12 +3493,18 @@ public partial class HigherLogicRegistry
         bw.Write(decanter.SelectedInputChestPos.y);
         bw.Write(decanter.SelectedInputChestPos.z);
         bw.Write(decanter.SelectedInputPipeGraphId.ToString());
+        bw.Write(decanter.SelectedInputPipeAnchorPos.x);
+        bw.Write(decanter.SelectedInputPipeAnchorPos.y);
+        bw.Write(decanter.SelectedInputPipeAnchorPos.z);
 
         bw.Write(decanter.SelectedOutputChestPos.x);
         bw.Write(decanter.SelectedOutputChestPos.y);
         bw.Write(decanter.SelectedOutputChestPos.z);
         bw.Write((int)decanter.SelectedOutputMode);
         bw.Write(decanter.SelectedOutputPipeGraphId.ToString());
+        bw.Write(decanter.SelectedOutputPipeAnchorPos.x);
+        bw.Write(decanter.SelectedOutputPipeAnchorPos.y);
+        bw.Write(decanter.SelectedOutputPipeAnchorPos.z);
 
         bw.Write(decanter.SelectedFluidType ?? string.Empty);
         bw.Write(decanter.SelectedRecipeKey ?? string.Empty);
@@ -3505,12 +3547,18 @@ public partial class HigherLogicRegistry
         bw.Write(infuser.SelectedInputChestPos.y);
         bw.Write(infuser.SelectedInputChestPos.z);
         bw.Write(infuser.SelectedInputPipeGraphId.ToString());
+        bw.Write(infuser.SelectedInputPipeAnchorPos.x);
+        bw.Write(infuser.SelectedInputPipeAnchorPos.y);
+        bw.Write(infuser.SelectedInputPipeAnchorPos.z);
 
         bw.Write(infuser.SelectedOutputChestPos.x);
         bw.Write(infuser.SelectedOutputChestPos.y);
         bw.Write(infuser.SelectedOutputChestPos.z);
         bw.Write((int)infuser.SelectedOutputMode);
         bw.Write(infuser.SelectedOutputPipeGraphId.ToString());
+        bw.Write(infuser.SelectedOutputPipeAnchorPos.x);
+        bw.Write(infuser.SelectedOutputPipeAnchorPos.y);
+        bw.Write(infuser.SelectedOutputPipeAnchorPos.z);
 
         bw.Write(infuser.SelectedRecipeKey ?? string.Empty);
         bw.Write(infuser.SelectedFluidType ?? string.Empty);
@@ -3603,7 +3651,7 @@ public partial class HigherLogicRegistry
                     if (snapshot == null)
                     {
                         Log.Error($"[HLR][IO] Load ABORT — unsupported snapshot kind/version kind='{kind}' version={snapshotVersion}");
-                        return;
+                        continue;
                     }
 
                     HLRDevLog($"[HLR][Factory] Created snapshot {kind} v{snapshotVersion}");
@@ -3641,12 +3689,28 @@ public partial class HigherLogicRegistry
         catch (EndOfStreamException)
         {
             Log.Error($"[HLR][IO] Load FAILED — file truncated: {hlrFile}");
-            HandleCorruptLoadFile("file truncated");
+            if (snapshots.Count > 0)
+            {
+                Log.Warning($"[HLR][IO] Partial load recovery — keeping {snapshots.Count} snapshot(s) read before EOF");
+                isDirty = true;
+            }
+            else
+            {
+                HandleCorruptLoadFile("file truncated");
+            }
         }
         catch (Exception ex)
         {
             Log.Error($"[HLR][IO] Load FAILED — exception: {ex}");
-            HandleCorruptLoadFile("exception");
+            if (snapshots.Count > 0)
+            {
+                Log.Warning($"[HLR][IO] Partial load recovery — keeping {snapshots.Count} snapshot(s) read before exception");
+                isDirty = true;
+            }
+            else
+            {
+                HandleCorruptLoadFile("exception");
+            }
         }
         HLRDevLog($"[HLR] Load Called! file={hlrFile}");
     }
@@ -3727,6 +3791,7 @@ public partial class HigherLogicRegistry
         extractor.SelectedOutputChestPos = Vector3i.zero;
         extractor.SelectedOutputMode = OutputTransportMode.Adjacent;
         extractor.SelectedOutputPipeGraphId = Guid.Empty;
+        extractor.SelectedOutputPipeAnchorPos = Vector3i.zero;
 
         if (snapshotVersion >= 2)
         {
@@ -3743,6 +3808,8 @@ public partial class HigherLogicRegistry
             string outputGraph = br.ReadString();
             if (!Guid.TryParse(outputGraph, out extractor.SelectedOutputPipeGraphId))
                 extractor.SelectedOutputPipeGraphId = Guid.Empty;
+            if (snapshotVersion >= 5)
+                extractor.SelectedOutputPipeAnchorPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
 
             if (snapshotVersion < 4)
             {
@@ -3824,8 +3891,10 @@ public partial class HigherLogicRegistry
 
         crafter.SelectedInputChestPos = Vector3i.zero;
         crafter.SelectedInputPipeGraphId = Guid.Empty;
+        crafter.SelectedInputPipeAnchorPos = Vector3i.zero;
         crafter.SelectedOutputChestPos = Vector3i.zero;
         crafter.SelectedOutputPipeGraphId = Guid.Empty;
+        crafter.SelectedOutputPipeAnchorPos = Vector3i.zero;
 
         if (snapshotVersion >= 2)
         {
@@ -3837,6 +3906,8 @@ public partial class HigherLogicRegistry
             string inputGraph = br.ReadString();
             if (!Guid.TryParse(inputGraph, out crafter.SelectedInputPipeGraphId))
                 crafter.SelectedInputPipeGraphId = Guid.Empty;
+            if (snapshotVersion >= 3)
+                crafter.SelectedInputPipeAnchorPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
 
             int outX = br.ReadInt32();
             int outY = br.ReadInt32();
@@ -3846,6 +3917,8 @@ public partial class HigherLogicRegistry
             string outputGraph = br.ReadString();
             if (!Guid.TryParse(outputGraph, out crafter.SelectedOutputPipeGraphId))
                 crafter.SelectedOutputPipeGraphId = Guid.Empty;
+            if (snapshotVersion >= 3)
+                crafter.SelectedOutputPipeAnchorPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
         }
 
         HLRDevLog($"[HLR][Crafter][Load] InputGraph={crafter.SelectedInputPipeGraphId} InputPos={crafter.SelectedInputChestPos}");
@@ -3870,6 +3943,9 @@ public partial class HigherLogicRegistry
         string inputGraph = br.ReadString();
         if (!Guid.TryParse(inputGraph, out decanter.SelectedInputPipeGraphId))
             decanter.SelectedInputPipeGraphId = Guid.Empty;
+        decanter.SelectedInputPipeAnchorPos = Vector3i.zero;
+        if (snapshotVersion >= 6)
+            decanter.SelectedInputPipeAnchorPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
 
         int outX = br.ReadInt32();
         int outY = br.ReadInt32();
@@ -3879,6 +3955,9 @@ public partial class HigherLogicRegistry
         string outputGraph = br.ReadString();
         if (!Guid.TryParse(outputGraph, out decanter.SelectedOutputPipeGraphId))
             decanter.SelectedOutputPipeGraphId = Guid.Empty;
+        decanter.SelectedOutputPipeAnchorPos = Vector3i.zero;
+        if (snapshotVersion >= 6)
+            decanter.SelectedOutputPipeAnchorPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
 
         decanter.SelectedFluidType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
         if (snapshotVersion >= 4)
@@ -3933,6 +4012,45 @@ public partial class HigherLogicRegistry
 
     private void LoadMelterSnapshot(BinaryReader br, MelterSnapshot melter, int snapshotVersion)
     {
+        // Older saves can contain Melter payloads written in the newer Decanter layout
+        // but tagged as version 1. Try strict v1 first with sanity checks, then fall back.
+        if (snapshotVersion == 1)
+        {
+            long startPos = br.BaseStream.Position;
+            if (!TryLoadMelterV1Payload(br, melter))
+            {
+                br.BaseStream.Position = startPos;
+                LoadDecanterSnapshot(br, melter, 5);
+                melter.CurrentHeat = Math.Max(0, br.ReadInt32());
+                melter.CurrentHeatSourceMax = Math.Max(0, br.ReadInt32());
+            }
+
+            melter.MachineRecipeGroupsCsv = string.IsNullOrWhiteSpace(melter.MachineRecipeGroupsCsv)
+                ? "melter"
+                : melter.MachineRecipeGroupsCsv;
+            SanitizeLoadedMelterSnapshot(melter);
+            return;
+        }
+
+        if (snapshotVersion == 2)
+        {
+            long startPos = br.BaseStream.Position;
+            if (!TryLoadMelterV2Payload(br, melter, readAnchorFields: false))
+            {
+                br.BaseStream.Position = startPos;
+                // Recovery path for the brief regression where v2 melter snapshots
+                // were written with v6-style anchor fields.
+                if (!TryLoadMelterV2Payload(br, melter, readAnchorFields: true))
+                    LoadDecanterSnapshot(br, melter, 6);
+            }
+
+            melter.MachineRecipeGroupsCsv = string.IsNullOrWhiteSpace(melter.MachineRecipeGroupsCsv)
+                ? "melter"
+                : melter.MachineRecipeGroupsCsv;
+            SanitizeLoadedMelterSnapshot(melter);
+            return;
+        }
+
         LoadDecanterSnapshot(br, melter, snapshotVersion);
         melter.MachineRecipeGroupsCsv = string.IsNullOrWhiteSpace(melter.MachineRecipeGroupsCsv)
             ? "melter"
@@ -3947,6 +4065,98 @@ public partial class HigherLogicRegistry
         {
             melter.CurrentHeat = 0;
             melter.CurrentHeatSourceMax = 0;
+        }
+
+        SanitizeLoadedMelterSnapshot(melter);
+    }
+
+    private bool TryLoadMelterV2Payload(BinaryReader br, MelterSnapshot melter, bool readAnchorFields)
+    {
+        try
+        {
+            LoadDecanterSnapshot(br, melter, readAnchorFields ? 6 : 2);
+            melter.CurrentHeat = Math.Max(0, br.ReadInt32());
+            melter.CurrentHeatSourceMax = Math.Max(0, br.ReadInt32());
+
+            if (!Enum.IsDefined(typeof(OutputTransportMode), melter.SelectedOutputMode))
+                return false;
+
+            if (melter.CurrentHeat > 200000 || melter.CurrentHeatSourceMax > 200000)
+                return false;
+
+            if (melter.PendingItemInput > 200000000 ||
+                melter.PendingItemOutput > 200000000 ||
+                melter.PendingFluidInput > 200000000 ||
+                melter.PendingFluidOutput > 200000000)
+            {
+                return false;
+            }
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void SanitizeLoadedMelterSnapshot(MelterSnapshot melter)
+    {
+        if (melter == null)
+            return;
+
+        if (melter.PendingItemInput > 200000000 ||
+            melter.PendingItemOutput > 200000000 ||
+            melter.PendingFluidInput > 200000000 ||
+            melter.PendingFluidOutput > 200000000 ||
+            melter.CurrentHeat > 200000000 ||
+            melter.CurrentHeatSourceMax > 200000000)
+        {
+            melter.PendingItemInput = 0;
+            melter.PendingItemOutput = 0;
+            melter.PendingFluidInput = 0;
+            melter.PendingFluidOutput = 0;
+            melter.PendingItemInputName = string.Empty;
+            melter.PendingItemInputFluidAmountMg = 0;
+            melter.PendingItemInputReturnItemName = string.Empty;
+            melter.PendingItemInputReturnItemAmount = 1;
+            melter.PendingItemOutputName = string.Empty;
+            melter.CurrentHeat = 0;
+            melter.CurrentHeatSourceMax = 0;
+            melter.CycleTickCounter = 0;
+            melter.CycleTickLength = Math.Max(1, melter.CycleTickLength);
+            melter.LastAction = "Waiting";
+            melter.LastBlockReason = "Recovered from invalid snapshot state";
+        }
+
+        if (melter.SelectedOutputChestPos != Vector3i.zero &&
+            melter.SelectedOutputPipeGraphId != Guid.Empty &&
+            melter.SelectedOutputMode != OutputTransportMode.Pipe)
+        {
+            melter.SelectedOutputMode = OutputTransportMode.Pipe;
+        }
+    }
+
+    private bool TryLoadMelterV1Payload(BinaryReader br, MelterSnapshot melter)
+    {
+        try
+        {
+            LoadDecanterSnapshot(br, melter, 1);
+            int heat = br.ReadInt32();
+            int heatSourceMax = br.ReadInt32();
+
+            // If these values are wildly out of range, this record is likely the
+            // known "v1-tagged but v5-shaped payload" and needs fallback parsing.
+            if (heat < 0 || heat > 200000 || heatSourceMax < 0 || heatSourceMax > 200000)
+                return false;
+
+            melter.CurrentHeat = heat;
+            melter.CurrentHeatSourceMax = heatSourceMax;
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 
@@ -3963,6 +4173,9 @@ public partial class HigherLogicRegistry
         string inputGraph = br.ReadString();
         if (!Guid.TryParse(inputGraph, out infuser.SelectedInputPipeGraphId))
             infuser.SelectedInputPipeGraphId = Guid.Empty;
+        infuser.SelectedInputPipeAnchorPos = Vector3i.zero;
+        if (snapshotVersion >= 3)
+            infuser.SelectedInputPipeAnchorPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
 
         int outX = br.ReadInt32();
         int outY = br.ReadInt32();
@@ -3972,6 +4185,9 @@ public partial class HigherLogicRegistry
         string outputGraph = br.ReadString();
         if (!Guid.TryParse(outputGraph, out infuser.SelectedOutputPipeGraphId))
             infuser.SelectedOutputPipeGraphId = Guid.Empty;
+        infuser.SelectedOutputPipeAnchorPos = Vector3i.zero;
+        if (snapshotVersion >= 3)
+            infuser.SelectedOutputPipeAnchorPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
 
         infuser.SelectedRecipeKey = br.ReadString() ?? string.Empty;
         infuser.SelectedFluidType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();

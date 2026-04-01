@@ -303,6 +303,230 @@ public static class PipeGraphManager
         return false;
     }
 
+    public static bool TryResolveGraphIdForMachineAndStorage(Vector3i machinePos, Vector3i storagePos, out Guid graphId)
+    {
+        graphId = Guid.Empty;
+        if (machinePos == Vector3i.zero || storagePos == Vector3i.zero)
+        {
+            Log.Out($"[PipeGraphManager] TryResolveGraphIdForMachineAndStorage invalid machinePos={machinePos} storagePos={storagePos}");
+            return false;
+        }
+
+        Guid found = Guid.Empty;
+        int matches = 0;
+
+        foreach (var kvp in graphsById)
+        {
+            PipeGraphData graph = kvp.Value;
+            if (graph == null)
+                continue;
+
+            bool touchesMachine = false;
+            foreach (Vector3i neighborPos in GetNeighborPositions(machinePos))
+            {
+                if (graph.PipePositions.Contains(neighborPos))
+                {
+                    touchesMachine = true;
+                    break;
+                }
+            }
+
+            if (!touchesMachine)
+                continue;
+
+            bool hasStorage = graph.ContainsStorageEndpoint(storagePos) ||
+                              (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] snapshotSlots) && snapshotSlots != null);
+            if (!hasStorage)
+                continue;
+
+            found = kvp.Key;
+            matches++;
+
+            if (matches > 1)
+                break;
+        }
+
+        if (matches == 1)
+        {
+            graphId = found;
+            return true;
+        }
+
+        if (matches > 1)
+            Log.Warning($"[PipeGraphManager] Ambiguous graph ID for machine+storage machinePos={machinePos} storagePos={storagePos}; matches={matches}");
+        else
+            Log.Out($"[PipeGraphManager] No graph match for machine+storage machinePos={machinePos} storagePos={storagePos}");
+
+        return false;
+    }
+
+    public static bool TryResolveMachinePipeAnchorPosition(
+        WorldBase world,
+        int clrIdx,
+        Vector3i machinePos,
+        Guid preferredGraphId,
+        Vector3i storagePos,
+        out Vector3i anchorPos)
+    {
+        anchorPos = Vector3i.zero;
+        if (world == null || machinePos == Vector3i.zero)
+            return false;
+
+        List<Vector3i> neighbors = new List<Vector3i>(GetNeighborPositions(machinePos));
+
+        bool IsValidAdjacentPipe(Vector3i pos)
+        {
+            return SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out TileEntity te) && te is TileEntityItemPipe;
+        }
+
+        bool IsGraphStorageMatch(Guid graphId)
+        {
+            if (graphId == Guid.Empty || storagePos == Vector3i.zero)
+                return true;
+
+            if (!graphsById.TryGetValue(graphId, out PipeGraphData graph) || graph == null)
+                return false;
+
+            return graph.ContainsStorageEndpoint(storagePos) ||
+                   (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] snapshotSlots) && snapshotSlots != null);
+        }
+
+        // First choice: adjacent pipe that is already on the selected graph.
+        if (preferredGraphId != Guid.Empty)
+        {
+            for (int i = 0; i < neighbors.Count; i++)
+            {
+                Vector3i pos = neighbors[i];
+                if (!IsValidAdjacentPipe(pos))
+                    continue;
+
+                if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out TileEntity te) || !(te is TileEntityItemPipe pipe))
+                    continue;
+
+                if (pipe.PipeGraphId != preferredGraphId)
+                    continue;
+
+                if (!IsGraphStorageMatch(preferredGraphId))
+                    continue;
+
+                anchorPos = pos;
+                return true;
+            }
+        }
+
+        // Second choice: adjacent pipe position that belongs to preferred graph snapshot.
+        if (preferredGraphId != Guid.Empty &&
+            graphsById.TryGetValue(preferredGraphId, out PipeGraphData preferredGraph) &&
+            preferredGraph != null &&
+            IsGraphStorageMatch(preferredGraphId))
+        {
+            for (int i = 0; i < neighbors.Count; i++)
+            {
+                Vector3i pos = neighbors[i];
+                if (!preferredGraph.PipePositions.Contains(pos))
+                    continue;
+
+                anchorPos = pos;
+                return true;
+            }
+        }
+
+        // Final fallback: unique adjacent graph that also matches storage.
+        Guid matchGraphId = Guid.Empty;
+        Vector3i matchPos = Vector3i.zero;
+        int matches = 0;
+        for (int i = 0; i < neighbors.Count; i++)
+        {
+            Vector3i pos = neighbors[i];
+            if (!IsValidAdjacentPipe(pos))
+                continue;
+
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pos, out TileEntity te) || !(te is TileEntityItemPipe pipe))
+                continue;
+
+            Guid graphId = pipe.PipeGraphId;
+            if (graphId == Guid.Empty || !IsGraphStorageMatch(graphId))
+                continue;
+
+            matchGraphId = graphId;
+            matchPos = pos;
+            matches++;
+            if (matches > 1)
+                break;
+        }
+
+        if (matches == 1)
+        {
+            anchorPos = matchPos;
+            return true;
+        }
+
+        if (matches > 1)
+            Log.Warning($"[PipeGraphManager] Ambiguous machine pipe anchor machinePos={machinePos} preferredGraph={preferredGraphId} storagePos={storagePos}");
+
+        return false;
+    }
+
+    public static bool TryResolveGraphIdForMachineAnchorAndStorage(
+        Vector3i machinePos,
+        Vector3i machinePipeAnchorPos,
+        Vector3i storagePos,
+        out Guid graphId)
+    {
+        graphId = Guid.Empty;
+        if (machinePos == Vector3i.zero || storagePos == Vector3i.zero || machinePipeAnchorPos == Vector3i.zero)
+            return false;
+
+        bool isAdjacent = false;
+        List<Vector3i> neighbors = new List<Vector3i>(GetNeighborPositions(machinePos));
+        for (int i = 0; i < neighbors.Count; i++)
+        {
+            if (neighbors[i] == machinePipeAnchorPos)
+            {
+                isAdjacent = true;
+                break;
+            }
+        }
+
+        if (!isAdjacent)
+        {
+            Log.Warning($"[PipeGraphManager] Invalid machine anchor machinePos={machinePos} anchor={machinePipeAnchorPos}");
+            return false;
+        }
+
+        Guid found = Guid.Empty;
+        int matches = 0;
+        foreach (var kvp in graphsById)
+        {
+            PipeGraphData graph = kvp.Value;
+            if (graph == null || !graph.PipePositions.Contains(machinePipeAnchorPos))
+                continue;
+
+            bool hasStorage = graph.ContainsStorageEndpoint(storagePos) ||
+                              (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] snapshotSlots) && snapshotSlots != null);
+            if (!hasStorage)
+                continue;
+
+            found = kvp.Key;
+            matches++;
+            if (matches > 1)
+                break;
+        }
+
+        if (matches == 1)
+        {
+            graphId = found;
+            return true;
+        }
+
+        if (matches > 1)
+            Log.Warning($"[PipeGraphManager] Ambiguous graph ID for machine anchor+storage machinePos={machinePos} anchor={machinePipeAnchorPos} storagePos={storagePos}; matches={matches}");
+        else
+            Log.Out($"[PipeGraphManager] No graph match for machine anchor+storage machinePos={machinePos} anchor={machinePipeAnchorPos} storagePos={storagePos}");
+
+        return false;
+    }
+
     private static int GetGraphRouteVersion(Guid graphId)
     {
         if (graphId == Guid.Empty)
@@ -1105,6 +1329,9 @@ public static class PipeGraphManager
 
         ItemStack[] slotSnapshot = CloneSlots(storage.items);
         HashSet<Guid> adjacentGraphIds = GetAdjacentPipeGraphIds(world, clrIdx, storagePos);
+        HashSet<Guid> endpointGraphIds = GetGraphsContainingStorageEndpoint(storagePos);
+        foreach (Guid endpointGraphId in endpointGraphIds)
+            adjacentGraphIds.Add(endpointGraphId);
         SummarizeSlots(slotSnapshot, out int itemTypes, out int totalItems, out int nonEmptySlots);
 
         int savedToGraphs = 0;
@@ -1142,6 +1369,9 @@ public static class PipeGraphManager
             return;
 
         HashSet<Guid> adjacentGraphIds = GetAdjacentPipeGraphIds(world, clrIdx, storagePos);
+        HashSet<Guid> endpointGraphIds = GetGraphsContainingStorageEndpoint(storagePos);
+        foreach (Guid endpointGraphId in endpointGraphIds)
+            adjacentGraphIds.Add(endpointGraphId);
         if (adjacentGraphIds.Count == 0)
             return;
 
@@ -1162,7 +1392,7 @@ public static class PipeGraphManager
             {
                 SummarizeSlots(liveSlots, out int unchangedItemTypes, out int unchangedTotalItems, out int unchangedNonEmptySlots);
                 Log.Out($"[PipeGraphSnapshot] Reapply skipped (not dirty) pos={storagePos} graph={graphId} slots={liveSlots.Length} nonEmpty={unchangedNonEmptySlots} itemTypes={unchangedItemTypes} totalItems={unchangedTotalItems}");
-                graph.RemoveStorageSnapshot(storagePos);
+                RemoveStorageSnapshotAtPosition(storagePos, false);
                 continue;
             }
 
@@ -1174,7 +1404,7 @@ public static class PipeGraphManager
 
             Log.Out($"[PipeGraphSnapshot] Reapplied snapshot pos={storagePos} graph={graphId} oldSlots={liveSlots.Length} oldNonEmpty={oldNonEmptySlots} oldTypes={oldItemTypes} oldTotal={oldTotalItems} newSlots={snapshotSlots.Length} newNonEmpty={newNonEmptySlots} newTypes={newItemTypes} newTotal={newTotalItems} droppedStacks={droppedStacks} droppedItems={droppedItems}");
 
-            graph.RemoveStorageSnapshot(storagePos);
+            RemoveStorageSnapshotAtPosition(storagePos, false);
             return;
         }
     }
@@ -1198,7 +1428,8 @@ public static class PipeGraphManager
         bool hadPreferredGraph = pipeGraphId != Guid.Empty &&
                                  graphsById.TryGetValue(pipeGraphId, out graph) &&
                                  graph != null &&
-                                 graph.ContainsStorageEndpoint(storagePos);
+                                 (graph.ContainsStorageEndpoint(storagePos) ||
+                                  (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] preferredSnapshot) && preferredSnapshot != null));
 
         if (!hadPreferredGraph)
         {
@@ -1218,23 +1449,16 @@ public static class PipeGraphManager
                 return false;
             }
 
-            if (!graph.ContainsStorageEndpoint(storagePos))
+            bool resolvedHasStorage = graph.ContainsStorageEndpoint(storagePos) ||
+                                      (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] resolvedSnapshot) && resolvedSnapshot != null);
+            if (!resolvedHasStorage)
             {
-                Log.Warning($"[PipeGraphManager] Resolved graph {pipeGraphId} does not contain endpoint {storagePos}");
+                Log.Warning($"[PipeGraphManager] Resolved graph {pipeGraphId} does not contain storage {storagePos}");
                 return false;
             }
 
             if (oldGraphId != Guid.Empty && oldGraphId != pipeGraphId)
                 Log.Out($"[PipeGraphManager] Rebound stale graph id {oldGraphId} -> {pipeGraphId} for storagePos={storagePos}");
-        }
-
-        if (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] snapshotSlots) && snapshotSlots != null)
-        {
-            if (!graph.ContainsStorageEndpoint(storagePos))
-                graph.AddStorageEndpoint(storagePos);
-
-            itemCounts = BuildItemCountsFromSlots(snapshotSlots);
-            return true;
         }
 
         if (!graph.ContainsStorageEndpoint(storagePos))
@@ -1243,22 +1467,30 @@ public static class PipeGraphManager
             return false;
         }
 
-        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, storagePos, out TileEntity storageEntity) ||
-            !(storageEntity is TileEntityComposite comp))
+        if (SafeWorldRead.TryGetTileEntity(world, clrIdx, storagePos, out TileEntity storageEntity) &&
+            storageEntity is TileEntityComposite comp)
         {
-            Log.Warning($"[PipeGraphManager] storage TE not found or not composite for storagePos={storagePos}");
-            return false;
-        }
+            TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
+            if (storage != null && storage.items != null)
+            {
+                // Live container state is authoritative whenever the storage is loaded.
+                itemCounts = BuildItemCountsFromSlots(storage.items);
+                RemoveStorageSnapshotAtPosition(storagePos, false);
+                return true;
+            }
 
-        TEFeatureStorage storage = comp.GetFeature<TEFeatureStorage>();
-        if (storage == null || storage.items == null)
-        {
             Log.Warning($"[PipeGraphManager] storage TE or items null for storagePos={storagePos}");
             return false;
         }
 
-        itemCounts = BuildItemCountsFromSlots(storage.items);
-        return true;
+        if (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] snapshotSlots) && snapshotSlots != null)
+        {
+            itemCounts = BuildItemCountsFromSlots(snapshotSlots);
+            return true;
+        }
+
+        Log.Warning($"[PipeGraphManager] storage TE not found and no snapshot for storagePos={storagePos}");
+        return false;
     }
 
 
@@ -1488,28 +1720,29 @@ public static class PipeGraphManager
         if (!graphsById.TryGetValue(pipeGraphId, out graph) || graph == null)
             return false;
 
+        if (!graph.ContainsStorageEndpoint(storagePos))
+            return false;
+
+        if (SafeWorldRead.TryGetTileEntity(world, clrIdx, storagePos, out TileEntity storageEntity) &&
+            storageEntity is TileEntityComposite comp)
+        {
+            liveStorage = comp.GetFeature<TEFeatureStorage>();
+            if (liveStorage == null || liveStorage.items == null)
+                return false;
+
+            slots = CloneSlots(liveStorage.items);
+            RemoveStorageSnapshotAtPosition(storagePos, false);
+            return true;
+        }
+
         if (graph.TryGetStorageSnapshot(storagePos, out ItemStack[] snapshotSlots) && snapshotSlots != null)
         {
-            if (!graph.ContainsStorageEndpoint(storagePos))
-                graph.AddStorageEndpoint(storagePos);
-
             slots = CloneSlots(snapshotSlots);
             usingSnapshot = true;
             return true;
         }
 
-        if (!graph.ContainsStorageEndpoint(storagePos))
-            return false;
-
-        if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, storagePos, out TileEntity storageEntity) || !(storageEntity is TileEntityComposite comp))
-            return false;
-
-        liveStorage = comp.GetFeature<TEFeatureStorage>();
-        if (liveStorage == null || liveStorage.items == null)
-            return false;
-
-        slots = CloneSlots(liveStorage.items);
-        return true;
+        return false;
     }
 
     private static void PersistMutatedStorageSlots(PipeGraphData graph, Vector3i storagePos, ItemStack[] slots, TEFeatureStorage liveStorage, bool usingSnapshot)
@@ -1519,7 +1752,7 @@ public static class PipeGraphManager
 
         if (usingSnapshot)
         {
-            graph.SetStorageSnapshot(storagePos, slots);
+            SetStorageSnapshotAtPosition(storagePos, slots);
             return;
         }
 
@@ -1590,6 +1823,46 @@ public static class PipeGraphManager
         }
 
         return clone;
+    }
+
+    private static HashSet<Guid> GetGraphsContainingStorageEndpoint(Vector3i storagePos)
+    {
+        HashSet<Guid> graphIds = new HashSet<Guid>();
+        if (storagePos == Vector3i.zero)
+            return graphIds;
+
+        foreach (var kvp in graphsById)
+        {
+            PipeGraphData graph = kvp.Value;
+            if (graph == null || graph.StorageEndpoints == null)
+                continue;
+
+            if (graph.StorageEndpoints.Contains(storagePos))
+                graphIds.Add(kvp.Key);
+        }
+
+        return graphIds;
+    }
+
+    private static int SetStorageSnapshotAtPosition(Vector3i storagePos, ItemStack[] slots)
+    {
+        if (storagePos == Vector3i.zero || graphsById.Count == 0)
+            return 0;
+
+        int changedGraphs = 0;
+        ItemStack[] snapshot = CloneSlots(slots);
+
+        foreach (var kvp in graphsById)
+        {
+            PipeGraphData graph = kvp.Value;
+            if (graph == null || graph.StorageEndpoints == null || !graph.StorageEndpoints.Contains(storagePos))
+                continue;
+
+            graph.SetStorageSnapshot(storagePos, snapshot);
+            changedGraphs++;
+        }
+
+        return changedGraphs;
     }
 
     private static bool AreSlotsEqual(ItemStack[] a, ItemStack[] b)
@@ -1722,8 +1995,6 @@ public static class PipeGraphManager
         if (world == null || graph == null || graph.PipeGraphId == Guid.Empty || graph.PipePositions.Count == 0)
             return false;
 
-        List<Vector3i> validPipes = new List<Vector3i>();
-
         foreach (Vector3i pipePos in graph.PipePositions)
         {
             if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity tileEntity) || !(tileEntity is TileEntityItemPipe pipe))
@@ -1734,34 +2005,7 @@ public static class PipeGraphManager
 
             pipe.SetPipeGraphId(graph.PipeGraphId);
             pipe.setModified();
-
-            validPipes.Add(pipePos);
             assignedPipePositions?.Add(pipePos);
-        }
-
-        graph.PipePositions.Clear();
-        for (int i = 0; i < validPipes.Count; i++)
-            graph.AddPipe(validPipes[i]);
-
-        if (graph.PipePositions.Count == 0)
-            return false;
-
-        List<Vector3i> invalidEndpoints = null;
-        foreach (Vector3i endpoint in graph.StorageEndpoints)
-        {
-            if (IsPositionConnectedToGraphPipe(world, clrIdx, graph, endpoint))
-                continue;
-
-            if (invalidEndpoints == null)
-                invalidEndpoints = new List<Vector3i>();
-
-            invalidEndpoints.Add(endpoint);
-        }
-
-        if (invalidEndpoints != null)
-        {
-            for (int i = 0; i < invalidEndpoints.Count; i++)
-                graph.StorageEndpoints.Remove(invalidEndpoints[i]);
         }
 
         return true;

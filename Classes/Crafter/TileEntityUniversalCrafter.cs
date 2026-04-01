@@ -312,6 +312,20 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             IngredientCount = new Dictionary<string, int>(),
             OwedResources = new Dictionary<string, int>(),
         };
+        PipeGraphManager.TryResolveMachinePipeAnchorPosition(
+            world,
+            0,
+            snapshot.Position,
+            snapshot.SelectedInputPipeGraphId,
+            snapshot.SelectedInputChestPos,
+            out snapshot.SelectedInputPipeAnchorPos);
+        PipeGraphManager.TryResolveMachinePipeAnchorPosition(
+            world,
+            0,
+            snapshot.Position,
+            snapshot.SelectedOutputPipeGraphId,
+            snapshot.SelectedOutputChestPos,
+            out snapshot.SelectedOutputPipeAnchorPos);
 
         DevLog("SNAPSHOT -> Base fields populated");
 

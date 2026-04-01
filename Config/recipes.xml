@@ -18,19 +18,25 @@
 
 		<!-- FLUID INFUSER -->
 
-		<machineRecipe name="boiled_jar_from_water" machine="fluidinfuser">
+		<machineRecipe name="water_jar" machine="fluidinfuser">
 			<input item="drinkJarEmpty" count="1" />
 			<fluid_input type="water" gallons="0.5" />
 			<output item="drinkJarBoiledWater" count="1" />
 		</machineRecipe>
 
-		<machineRecipe name="gas_can_from_polymer" machine="fluidinfuser">
+		<machineRecipe name="murky_water_jar" machine="fluidinfuser">
+			<input item="drinkJarEmpty" count="1" />
+			<fluid_input type="murky_water" gallons="0.5" />
+			<output item="drinkJarRiverWater" count="1" />
+		</machineRecipe>
+
+		<machineRecipe name="ammogascan" machine="fluidinfuser">
 			<input item="resourceScrapPolymers" count="10" />
 			<fluid_input type="gas" gallons="2" />
 			<output item="ammoGasCan" count="1" />
 		</machineRecipe>
 
-		<machineRecipe name="oil_can_from_polymer" machine="fluidinfuser">
+		<machineRecipe name="resourceoil" machine="fluidinfuser">
 			<input item="resourceScrapPolymers" count="10" />
 			<fluid_input type="molten_oil" gallons="0.5" />
 			<output item="resourceOil" count="1" />
