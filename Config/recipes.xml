@@ -42,12 +42,30 @@
 			<output item="resourceOil" count="1" />
 		</machineRecipe>
 
+		<machineRecipe name="infuse_glue" machine="fluidinfuser">
+			<input item="resourceScrapPolymers" count="10" />
+			<fluid_input type="glue" gallons="0.2" />
+			<output item="resourceGlue" count="1" />
+		</machineRecipe>
+
 		<!-- MELTER -->
 
 		<machineRecipe name="melt_oil_shale" machine="melter">
 			<heat value="30" />
 			<input item="resourceOilShale" count="5" />
 			<fluid_output type="molten_oil" gallons="0.25" />
+		</machineRecipe>
+
+		<machineRecipe name="melt_scrap_polymer" machine="melter">
+			<heat value="10" />
+			<input item="resourceScrapPolymers" count="10" />
+			<fluid_output type="molten_plastic" gallons="0.2" />
+		</machineRecipe>
+
+		<machineRecipe name="melt_bone_to_collagen" machine="melter">
+			<heat value="15" />
+			<input item="resourceBone" count="5" />
+			<fluid_output type="collagen" gallons="0.25" />
 		</machineRecipe>
 
 		<machineRecipe name="melt_scrap_iron" machine="melter">
@@ -112,6 +130,18 @@
 			<fluid_output type="molten_lead_alloy" gallons="0.3" />
 		</machineRecipe>
 
+		<machineRecipe name="mix_glue_resin_plastic" machine="fluid_mixer">
+			<fluid_input type="molten_plastic" gallons="0.2" />
+			<fluid_input type="water" gallons="0.1" />
+			<fluid_output type="glue_resin" gallons="0.3" />
+		</machineRecipe>
+
+		<machineRecipe name="mix_glue_resin_bone" machine="fluid_mixer">
+			<fluid_input type="collagen" gallons="0.2" />
+			<fluid_input type="water" gallons="0.1" />
+			<fluid_output type="glue_resin" gallons="0.3" />
+		</machineRecipe>
+
 		<!-- BOILER -->
 
 		<machineRecipe name="boil_murky_water" machine="boiler">
@@ -124,6 +154,12 @@
 			<heat value="20" />
 			<fluid_input type="molten_oil" gallons="1" />
 			<fluid_output type="gas" gallons=".2" />
+		</machineRecipe>
+
+		<machineRecipe name="boil_glue_resin" machine="boiler">
+			<heat value="20" />
+			<fluid_input type="glue_resin" gallons="0.3" />
+			<fluid_output type="glue" gallons="0.2" />
 		</machineRecipe>
 
 		<!-- MOLD -->

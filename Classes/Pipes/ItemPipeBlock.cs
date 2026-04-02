@@ -103,10 +103,12 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
         {
             case 0:
             case 2:
+            case 12:
                 return PipeAxis.AxisZ;
 
             case 1:
             case 3:
+            case 9:
                 return PipeAxis.AxisX;
 
             case 8:

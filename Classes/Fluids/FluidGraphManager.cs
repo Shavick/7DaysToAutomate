@@ -324,6 +324,8 @@ public static class FluidGraphManager
             Vector3i pipePos = machinePos + NeighborOffsets[i];
             if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity te) || !(te is TileEntityLiquidPipe pipe))
                 continue;
+            if (!IsPipeOpenTowardPosition(world, clrIdx, pipePos, machinePos))
+                continue;
 
             if (pipe.FluidGraphId == Guid.Empty)
             {
@@ -993,6 +995,8 @@ public static class FluidGraphManager
             Vector3i neighborPos = pos + NeighborOffsets[i];
             if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out TileEntity te) || !(te is TileEntityLiquidPipe pipe))
                 continue;
+            if (!IsPipeOpenTowardPosition(world, clrIdx, neighborPos, pos))
+                continue;
 
             Guid graphId = pipe.FluidGraphId;
             if (graphId == Guid.Empty)
@@ -1322,6 +1326,9 @@ public static class FluidGraphManager
             foreach (Vector3i offset in NeighborOffsets)
             {
                 Vector3i neighborPos = pipePos + offset;
+                if (!IsPipeOpenTowardPosition(world, clrIdx, pipePos, neighborPos))
+                    continue;
+
                 if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out TileEntity te))
                     continue;
 
@@ -1402,13 +1409,24 @@ public static class FluidGraphManager
             if (!(pipeValue.Block is LiquidPipeBlock))
                 continue;
 
-            HashSet<Vector3i> openSides = LiquidPipeBlock.GetOpenSides(pipeValue);
-            Vector3i delta = targetPos - neighborPos;
-            if (openSides.Contains(delta))
+            if (IsPipeOpenTowardPosition(world, clrIdx, neighborPos, targetPos))
                 return true;
         }
 
         return false;
+    }
+
+    private static bool IsPipeOpenTowardPosition(WorldBase world, int clrIdx, Vector3i pipePos, Vector3i targetPos)
+    {
+        if (!SafeWorldRead.TryGetBlock(world, clrIdx, pipePos, out BlockValue pipeValue))
+            return false;
+
+        if (!(pipeValue.Block is LiquidPipeBlock))
+            return false;
+
+        HashSet<Vector3i> openSides = LiquidPipeBlock.GetOpenSides(pipeValue);
+        Vector3i delta = targetPos - pipePos;
+        return openSides.Contains(delta);
     }
 
     private static bool IsFluidIntakePipe(WorldBase world, int clrIdx, Vector3i pos)

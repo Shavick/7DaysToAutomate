@@ -101,9 +101,11 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
         {
             case 0:
             case 2:
+            case 12:
                 return PipeAxis.AxisZ;
             case 1:
             case 3:
+            case 9:
                 return PipeAxis.AxisX;
             case 8:
             case 10:
@@ -545,7 +547,26 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
 
         List<string> pipeLines = new List<string>();
         foreach (Vector3i p in graph.PipePositions)
-            pipeLines.Add(p.ToString());
+        {
+            string details = p.ToString();
+            if (SafeWorldRead.TryGetBlock(world, clrIdx, p, out BlockValue pipeValue))
+            {
+                PipeShape shape = GetPipeShape(pipeValue);
+                HashSet<Vector3i> openSides = GetOpenSides(pipeValue);
+                List<string> openSideStrings = new List<string>();
+                foreach (Vector3i side in openSides)
+                    openSideStrings.Add(side.ToString());
+
+                openSideStrings.Sort(StringComparer.Ordinal);
+                details += $"(rot={pipeValue.rotation},shape={shape},open=[{string.Join(" ", openSideStrings)}])";
+            }
+            else
+            {
+                details += "(rot=?,shape=?,open=[?])";
+            }
+
+            pipeLines.Add(details);
+        }
 
         pipeLines.Sort(StringComparer.Ordinal);
         Log.Out($"[FluidGraph][PipeActivate] PipeList={string.Join(", ", pipeLines)}");
@@ -579,6 +600,21 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
             player.playerInput.PermanentActions.Activate.GetBindingXuiMarkupString();
 
         string name = blockValue.Block.GetLocalizedBlockName();
+        string graphFluid = string.Empty;
+
+        if (world != null &&
+            SafeWorldRead.TryGetTileEntity(world, clrIdx, blockPos, out TileEntity te) &&
+            te is TileEntityLiquidPipe pipe &&
+            pipe.FluidGraphId != Guid.Empty &&
+            FluidGraphManager.TryGetGraph(pipe.FluidGraphId, out FluidGraphData graph) &&
+            graph != null &&
+            !string.IsNullOrEmpty(graph.FluidType))
+        {
+            graphFluid = graph.FluidType;
+        }
+
+        if (!string.IsNullOrEmpty(graphFluid))
+            name = $"{name} ({graphFluid})";
 
         if (!CanToggleValve(blockValue))
             return $"{key} Inspect {name}";
