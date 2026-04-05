@@ -1,4 +1,4 @@
-﻿using HarmonyLib;
+using HarmonyLib;
 using System;
 using System.Reflection;
 
@@ -7,7 +7,6 @@ public static class UCPatch_TileEntity_Instantiate
 {
     static MethodBase TargetMethod()
     {
-
         var m = AccessTools.Method(
             typeof(TileEntity),
             "Instantiate",
@@ -19,121 +18,52 @@ public static class UCPatch_TileEntity_Instantiate
 
     static bool Prefix(TileEntityType type, Chunk _chunk, ref TileEntity __result)
     {
-        int tid = (int)type;
-
-        if (tid == 132)
+        switch ((int)type)
         {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=132 -> TileEntityUniversalExtractor");
-            __result = new TileEntityUniversalExtractor(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
+            case 132:
+                __result = new TileEntityUniversalExtractor(_chunk);
+                return false;
+            case 133:
+                __result = new TileEntityUniversalCrafter(_chunk);
+                return false;
+            case 134:
+                __result = new TileEntityUniversalWasher(_chunk);
+                return false;
+            case 135:
+                __result = new TileEntityNetworkController(_chunk);
+                return false;
+            case 136:
+                __result = new TileEntityItemPipe(_chunk);
+                return false;
+            case 137:
+                __result = new TileEntityLiquidPipe(_chunk);
+                return false;
+            case 138:
+                __result = new TileEntityFluidPump(_chunk);
+                return false;
+            case 139:
+                __result = new TileEntityFluidStorage(_chunk);
+                return false;
+            case 140:
+                __result = new TileEntityFluidDecanter(_chunk);
+                return false;
+            case 141:
+                __result = new TileEntityFluidInfuser(_chunk);
+                return false;
+            case 142:
+                __result = new TileEntityMelter(_chunk);
+                return false;
+            case 143:
+                __result = new TileEntityFluidMixer(_chunk);
+                return false;
+            case 144:
+                __result = new TileEntityCaster(_chunk);
+                return false;
+            case 145:
+                __result = new TileEntityBoiler(_chunk);
+                return false;
+            default:
+                return true;
         }
-
-        if (tid == 133)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=133 -> TileEntityUniversalCrafter");
-            __result = new TileEntityUniversalCrafter(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-        if (tid == 134)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=134 -> TileEntityUniversalWasher");
-            __result = new TileEntityUniversalWasher(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-        if (tid == 135)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=135 -> TileEntityNetworkController");
-            __result = new TileEntityNetworkController(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-        if (tid == 136)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=136 -> TileEntityItemPipe");
-            __result = new TileEntityItemPipe(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-
-        if (tid == 137)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=137 -> TileEntityLiquidPipe");
-            __result = new TileEntityLiquidPipe(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-        if (tid == 138)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=138 -> TileEntityFluidPump");
-            __result = new TileEntityFluidPump(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-        if (tid == 139)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=139 -> TileEntityFluidStorage");
-            __result = new TileEntityFluidStorage(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-        if (tid == 140)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=140 -> TileEntityFluidDecanter");
-            __result = new TileEntityFluidDecanter(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-        if (tid == 141)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=141 -> TileEntityFluidInfuser");
-            __result = new TileEntityFluidInfuser(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-        if (tid == 142)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=142 -> TileEntityMelter");
-            __result = new TileEntityMelter(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-        if (tid == 143)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=143 -> TileEntityFluidMixer");
-            __result = new TileEntityFluidMixer(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-
-        if (tid == 144)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=144 -> TileEntityCaster");
-            __result = new TileEntityCaster(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-        if (tid == 145)
-        {
-            Log.Out("[UCPatch][TE.Instantiate] Handling tid=145 -> TileEntityBoiler");
-            __result = new TileEntityBoiler(_chunk);
-            Log.Out($"[UCPatch][TE.Instantiate] Created __result={(__result == null ? "NULL" : __result.GetType().Name)} | returning false (skip vanilla)");
-            return false;
-        }
-        return true;
     }
 }
-
-

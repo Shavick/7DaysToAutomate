@@ -796,7 +796,7 @@
 			<property name="EconomicValue" value="1400" />
 			<property name="DescriptionKey" value="universalMelterDesc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
-			<property name="InputSpeed" value="5" />
+			<property name="InputSpeed" value="10" />
 			<property name="MachineRecipes" value="melter" />
 			<property name="EnableHeatRequirement" value="true" />
 			<property name="HeatGainCapPerTick" value="0.25" />

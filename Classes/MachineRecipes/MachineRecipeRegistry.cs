@@ -205,6 +205,13 @@ public static class MachineRecipeRegistry
             List<string> groups = ParseMachineGroups(machineGroupsCsv);
             List<MachineRecipe> results = new List<MachineRecipe>();
 
+            if (groups.Count == 0)
+            {
+                results.AddRange(allRecipes);
+                results.Sort((a, b) => string.Compare(GetSortLabel(a), GetSortLabel(b), StringComparison.OrdinalIgnoreCase));
+                return results;
+            }
+
             for (int i = 0; i < groups.Count; i++)
             {
                 string group = groups[i];

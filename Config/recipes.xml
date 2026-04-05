@@ -56,6 +56,12 @@
 			<fluid_output type="molten_oil" gallons="0.25" />
 		</machineRecipe>
 
+		<machineRecipe name="melt_coal" machine="melter">
+			<heat value="50" />
+			<input item="resourceCoal" count="5" />
+			<fluid_output type="molten_oil" gallons="0.05" />
+		</machineRecipe>
+
 		<machineRecipe name="melt_scrap_polymer" machine="melter">
 			<heat value="10" />
 			<input item="resourceScrapPolymers" count="10" />

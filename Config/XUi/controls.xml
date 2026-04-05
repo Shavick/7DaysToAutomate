@@ -145,6 +145,16 @@
 			</rect>
 		</fluid_infuser_recipe_entry>
 
+		<machine_recipe_codex_entry>
+			<rect width="360" height="44" style="press, hover" controller="MachineRecipeCodexEntry, 7DaysToAutomate" sound="[recipe_click]" tooltip="{tooltip}" sound_play_on_hover="[default_hover]">
+				<sprite depth="2" name="backgroundMain" sprite="menu_empty3px" pos="-2,2" width="364" height="48" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="360" height="44" pos="0,0" color="[darkGrey]" type="sliced" />
+				<sprite depth="4" name="selectedRow" width="360" height="44" pos="0,0" color="0,110,70,170" type="sliced" visible="{isselected}" />
+				<label depth="5" name="recipeNameLabel" pos="8,-2" width="235" height="22" text="{recipe_name}" font_size="20" color="[white]" />
+				<label depth="5" name="recipeMachineLabel" pos="244,-2" width="106" height="22" text="{recipe_machine}" font_size="18" justify="right" color="[limeGreen]" />
+			</rect>
+		</machine_recipe_codex_entry>
+
 		<melter_input_container_entry>
 			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="MelterInputContainerEntry, 7DaysToAutomate">
 				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />

@@ -1527,13 +1527,37 @@ public class TileEntityMelter : TileEntityMachine
 
         DevLog($"PIPE CONSUME SUCCESS -> graph={SelectedInputPipeGraphId} pos={SelectedInputChestPos} item={matchedItemName} consumed={consumedCount}");
 
-        pendingItemInput = Math.Max(1, consumedCount);
-        pendingItemInputName = matchedItemName;
-        pendingItemInputFluidAmountMg = Math.Max(0, rule.FluidAmountMg);
-        pendingItemInputReturnItemName = rule.ReturnItemName ?? string.Empty;
-        pendingItemInputReturnItemAmount = Math.Max(1, rule.ReturnItemAmount);
+        int immediateConvertedFluidMg = Math.Max(0, rule.FluidAmountMg);
+        int immediateFreeCapacity = pendingFluidOutputCapacityMg - pendingFluidOutput;
+        if (immediateFreeCapacity < immediateConvertedFluidMg)
+        {
+            blockedReason = "Pending fluid output full";
+            DevLog($"CYCLE BLOCKED -> {blockedReason} freeMg={immediateFreeCapacity} requiredMg={immediateConvertedFluidMg}");
+            return false;
+        }
 
-        cycleAction = "Requested Input";
+        pendingFluidOutput += immediateConvertedFluidMg;
+
+        string immediateReturnItem = rule.ReturnItemName ?? string.Empty;
+        int immediateReturnItemAmount = Math.Max(1, rule.ReturnItemAmount);
+        if (!string.IsNullOrEmpty(immediateReturnItem))
+        {
+            ItemValue returnValue = ItemClass.GetItem(immediateReturnItem, false);
+            if (returnValue != null && returnValue.type != ItemValue.None.type)
+            {
+                pendingItemOutput = immediateReturnItemAmount;
+                pendingItemOutputName = immediateReturnItem;
+            }
+        }
+
+        // Keep compatibility with older persisted staged-input states.
+        pendingItemInput = 0;
+        pendingItemInputName = string.Empty;
+        pendingItemInputFluidAmountMg = 0;
+        pendingItemInputReturnItemName = string.Empty;
+        pendingItemInputReturnItemAmount = 1;
+
+        cycleAction = "Converted";
         blockedReason = string.Empty;
         return true;
     }

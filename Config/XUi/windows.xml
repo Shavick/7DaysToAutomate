@@ -726,6 +726,140 @@
 			</rect>
 		</window>
 
+		<window name="windowMachineRecipeCodex" controller="MachineRecipeCodex, 7DaysToAutomate" width="860" height="600" panel="Center" cursor_area="true">
+			<rect pos="0,-40">
+				<panel name="header" width="860" height="50" depth="1">
+					<sprite depth="2" name="backgroundMain" sprite="ui_game_panel_header" color="[darkestGrey]" />
+					<label depth="6" pos="0,-6" width="860" height="40" text="Machine Recipe Codex" font_size="34" justify="center" color="[limeGreen]" effect="outline" />
+				</panel>
+				<rect name="content" pos="0,-50" height="550">
+					<sprite depth="1" name="bg" width="860" height="560" type="sliced" color="[black]" alpha="0.85" />
+				</rect>
+				<button depth="10" name="closeButton" pos="825,-25" width="35" height="35" pivot="center" sprite="ui_game_symbol_x" defaultcolor="[white]" hovercolor="[red]" type="sliced" sound="[paging_click]" on_press="true" />
+
+				<rect pos="20,-62">
+					<label depth="6" pos="0,0" width="360" height="28" text="Machine Group" font_size="22" justify="center" color="[limeGreen]" />
+					<button depth="6" name="groupPrevButton" pos="20,-26" width="26" height="26" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
+					<label depth="6" name="machineGroupValue" pos="52,-25" width="256" height="28" text="{selected_machine_group}" justify="center" font_size="21" color="[white]" />
+					<button depth="6" name="groupNextButton" pos="312,-26" width="26" height="26" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
+				</rect>
+
+				<panel name="searchPanel" width="360" height="44" pos="20,-122">
+					<sprite color="[darkGrey]" type="sliced" />
+					<sprite sprite="menu_empty3px" pos="-3,3" width="366" height="49" color="[black]" type="sliced" fillcenter="false" />
+					<textfield name="codexSearchInput" pos="8,-7" width="343" height="30" search_field="true" clear_button="true" />
+				</panel>
+
+				<label depth="6" pos="20,-172" width="360" height="24" text="{recipe_count}" font_size="18" color="[white]" />
+				<label depth="6" pos="260,-172" width="120" height="24" text="{page_info}" justify="right" font_size="18" color="[white]" />
+				<button depth="6" name="pagePrevButton" pos="20,-196" width="26" height="26" sprite="ui_game_symbol_arrow_left" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
+				<button depth="6" name="pageNextButton" pos="354,-196" width="26" height="26" sprite="ui_game_symbol_arrow_right" defaultcolor="[white]" hovercolor="[limeGreen]" hoverscale="1" sound="[paging_click]" />
+
+				<grid name="codexRecipes" rows="8" cols="1" pos="20,-232" width="360" height="352" cell_width="360" cell_height="44" controller="MachineRecipeCodexList, 7DaysToAutomate" repeat_content="true" arrangement="vertical">
+					<machine_recipe_codex_entry name="0" />
+				</grid>
+
+				<panel name="recipeDetailsPanel" pos="410,-70" width="430" height="514" depth="1">
+					<sprite depth="1" name="detailsBg" type="sliced" color="[darkGrey]" />
+					<sprite depth="2" name="detailsBorder" sprite="menu_empty3px" type="sliced" color="[black]" fillcenter="false" />
+					<label depth="6" pos="0,-42" width="430" height="32" text="{recipe_machine_name_header}" font_size="26" justify="center" color="[limeGreen]" />
+					<label depth="6" pos="0,-72" width="430" height="24" text="{recipe_output_title}" font_size="20" justify="center" color="[white]" />
+
+					<label depth="6" pos="25,-108" width="170" height="22" text="Ingredients" font_size="20" justify="center" color="[limeGreen]" />
+					<label depth="6" pos="235,-108" width="170" height="22" text="Outputs" font_size="20" justify="center" color="[limeGreen]" />
+
+					<rect name="inputRowGeneric" pos="0,0" width="430" height="514" visible="{input_count_not_two_visible}">
+						<rect name="inputSlot1" pos="25,-156" width="50" height="50" depth="3" style="hover" tooltip="{input_slot1_tooltip}" visible="{input_slot1_visible}">
+							<sprite depth="3" type="sliced" color="0,0,0,140" />
+							<sprite depth="4" name="in1Item" atlas="ItemIconAtlas" sprite="{input_slot1_item_icon}" width="50" height="50" foregroundlayer="true" visible="{input_slot1_item_visible}" />
+							<sprite depth="4" name="in1Fluid" sprite="ui_game_symbol_water" color="{input_slot1_fluid_color}" pos="10,-10" width="30" height="30" visible="{input_slot1_fluid_visible}" />
+							<sprite depth="4" name="in1None" sprite="ui_game_symbol_x" color="[white]" pos="10,-10" width="30" height="30" visible="{input_slot1_none_visible}" />
+						</rect>
+						<label depth="6" pos="72,-170" width="16" height="24" text="+" font_size="24" justify="center" color="[white]" visible="{input_plus1_visible}" />
+						<rect name="inputSlot2" pos="85,-156" width="50" height="50" depth="3" style="hover" tooltip="{input_slot2_tooltip}" visible="{input_slot2_visible}">
+							<sprite depth="3" type="sliced" color="0,0,0,140" />
+							<sprite depth="4" name="in2Item" atlas="ItemIconAtlas" sprite="{input_slot2_item_icon}" width="50" height="50" foregroundlayer="true" visible="{input_slot2_item_visible}" />
+							<sprite depth="4" name="in2Fluid" sprite="ui_game_symbol_water" color="{input_slot2_fluid_color}" pos="10,-10" width="30" height="30" visible="{input_slot2_fluid_visible}" />
+							<sprite depth="4" name="in2None" sprite="ui_game_symbol_x" color="[white]" pos="10,-10" width="30" height="30" visible="{input_slot2_none_visible}" />
+						</rect>
+						<label depth="6" pos="132,-170" width="16" height="24" text="+" font_size="24" justify="center" color="[white]" visible="{input_plus2_visible}" />
+						<rect name="inputSlot3" pos="145,-156" width="50" height="50" depth="3" style="hover" tooltip="{input_slot3_tooltip}" visible="{input_slot3_visible}">
+							<sprite depth="3" type="sliced" color="0,0,0,140" />
+							<sprite depth="4" name="in3Item" atlas="ItemIconAtlas" sprite="{input_slot3_item_icon}" width="50" height="50" foregroundlayer="true" visible="{input_slot3_item_visible}" />
+							<sprite depth="4" name="in3Fluid" sprite="ui_game_symbol_water" color="{input_slot3_fluid_color}" pos="10,-10" width="30" height="30" visible="{input_slot3_fluid_visible}" />
+							<sprite depth="4" name="in3None" sprite="ui_game_symbol_x" color="[white]" pos="10,-10" width="30" height="30" visible="{input_slot3_none_visible}" />
+						</rect>
+					</rect>
+
+					<rect name="inputRowTwo" pos="0,0" width="430" height="514" visible="{input_count_two_visible}">
+						<rect name="twoInputLeft" pos="55,-156" width="50" height="50" depth="3" style="hover" tooltip="{two_input_left_tooltip}">
+							<sprite depth="3" type="sliced" color="0,0,0,140" />
+							<sprite depth="4" name="twoInLeftItem" atlas="ItemIconAtlas" sprite="{two_input_left_item_icon}" width="50" height="50" foregroundlayer="true" visible="{two_input_left_item_visible}" />
+							<sprite depth="4" name="twoInLeftFluid" sprite="ui_game_symbol_water" color="{two_input_left_fluid_color}" pos="10,-10" width="30" height="30" visible="{two_input_left_fluid_visible}" />
+							<sprite depth="4" name="twoInLeftNone" sprite="ui_game_symbol_x" color="[white]" pos="10,-10" width="30" height="30" visible="{two_input_left_none_visible}" />
+						</rect>
+						<label depth="6" pos="102,-170" width="16" height="24" text="+" font_size="24" justify="center" color="[white]" />
+						<rect name="twoInputRight" pos="115,-156" width="50" height="50" depth="3" style="hover" tooltip="{two_input_right_tooltip}">
+							<sprite depth="3" type="sliced" color="0,0,0,140" />
+							<sprite depth="4" name="twoInRightItem" atlas="ItemIconAtlas" sprite="{two_input_right_item_icon}" width="50" height="50" foregroundlayer="true" visible="{two_input_right_item_visible}" />
+							<sprite depth="4" name="twoInRightFluid" sprite="ui_game_symbol_water" color="{two_input_right_fluid_color}" pos="10,-10" width="30" height="30" visible="{two_input_right_fluid_visible}" />
+							<sprite depth="4" name="twoInRightNone" sprite="ui_game_symbol_x" color="[white]" pos="10,-10" width="30" height="30" visible="{two_input_right_none_visible}" />
+						</rect>
+					</rect>
+
+					<sprite depth="6" name="flowArrow" sprite="ui_game_symbol_arrow_right" pos="206,-166" width="18" height="18" color="[white]" />
+					<label depth="6" pos="0,-196" width="430" height="22" text="{recipe_time_text}" font_size="18" justify="center" color="[white]" />
+
+					<rect name="outputRowGeneric" pos="0,0" width="430" height="514" visible="{output_count_not_two_visible}">
+						<rect name="outputSlot1" pos="235,-156" width="50" height="50" depth="3" style="hover" tooltip="{output_slot1_tooltip}" visible="{output_slot1_visible}">
+							<sprite depth="3" type="sliced" color="0,0,0,140" />
+							<sprite depth="4" name="out1Item" atlas="ItemIconAtlas" sprite="{output_slot1_item_icon}" width="50" height="50" foregroundlayer="true" visible="{output_slot1_item_visible}" />
+							<sprite depth="4" name="out1Fluid" sprite="ui_game_symbol_water" color="{output_slot1_fluid_color}" pos="10,-10" width="30" height="30" visible="{output_slot1_fluid_visible}" />
+							<sprite depth="4" name="out1None" sprite="ui_game_symbol_x" color="[white]" pos="10,-10" width="30" height="30" visible="{output_slot1_none_visible}" />
+						</rect>
+						<label depth="6" pos="282,-170" width="16" height="24" text="+" font_size="24" justify="center" color="[white]" visible="{output_plus1_visible}" />
+						<rect name="outputSlot2" pos="295,-156" width="50" height="50" depth="3" style="hover" tooltip="{output_slot2_tooltip}" visible="{output_slot2_visible}">
+							<sprite depth="3" type="sliced" color="0,0,0,140" />
+							<sprite depth="4" name="out2Item" atlas="ItemIconAtlas" sprite="{output_slot2_item_icon}" width="50" height="50" foregroundlayer="true" visible="{output_slot2_item_visible}" />
+							<sprite depth="4" name="out2Fluid" sprite="ui_game_symbol_water" color="{output_slot2_fluid_color}" pos="10,-10" width="30" height="30" visible="{output_slot2_fluid_visible}" />
+							<sprite depth="4" name="out2None" sprite="ui_game_symbol_x" color="[white]" pos="10,-10" width="30" height="30" visible="{output_slot2_none_visible}" />
+						</rect>
+						<label depth="6" pos="342,-170" width="16" height="24" text="+" font_size="24" justify="center" color="[white]" visible="{output_plus2_visible}" />
+						<rect name="outputSlot3" pos="355,-156" width="50" height="50" depth="3" style="hover" tooltip="{output_slot3_tooltip}" visible="{output_slot3_visible}">
+							<sprite depth="3" type="sliced" color="0,0,0,140" />
+							<sprite depth="4" name="out3Item" atlas="ItemIconAtlas" sprite="{output_slot3_item_icon}" width="50" height="50" foregroundlayer="true" visible="{output_slot3_item_visible}" />
+							<sprite depth="4" name="out3Fluid" sprite="ui_game_symbol_water" color="{output_slot3_fluid_color}" pos="10,-10" width="30" height="30" visible="{output_slot3_fluid_visible}" />
+							<sprite depth="4" name="out3None" sprite="ui_game_symbol_x" color="[white]" pos="10,-10" width="30" height="30" visible="{output_slot3_none_visible}" />
+						</rect>
+					</rect>
+
+					<rect name="outputRowTwo" pos="0,0" width="430" height="514" visible="{output_count_two_visible}">
+						<rect name="twoOutputLeft" pos="265,-156" width="50" height="50" depth="3" style="hover" tooltip="{two_output_left_tooltip}">
+							<sprite depth="3" type="sliced" color="0,0,0,140" />
+							<sprite depth="4" name="twoOutLeftItem" atlas="ItemIconAtlas" sprite="{two_output_left_item_icon}" width="50" height="50" foregroundlayer="true" visible="{two_output_left_item_visible}" />
+							<sprite depth="4" name="twoOutLeftFluid" sprite="ui_game_symbol_water" color="{two_output_left_fluid_color}" pos="10,-10" width="30" height="30" visible="{two_output_left_fluid_visible}" />
+							<sprite depth="4" name="twoOutLeftNone" sprite="ui_game_symbol_x" color="[white]" pos="10,-10" width="30" height="30" visible="{two_output_left_none_visible}" />
+						</rect>
+						<label depth="6" pos="312,-170" width="16" height="24" text="+" font_size="24" justify="center" color="[white]" />
+						<rect name="twoOutputRight" pos="325,-156" width="50" height="50" depth="3" style="hover" tooltip="{two_output_right_tooltip}">
+							<sprite depth="3" type="sliced" color="0,0,0,140" />
+							<sprite depth="4" name="twoOutRightItem" atlas="ItemIconAtlas" sprite="{two_output_right_item_icon}" width="50" height="50" foregroundlayer="true" visible="{two_output_right_item_visible}" />
+							<sprite depth="4" name="twoOutRightFluid" sprite="ui_game_symbol_water" color="{two_output_right_fluid_color}" pos="10,-10" width="30" height="30" visible="{two_output_right_fluid_visible}" />
+							<sprite depth="4" name="twoOutRightNone" sprite="ui_game_symbol_x" color="[white]" pos="10,-10" width="30" height="30" visible="{two_output_right_none_visible}" />
+						</rect>
+					</rect>
+
+					<label depth="6" pos="25,-222" width="170" height="20" text="{input_more_text}" font_size="16" justify="center" color="[white]" visible="{input_more_visible}" />
+					<label depth="6" pos="235,-222" width="170" height="20" text="{output_more_text}" font_size="16" justify="center" color="[white]" visible="{output_more_visible}" />
+
+					<rect name="heatBadgeHover" pos="190,-246" width="50" height="38" depth="4" style="hover" tooltip="{heat_badge_tooltip}" visible="{heat_badge_visible}">
+						<sprite depth="5" name="heatBadgeIcon" sprite="ui_game_symbol_fire" color="255,150,40,255" pos="10,-8" width="30" height="30" />
+					</rect>
+					<label depth="6" pos="15,-280" width="400" height="20" text="{heat_badge_text}" font_size="18" justify="center" color="255,180,90,255" visible="{heat_badge_visible}" />
+				</panel>
+			</rect>
+		</window>
+
 		<!-- HUD WINDOW: PIPE PROBE -->
 
 		<window name="windowPipeProbeHud" controller="PipeProbeHud, 7DaysToAutomate" width="460" height="200" panel="TopCenter" dynamic_position="true" open_sound="" close_sound="">
@@ -740,5 +874,9 @@
 				<label depth="2" pos="20,-162" width="420" height="24" text="{probe_line6}" font_size="22" color="[white]" />
 			</rect>
 		</window>
+	</append>
+
+	<append xpath="/windows/window[@name='windowCraftingList']/panel[@name='content']/rect[@name='searchControls']">
+		<button depth="4" name="machineRecipeCodexButton" style="icon30px, press" pos="61,-20" sprite="ui_game_symbol_book" pivot="center" sound="[paging_click]" tooltip="Machine Recipes" collider_scale="1.5" />
 	</append>
 </configs>

@@ -591,10 +591,13 @@ public partial class HigherLogicRegistry
             return;
         }
 
+        HLRDevLog($"[HLR][Caster] SIMULATE BEGIN @ {caster.Position} ticks={hlrTicksToSimulate} pendingOutputs={(caster.PendingOutputs?.Count ?? 0)} isProcessing={caster.IsProcessing}");
+
         if (!TryFlushCasterPendingOutput(caster, out string blockedReason) && caster.PendingOutputs.Count > 0)
         {
             caster.LastAction = "Waiting";
             caster.LastBlockReason = string.IsNullOrEmpty(blockedReason) ? "Output blocked" : blockedReason;
+            HLRDevLog($"[HLR][Caster] WAIT - reason='{caster.LastBlockReason}' @ {caster.Position}");
             caster.WorldTime = worldTime;
             return;
         }
@@ -660,6 +663,9 @@ public partial class HigherLogicRegistry
         caster.LastAction = nextAction;
         caster.LastBlockReason = nextReason;
         caster.WorldTime = worldTime;
+
+        if (caster.LastAction == "Waiting")
+            HLRDevLog($"[HLR][Caster] WAIT - reason='{caster.LastBlockReason}' @ {caster.Position}");
     }
 
     private string GetCasterMissingRequirementReason(CasterSnapshot caster)

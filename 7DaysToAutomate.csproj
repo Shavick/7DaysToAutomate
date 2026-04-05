@@ -141,12 +141,16 @@
     <Compile Include="Classes\HarmonyPatches\Block_OnBlockActivated_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\ProgressionFromXML_Load_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\RecipesFromXML_Load_MachineRecipes_Patch.cs" />
+    <Compile Include="Classes\HarmonyPatches\XUiC_CraftingListInfo_MachineRecipeButton_Patch.cs" />
     <Compile Include="Classes\HarmonyPatches\TileEntity_Instantiate_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\World_Init_Patches.cs" />
     <Compile Include="Classes\HLR\HigherLogicRegistry.cs" />
     <Compile Include="Classes\HLR\HigherLogicRegistry.MixerCaster.cs" />
     <Compile Include="Classes\HLR\HigherLogicRegistry.MixerCasterIO.cs" />
     <Compile Include="Classes\MachineRecipes\MachineRecipeRegistry.cs" />
+    <Compile Include="Classes\MachineRecipes\UI\XUiC_MachineRecipeCodex.cs" />
+    <Compile Include="Classes\MachineRecipes\UI\XUiC_MachineRecipeCodexEntry.cs" />
+    <Compile Include="Classes\MachineRecipes\UI\XUiC_MachineRecipeCodexList.cs" />
     <Compile Include="Classes\Machines\MachineOutputDiscovery.cs" />
     <Compile Include="Classes\Net Packages\NetPackageCrafterControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageMachineAuthority.cs" />

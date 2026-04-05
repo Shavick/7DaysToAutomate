@@ -534,7 +534,7 @@ public partial class HigherLogicRegistry
             return;
 
 
-        if (!TryGetSnapshotStorageItemCounts(crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos, out Dictionary<string, int> availableCounts))
+        if (!TryGetSnapshotStorageItemCounts(ref crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos, out Dictionary<string, int> availableCounts))
         {
             HLRDevLog("[HLR][Crafter] WAIT — Input storage snapshot unavailable");
             return;
@@ -907,7 +907,7 @@ public partial class HigherLogicRegistry
             return $"Need {FormatGallons(fluidAmountMg)} gal {ToFluidDisplayName(fluidType)}";
         }
 
-        if (!TryGetSnapshotStorageItemCounts(infuser.SelectedInputPipeGraphId, infuser.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
+        if (!TryGetSnapshotStorageItemCounts(ref infuser.SelectedInputPipeGraphId, infuser.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
             availableCounts == null)
         {
             return "Input storage unavailable";
@@ -1410,7 +1410,7 @@ public partial class HigherLogicRegistry
 
         if (decanter.PendingItemInput <= 0)
         {
-            if (!TryGetSnapshotStorageItemCounts(decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
+            if (!TryGetSnapshotStorageItemCounts(ref decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
                 availableCounts == null)
             {
                 return "Input item unavailable";
@@ -1494,7 +1494,7 @@ public partial class HigherLogicRegistry
 
         if (melter.PendingItemInput <= 0)
         {
-            if (!TryGetSnapshotStorageItemCounts(melter.SelectedInputPipeGraphId, melter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
+            if (!TryGetSnapshotStorageItemCounts(ref melter.SelectedInputPipeGraphId, melter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
                 availableCounts == null)
             {
                 return "Input item unavailable";
@@ -1693,6 +1693,7 @@ public partial class HigherLogicRegistry
         bool TryMatchRecipe(
             MachineRecipe machineRecipe,
             bool requireSelectedFluid,
+            bool updateSelection,
             out string inputItem,
             out int inputCount,
             out int outputRequiredHeat,
@@ -1748,8 +1749,12 @@ public partial class HigherLogicRegistry
             if (outputRequiredHeat > 0 && melter.CurrentHeat < outputRequiredHeat)
                 return false;
 
-            melter.SelectedRecipeKey = machineRecipe.NormalizedKey ?? string.Empty;
-            melter.SelectedFluidType = fluidType ?? string.Empty;
+            if (updateSelection)
+            {
+                melter.SelectedRecipeKey = machineRecipe.NormalizedKey ?? string.Empty;
+                melter.SelectedFluidType = fluidType ?? string.Empty;
+            }
+
             return true;
         }
 
@@ -1758,6 +1763,7 @@ public partial class HigherLogicRegistry
             TryMatchRecipe(
                 selectedRecipe,
                 true,
+                false,
                 out matchedItemName,
                 out requiredInputCount,
                 out requiredHeat,
@@ -1769,11 +1775,17 @@ public partial class HigherLogicRegistry
             return true;
         }
 
+        // Respect explicit user selection. If that recipe cannot currently run
+        // (or isn't resolvable yet), do not auto-switch to another recipe.
+        if (!string.IsNullOrEmpty(melter.SelectedRecipeKey))
+            return false;
+
         List<MachineRecipe> recipes = MachineRecipeRegistry.GetRecipesForMachineGroups(groupsCsv, false);
         for (int i = 0; i < recipes.Count; i++)
         {
             if (TryMatchRecipe(
                     recipes[i],
+                    true,
                     true,
                     out matchedItemName,
                     out requiredInputCount,
@@ -1792,6 +1804,7 @@ public partial class HigherLogicRegistry
             if (TryMatchRecipe(
                     recipes[i],
                     false,
+                    true,
                     out matchedItemName,
                     out requiredInputCount,
                     out requiredHeat,
@@ -2217,7 +2230,7 @@ public partial class HigherLogicRegistry
             return false;
         }
 
-        if (!TryGetSnapshotStorageItemCounts(melter.SelectedInputPipeGraphId, melter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
+        if (!TryGetSnapshotStorageItemCounts(ref melter.SelectedInputPipeGraphId, melter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
             availableCounts == null)
         {
             blockedReason = "Input item unavailable";
@@ -2358,7 +2371,7 @@ public partial class HigherLogicRegistry
             return false;
         }
 
-        if (!TryGetSnapshotStorageItemCounts(decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
+        if (!TryGetSnapshotStorageItemCounts(ref decanter.SelectedInputPipeGraphId, decanter.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
             availableCounts == null)
         {
             blockedReason = "Input item unavailable";
@@ -2528,7 +2541,7 @@ public partial class HigherLogicRegistry
     }
 
     private bool TryGetSnapshotStorageItemCounts(
-        Guid pipeGraphId,
+        ref Guid pipeGraphId,
         Vector3i storagePos,
         out Dictionary<string, int> itemCounts)
     {
@@ -2563,8 +2576,13 @@ public partial class HigherLogicRegistry
         }
 
         // Fast path: current ID still valid
-        if (TryGetSnapshotStorageItemCounts(pipeGraphId, storagePos, out _))
+        Guid originalGraphId = pipeGraphId;
+        if (TryGetSnapshotStorageItemCounts(ref pipeGraphId, storagePos, out _))
+        {
+            if (pipeGraphId != originalGraphId)
+                isDirty = true;
             return true;
+        }
 
         // Fallback: prefer anchor+storage match; otherwise fallback to machine+storage.
         Guid resolvedGraphId = Guid.Empty;
@@ -2582,7 +2600,7 @@ public partial class HigherLogicRegistry
                 PipeGraphManager.TryResolveMachinePipeAnchorPosition(world, 0, machinePos, pipeGraphId, storagePos, out Vector3i reboundAnchor))
                 machinePipeAnchorPos = reboundAnchor;
             isDirty = true;                // ensure remapped ID gets saved
-            return TryGetSnapshotStorageItemCounts(pipeGraphId, storagePos, out _);
+            return TryGetSnapshotStorageItemCounts(ref pipeGraphId, storagePos, out _);
         }
 
         HLRDevLog($"[HLR][PipeIO][Validate] MISS graph={pipeGraphId} machinePos={machinePos} anchor={machinePipeAnchorPos} pos={storagePos}");

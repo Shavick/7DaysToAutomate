@@ -12,8 +12,10 @@ public class ConsoleCmdMachineRecipes : ConsoleCmdAbstract
     {
         return
             "Usage:\n" +
+            "  mr open\n" +
             "  mr list [machineGroup] [verbose]\n" +
             "Examples:\n" +
+            "  mr open\n" +
             "  mr list\n" +
             "  mr list fluiddecanter\n" +
             "  mr list fluiddecanter verbose";
@@ -28,7 +30,19 @@ public class ConsoleCmdMachineRecipes : ConsoleCmdAbstract
     {
         try
         {
-            if (_params == null || _params.Count == 0 || !string.Equals(_params[0], "list", StringComparison.OrdinalIgnoreCase))
+            if (_params == null || _params.Count == 0)
+            {
+                SdtdConsole.Instance.Output(getHelp());
+                return;
+            }
+
+            if (string.Equals(_params[0], "open", StringComparison.OrdinalIgnoreCase))
+            {
+                OpenCodex();
+                return;
+            }
+
+            if (!string.Equals(_params[0], "list", StringComparison.OrdinalIgnoreCase))
             {
                 SdtdConsole.Instance.Output(getHelp());
                 return;
@@ -106,5 +120,19 @@ public class ConsoleCmdMachineRecipes : ConsoleCmdAbstract
             SdtdConsole.Instance.Output($"[MachineRecipe] ERROR - {ex.Message}");
             Log.Exception(ex);
         }
+    }
+
+    private static void OpenCodex()
+    {
+        World world = GameManager.Instance?.World;
+        EntityPlayerLocal localPlayer = world?.GetPrimaryPlayer() as EntityPlayerLocal;
+        if (localPlayer?.playerUI?.windowManager == null)
+        {
+            SdtdConsole.Instance.Output("[MachineRecipe] Could not open codex. Local player UI is unavailable.");
+            return;
+        }
+
+        XUiC_MachineRecipeCodex.Open(localPlayer);
+        SdtdConsole.Instance.Output("[MachineRecipe] Opened Machine Recipe Codex.");
     }
 }

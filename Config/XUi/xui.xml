@@ -40,6 +40,10 @@
 			<window name="windowCasterInfo" />
 		</window_group>
 
+		<window_group name="MachineRecipeCodex" open_backpack_on_open="false" close_compass_on_open="true">
+			<window name="windowMachineRecipeCodex" />
+		</window_group>
+
 		<!-- HUD WINDOW GROUPS -->
 
 		<window_group name="PipeProbeHud" open_backpack_on_open="false">
