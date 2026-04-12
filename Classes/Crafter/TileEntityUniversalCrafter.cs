@@ -8,6 +8,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
     private const int MaxSerializedInputTargets = 64;
     private const int MaxSerializedOutputTargets = 64;
     private const int MaxSerializedInputBufferEntries = 256;
+    private const string DefaultCraftingArea = "workbench";
     public bool IsDevLogging => blockValue.Block.Properties.GetBool("DevLogs");
 
     public string SelectedRecipeName = "";
@@ -122,6 +123,58 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             return 0;
 
         return inputBuffer != null && inputBuffer.TryGetValue(itemName, out int count) ? count : 0;
+    }
+
+    public List<string> GetConfiguredCraftingAreas()
+    {
+        string raw = blockValue.Block?.Properties?.GetString("CraftingAreaRecipes");
+        if (string.IsNullOrWhiteSpace(raw))
+            raw = blockValue.Block?.Properties?.GetString("craftingarearecipes");
+
+        List<string> areas = new List<string>();
+        if (string.IsNullOrWhiteSpace(raw))
+            return areas;
+
+        HashSet<string> seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        string[] tokens = raw.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+        for (int i = 0; i < tokens.Length; i++)
+        {
+            string token = (tokens[i] ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(token))
+                continue;
+
+            if (seen.Add(token))
+                areas.Add(token);
+        }
+
+        return areas;
+    }
+
+    public bool IsRecipeAllowedByCraftingArea(Recipe recipe)
+    {
+        if (recipe == null)
+            return false;
+
+        string recipeArea = (recipe.craftingArea ?? string.Empty).Trim();
+        List<string> configuredAreas = GetConfiguredCraftingAreas();
+
+        // Backward-compatible default behavior: show legacy workbench pool.
+        if (configuredAreas.Count == 0)
+        {
+            return string.IsNullOrEmpty(recipeArea) ||
+                string.Equals(recipeArea, DefaultCraftingArea, StringComparison.OrdinalIgnoreCase);
+        }
+
+        if (string.IsNullOrEmpty(recipeArea))
+            return false;
+
+        for (int i = 0; i < configuredAreas.Count; i++)
+        {
+            if (string.Equals(configuredAreas[i], recipeArea, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
     }
 
     private float GetInternalStorageMultiplier()
@@ -1697,6 +1750,12 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             return false;
         }
 
+        if (!IsRecipeAllowedByCraftingArea(recipe))
+        {
+            isCrafting = false;
+            return false;
+        }
+
         if (!HasValidSelectedOutput(GameManager.Instance.World))
         {
             isCrafting = false;
@@ -2005,6 +2064,12 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (recipe == null)
         {
             DevLog($"ServerSelectRecipe rejected: recipe '{recipeName}' not found", DevLogLevel.Warning);
+            return false;
+        }
+
+        if (!IsRecipeAllowedByCraftingArea(recipe))
+        {
+            DevLog($"ServerSelectRecipe rejected: recipe '{recipeName}' crafting area '{recipe.craftingArea}' is not allowed by CraftingAreaRecipes", DevLogLevel.Warning);
             return false;
         }
 

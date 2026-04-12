@@ -14,6 +14,8 @@ universalClayExtractor,"Clay Extractor"
 
 universalCrafter,"Universal Crafter"
 universalCrafterDesc,"Automates crafting recipes using configured input and output containers."
+universalCementMixer,"Universal Cement Mixer"
+universalCementMixerDesc,"Automates cement mixer recipes using configured input and output containers."
 
 networkController,"Network Controller"
 networkControllerDesc,"Manages machine networks and links connected pipe systems."

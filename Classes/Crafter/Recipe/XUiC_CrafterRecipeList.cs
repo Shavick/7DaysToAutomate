@@ -136,6 +136,7 @@ public class XUiC_CrafterRecipeList : XUiController
     private void BuildRecipeList(string searchText = "")
     {
         recipeInfos.Clear();
+        TileEntityUniversalCrafter crafter = GetCrafter();
 
         bool hasSearch = !string.IsNullOrEmpty(searchText);
 
@@ -144,8 +145,7 @@ public class XUiC_CrafterRecipeList : XUiController
             if (recipe == null)
                 continue;
 
-            if (!string.IsNullOrEmpty(recipe.craftingArea) &&
-                !string.Equals(recipe.craftingArea, "workbench", StringComparison.OrdinalIgnoreCase))
+            if (crafter != null && !crafter.IsRecipeAllowedByCraftingArea(recipe))
                 continue;
 
             if (!recipe.IsUnlocked(xui?.playerUI.entityPlayer))

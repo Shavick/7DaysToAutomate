@@ -34,7 +34,7 @@
 
 		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="30,100" value="1" tags="universalIronExtractort2" />
 
-		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="40,100" value="1" tags="universalIronExtractort3,universalCrafter" />
+		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="40,100" value="1" tags="universalIronExtractort3,universalCrafter,universalCementMixer" />
 
 		<passive_effect name="RecipeTagUnlocked" operation="base_set" level="50,100" value="1" tags="universalIronExtractort4" />
 
@@ -47,7 +47,7 @@
 		<unlock_entry item="universalIronExtractort2" unlock_tier="1" />
 	</append>
 	<append xpath="/progression/crafting_skills/crafting_skill[@name='craftingWorkstations']/display_entry[@icon='toolApiaryExtractor,toolApiaryBroodBox,resourceWaterFilter,chemistryStation']">
-		<unlock_entry item="universalIronExtractort3,universalCrafter" unlock_tier="1" />
+		<unlock_entry item="universalIronExtractort3,universalCrafter,universalCementMixer" unlock_tier="1" />
 
 		<unlock_entry item="universalIronExtractort4" unlock_tier="4" />
 	</append>

@@ -12,8 +12,14 @@
 
 		<machineRecipe name="gas_from_gas_can" machine="fluiddecanter">
 			<input item="ammoGasCan" count="1" />
-			<output item="resourceScrapPolymers" count="10" />
-			<fluid_output type="gas" gallons="2" />
+			<output item="resourceScrapPolymers" count="2" />
+			<fluid_output type="gas" gallons="0.1" />
+		</machineRecipe>
+
+		<machineRecipe name="oil_from_oil_can" machine="fluiddecanter">
+			<input item="resourceOil" count="1" />
+			<output item="resourceScrapPolymers" count="5" />
+			<fluid_output type="gas" gallons="0.5" />
 		</machineRecipe>
 
 		<!-- FLUID INFUSER -->
@@ -31,13 +37,13 @@
 		</machineRecipe>
 
 		<machineRecipe name="ammogascan" machine="fluidinfuser">
-			<input item="resourceScrapPolymers" count="10" />
-			<fluid_input type="gas" gallons="2" />
+			<input item="resourceScrapPolymers" count="2" />
+			<fluid_input type="gas" gallons="0.1" />
 			<output item="ammoGasCan" count="1" />
 		</machineRecipe>
 
 		<machineRecipe name="resourceoil" machine="fluidinfuser">
-			<input item="resourceScrapPolymers" count="10" />
+			<input item="resourceScrapPolymers" count="5" />
 			<fluid_input type="molten_oil" gallons="0.5" />
 			<output item="resourceOil" count="1" />
 		</machineRecipe>
@@ -298,6 +304,14 @@
 		<!-- MACHINES: CRAFTER -->
 
 		<recipe name="universalCrafter" count="1" craft_area="workbench" craft_time="60" tags="learnable,workbenchCrafting,universalCrafter">
+			<ingredient name="resourceForgedSteel" count="35" />
+			<ingredient name="resourceMechanicalParts" count="20" />
+			<ingredient name="resourceElectricParts" count="20" />
+			<ingredient name="resourceDuctTape" count="8" />
+			<ingredient name="resourceScrapPolymers" count="40" />
+		</recipe>
+
+		<recipe name="universalCementMixer" count="1" craft_area="workbench" craft_time="60" tags="learnable,workbenchCrafting,universalCementMixer">
 			<ingredient name="resourceForgedSteel" count="35" />
 			<ingredient name="resourceMechanicalParts" count="20" />
 			<ingredient name="resourceElectricParts" count="20" />
