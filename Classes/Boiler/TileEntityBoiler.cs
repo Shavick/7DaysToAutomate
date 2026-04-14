@@ -104,6 +104,7 @@ public class TileEntityBoiler : TileEntityMachine
             PendingFluidOutputCapacityMg = Math.Max(0, pendingFluidOutputCapacityMg),
             CurrentHeat = Math.Max(0, CurrentHeat),
             CurrentHeatSourceMax = Math.Max(0, CurrentHeatSourceMax),
+            DevLogsEnabled = ReadBoolProperty("DevLogs", false),
             MachineRecipeGroupsCsv = machineRecipeGroupsCsv ?? DefaultMachineRecipeGroup,
             LastAction = LastAction ?? string.Empty,
             LastBlockReason = LastBlockReason ?? string.Empty
@@ -1246,6 +1247,14 @@ public class TileEntityBoiler : TileEntityMachine
         else if (value > max)
             value = max;
 
+        return value;
+    }
+
+    private bool ReadBoolProperty(string propertyName, bool fallback)
+    {
+        string raw = blockValue.Block?.Properties?.GetString(propertyName);
+        if (string.IsNullOrEmpty(raw) || !bool.TryParse(raw, out bool value))
+            value = fallback;
         return value;
     }
 

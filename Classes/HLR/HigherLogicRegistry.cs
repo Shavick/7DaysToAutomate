@@ -1688,6 +1688,33 @@ public partial class HigherLogicRegistry
             candidates.Add(candidate);
         }
 
+        if (candidates.Count > 0)
+            return candidates;
+
+        // HLR/offline fallback: when adjacent live chunks are unavailable, infer adjacency
+        // from persisted fluid-graph topology instead of live tile-entity reads.
+        var allGraphs = FluidGraphManager.GetAllGraphs();
+        if (allGraphs == null || allGraphs.Count == 0)
+            return candidates;
+
+        for (int i = 0; i < offsets.Length; i++)
+        {
+            Vector3i adjacentPos = machinePos + offsets[i];
+            foreach (var kvp in allGraphs)
+            {
+                Guid graphId = kvp.Key;
+                FluidGraphData graph = kvp.Value;
+                if (graphId == Guid.Empty || graph == null || candidates.Contains(graphId))
+                    continue;
+
+                bool adjacentByPipe = graph.PipePositions != null && graph.PipePositions.Contains(adjacentPos);
+                bool adjacentByPump = !adjacentByPipe && graph.PumpEndpoints != null && graph.PumpEndpoints.Contains(adjacentPos);
+                bool adjacentByStorage = !adjacentByPipe && !adjacentByPump && graph.StorageEndpoints != null && graph.StorageEndpoints.Contains(adjacentPos);
+                if (adjacentByPipe || adjacentByPump || adjacentByStorage)
+                    candidates.Add(graphId);
+            }
+        }
+
         return candidates;
     }
 

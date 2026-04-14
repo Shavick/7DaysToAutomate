@@ -3,7 +3,7 @@ using System;
 public class BoilerSnapshot : IHLRSnapshot
 {
     public string SnapshotKind => "Boiler";
-    public int SnapshotVersion => 1;
+    public int SnapshotVersion => 2;
 
     public Guid MachineId { get; set; }
     public Vector3i Position { get; set; }
@@ -30,6 +30,7 @@ public class BoilerSnapshot : IHLRSnapshot
     public int PendingFluidOutputCapacityMg;
     public int CurrentHeat;
     public int CurrentHeatSourceMax;
+    public bool DevLogsEnabled;
 
     public string MachineRecipeGroupsCsv;
     public string LastAction;
