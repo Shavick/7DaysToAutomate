@@ -76,8 +76,86 @@ public class TileEntityBoiler : TileEntityMachine
         return unchecked((TileEntityType)UCTileEntityIDs.Boiler);
     }
 
-    public override IHLRSnapshot BuildHLRSnapshot(WorldBase world) => null;
-    public override void ApplyHLRSnapshot(object snapshotObj) { }
+    public override IHLRSnapshot BuildHLRSnapshot(WorldBase world)
+    {
+        EnsureConfigLoaded();
+        ulong now = world?.GetWorldTime() ?? 0UL;
+
+        return new BoilerSnapshot
+        {
+            MachineId = MachineGuid,
+            Position = ToWorldPos(),
+            WorldTime = now,
+            LastHLRSimTime = now,
+            IsOn = IsOn,
+            SelectedRecipeKey = SelectedRecipeKey ?? string.Empty,
+            SelectedFluidType = SelectedFluidType ?? string.Empty,
+            SelectedFluidGraphId = SelectedFluidGraphId,
+            IsProcessing = IsProcessing,
+            CycleTickCounter = CycleTickCounter,
+            CycleTickLength = Math.Max(1, CycleTickLength),
+            ActiveRecipeKey = ActiveRecipeKey ?? string.Empty,
+            PendingFluidInputAType = PendingFluidInputAType ?? string.Empty,
+            PendingFluidInputAAmountMg = Math.Max(0, PendingFluidInputAAmountMg),
+            PendingFluidInputBType = PendingFluidInputBType ?? string.Empty,
+            PendingFluidInputBAmountMg = Math.Max(0, PendingFluidInputBAmountMg),
+            PendingFluidOutputType = PendingFluidOutputType ?? string.Empty,
+            PendingFluidOutput = Math.Max(0, pendingFluidOutput),
+            PendingFluidOutputCapacityMg = Math.Max(0, pendingFluidOutputCapacityMg),
+            CurrentHeat = Math.Max(0, CurrentHeat),
+            CurrentHeatSourceMax = Math.Max(0, CurrentHeatSourceMax),
+            MachineRecipeGroupsCsv = machineRecipeGroupsCsv ?? DefaultMachineRecipeGroup,
+            LastAction = LastAction ?? string.Empty,
+            LastBlockReason = LastBlockReason ?? string.Empty
+        };
+    }
+
+    public override void ApplyHLRSnapshot(object snapshotObj)
+    {
+        if (!(snapshotObj is BoilerSnapshot snapshot))
+            return;
+
+        IsOn = snapshot.IsOn;
+        SelectedRecipeKey = snapshot.SelectedRecipeKey ?? string.Empty;
+        SelectedFluidType = (snapshot.SelectedFluidType ?? string.Empty).Trim().ToLowerInvariant();
+        SelectedFluidGraphId = snapshot.SelectedFluidGraphId;
+        IsProcessing = snapshot.IsProcessing;
+        CycleTickCounter = Math.Max(0, snapshot.CycleTickCounter);
+        CycleTickLength = Math.Max(1, snapshot.CycleTickLength);
+        ActiveRecipeKey = snapshot.ActiveRecipeKey ?? string.Empty;
+        PendingFluidInputAType = (snapshot.PendingFluidInputAType ?? string.Empty).Trim().ToLowerInvariant();
+        PendingFluidInputAAmountMg = Math.Max(0, snapshot.PendingFluidInputAAmountMg);
+        PendingFluidInputBType = (snapshot.PendingFluidInputBType ?? string.Empty).Trim().ToLowerInvariant();
+        PendingFluidInputBAmountMg = Math.Max(0, snapshot.PendingFluidInputBAmountMg);
+        PendingFluidOutputType = (snapshot.PendingFluidOutputType ?? string.Empty).Trim().ToLowerInvariant();
+        pendingFluidOutput = Math.Max(0, snapshot.PendingFluidOutput);
+        pendingFluidOutputCapacityMg = Math.Max(1, snapshot.PendingFluidOutputCapacityMg);
+        CurrentHeat = Math.Max(0, snapshot.CurrentHeat);
+        CurrentHeatSourceMax = Math.Max(0, snapshot.CurrentHeatSourceMax);
+        heatFraction = 0f;
+        machineRecipeGroupsCsv = string.IsNullOrWhiteSpace(snapshot.MachineRecipeGroupsCsv)
+            ? DefaultMachineRecipeGroup
+            : snapshot.MachineRecipeGroupsCsv.Trim();
+        LastAction = snapshot.LastAction ?? string.Empty;
+        LastBlockReason = snapshot.LastBlockReason ?? string.Empty;
+
+        if (!IsProcessing)
+        {
+            CycleTickCounter = 0;
+            ActiveRecipeKey = string.Empty;
+            ClearPendingInputs();
+        }
+
+        configLoaded = false;
+        EnsureConfigLoaded();
+        simulatedByHLR = false;
+        NeedsUiRefresh = true;
+        lastStateSignature = int.MinValue;
+
+        World currentWorld = GameManager.Instance?.World;
+        if (currentWorld != null && !currentWorld.IsRemote())
+            setModified();
+    }
 
     protected override void OnPowerStateChanged(bool state)
     {

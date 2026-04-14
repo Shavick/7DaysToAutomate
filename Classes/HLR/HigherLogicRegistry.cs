@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using static TileEntityUniversalExtractor;
 
@@ -311,6 +312,13 @@ public partial class HigherLogicRegistry
                 HLRDevLog($"[HLR][FluidMixer] Simulate @ {mixer.Position} ticks={hlrTicksToSimulate}");
                 SimulateFluidMixer(mixer, worldTime, hlrTicksToSimulate);
                 mixer.LastHLRSimTime = worldTime;
+                isDirty = true;
+                break;
+
+            case BoilerSnapshot boiler:
+                HLRDevLog($"[HLR][Boiler] Simulate @ {boiler.Position} ticks={hlrTicksToSimulate}");
+                SimulateBoiler(boiler, worldTime, hlrTicksToSimulate);
+                boiler.LastHLRSimTime = worldTime;
                 isDirty = true;
                 break;
 
@@ -689,6 +697,8 @@ public partial class HigherLogicRegistry
         if (melter == null)
             return;
 
+        SimulateMelterHeat(melter, hlrTicksToSimulate);
+
         HLRDevLog($"[HLR][Melter] SIMULATE BEGIN @ {melter.Position} ticks={hlrTicksToSimulate} pendingIn={melter.PendingItemInput} pendingItemOut={melter.PendingItemOutput} pendingFluidOutMg={melter.PendingFluidOutput} heat={melter.CurrentHeat}");
 
         if (!melter.IsOn)
@@ -757,6 +767,55 @@ public partial class HigherLogicRegistry
 
         melter.WorldTime = worldTime;
         HLRDevLog($"[HLR][Melter] SIMULATE END @ {melter.Position} action='{melter.LastAction}' reason='{melter.LastBlockReason}' pendingIn={melter.PendingItemInput} pendingItemOut={melter.PendingItemOutput} pendingFluidOutMg={melter.PendingFluidOutput} heat={melter.CurrentHeat}");
+    }
+
+    private void SimulateMelterHeat(MelterSnapshot melter, int hlrTicksToSimulate)
+    {
+        if (melter == null || hlrTicksToSimulate <= 0)
+            return;
+
+        float gainPerTick = GetMelterHeatFloatProperty(melter.Position, "HeatGainCapPerTick", 3f, 0f, 1000f);
+        float lossPerTick = GetMelterHeatFloatProperty(melter.Position, "HeatLossPerTick", 1f, 0f, 1000f);
+
+        float heatExact = Math.Max(0f, melter.CurrentHeat);
+        float sourceMax = Math.Max(0f, melter.CurrentHeatSourceMax);
+
+        if (heatExact < sourceMax)
+            heatExact = Math.Min(sourceMax, heatExact + Math.Max(0f, gainPerTick) * hlrTicksToSimulate);
+        else if (heatExact > sourceMax)
+            heatExact = Math.Max(sourceMax, heatExact - Math.Max(0f, lossPerTick) * hlrTicksToSimulate);
+
+        int updatedHeat = Math.Max(0, (int)Math.Floor(heatExact));
+        if (updatedHeat != melter.CurrentHeat)
+        {
+            HLRDevLog($"[HLR][Melter][Heat] UPDATE @ {melter.Position} ticks={hlrTicksToSimulate} sourceMax={melter.CurrentHeatSourceMax} heat={melter.CurrentHeat}->{updatedHeat}");
+            melter.CurrentHeat = updatedHeat;
+        }
+    }
+
+    private float GetMelterHeatFloatProperty(Vector3i position, string propertyName, float fallback, float min, float max)
+    {
+        float value = fallback;
+
+        if (SafeWorldRead.TryGetBlock(world, 0, position, out BlockValue blockValue))
+        {
+            string raw = blockValue.Block?.Properties?.GetString(propertyName);
+            if (!string.IsNullOrWhiteSpace(raw))
+            {
+                if (!float.TryParse(raw.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out value) &&
+                    !float.TryParse(raw.Trim(), out value))
+                {
+                    value = fallback;
+                }
+            }
+        }
+
+        if (value < min)
+            value = min;
+        else if (value > max)
+            value = max;
+
+        return value;
     }
 
     private void SimulateInfuser(FluidInfuserSnapshot infuser, ulong worldTime, int hlrTicksToSimulate)
@@ -1487,10 +1546,26 @@ public partial class HigherLogicRegistry
         //if (!HasValidGraphStorageEndpoint(ref melter.SelectedOutputPipeGraphId, melter.SelectedOutputChestPos))
         //    return "Missing Item Output";
 
-        if (!TryResolveDecanterFluidGraph(melter, out Guid resolvedFluidGraphId))
-            return "Missing/Invalid Fluid Output";
+        bool hasPendingFluidBufferRoom = melter.PendingFluidOutputCapacityMg > 0 &&
+                                         melter.PendingFluidOutput < melter.PendingFluidOutputCapacityMg;
 
-        melter.SelectedFluidGraphId = resolvedFluidGraphId;
+        // Offline melter simulation should trust cached fluid graph identity and keep buffering output.
+        // Live graph re-resolution is only needed when we have no cached graph to trust.
+        if (melter.SelectedFluidGraphId != Guid.Empty)
+        {
+            if (!hasPendingFluidBufferRoom)
+                return "Pending fluid output full";
+
+            HLRDevLog($"[HLR][Melter][Req] FLUID GRAPH CACHED - graph={melter.SelectedFluidGraphId} pendingFluidOutMg={melter.PendingFluidOutput} capacityMg={melter.PendingFluidOutputCapacityMg}");
+        }
+        else if (TryResolveDecanterFluidGraph(melter, out Guid resolvedFluidGraphId))
+        {
+            melter.SelectedFluidGraphId = resolvedFluidGraphId;
+        }
+        else
+        {
+            return "Missing/Invalid Fluid Output";
+        }
 
         if (melter.PendingItemInput <= 0)
         {
@@ -2658,6 +2733,8 @@ public partial class HigherLogicRegistry
             lastSimTime = infuser.LastHLRSimTime;
         else if (snapshot is FluidMixerSnapshot mixer)
             lastSimTime = mixer.LastHLRSimTime;
+        else if (snapshot is BoilerSnapshot boiler)
+            lastSimTime = boiler.LastHLRSimTime;
         else if (snapshot is CasterSnapshot caster)
             lastSimTime = caster.LastHLRSimTime;
         else
@@ -2770,6 +2847,9 @@ public partial class HigherLogicRegistry
 
             case FluidMixerSnapshot mixer:
                 return CloneFluidMixerSnapshot(mixer);
+
+            case BoilerSnapshot boiler:
+                return CloneBoilerSnapshot(boiler);
 
             case CasterSnapshot caster:
                 return CloneCasterSnapshot(caster);
@@ -3232,6 +3312,14 @@ public partial class HigherLogicRegistry
                 HLRDevLog($"[HLR][Factory] Unsupported FluidMixer version {version}");
                 return null;
 
+            case "Boiler":
+                if (version >= 1)
+                {
+                    return new BoilerSnapshot();
+                }
+                HLRDevLog($"[HLR][Factory] Unsupported Boiler version {version}");
+                return null;
+
             case "Caster":
                 if (version >= 1)
                 {
@@ -3338,6 +3426,9 @@ public partial class HigherLogicRegistry
 
                     if (snapshot is FluidMixerSnapshot mixer)
                         SaveFluidMixerSnapshot(bw, mixer);
+
+                    if (snapshot is BoilerSnapshot boiler)
+                        SaveBoilerSnapshot(bw, boiler);
 
                     if (snapshot is CasterSnapshot caster)
                         SaveCasterSnapshot(bw, caster);
@@ -3697,6 +3788,8 @@ public partial class HigherLogicRegistry
                         LoadFluidInfuserSnapshot(br, infuser, snapshotVersion);
                     if (snapshot is FluidMixerSnapshot mixer)
                         LoadFluidMixerSnapshot(br, mixer, snapshotVersion);
+                    if (snapshot is BoilerSnapshot boiler)
+                        LoadBoilerSnapshot(br, boiler, snapshotVersion);
                     if (snapshot is CasterSnapshot caster)
                         LoadCasterSnapshot(br, caster, snapshotVersion);
                     snapshots[machineId] = snapshot;

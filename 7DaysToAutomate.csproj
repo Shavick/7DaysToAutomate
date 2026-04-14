@@ -129,6 +129,7 @@
     <Compile Include="Classes\FluidMixer\TileEntityFluidMixer.cs" />
     <Compile Include="Classes\FluidMixer\XUiC_FluidMixerInfo.cs" />
     <Compile Include="Classes\Boiler\BoilerBlock.cs" />
+    <Compile Include="Classes\Boiler\BoilerSnapshot.cs" />
     <Compile Include="Classes\Boiler\TileEntityBoiler.cs" />
     <Compile Include="Classes\Boiler\XUiC_BoilerInfo.cs" />
     <Compile Include="Classes\Caster\CasterBlock.cs" />

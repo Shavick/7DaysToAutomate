@@ -33,6 +33,37 @@ public partial class HigherLogicRegistry
         };
     }
 
+    private BoilerSnapshot CloneBoilerSnapshot(BoilerSnapshot source)
+    {
+        return new BoilerSnapshot
+        {
+            MachineId = source.MachineId,
+            Position = source.Position,
+            WorldTime = source.WorldTime,
+            LastHLRSimTime = source.LastHLRSimTime,
+            IsOn = source.IsOn,
+            SelectedRecipeKey = source.SelectedRecipeKey,
+            SelectedFluidType = source.SelectedFluidType,
+            SelectedFluidGraphId = source.SelectedFluidGraphId,
+            IsProcessing = source.IsProcessing,
+            CycleTickCounter = source.CycleTickCounter,
+            CycleTickLength = source.CycleTickLength,
+            ActiveRecipeKey = source.ActiveRecipeKey,
+            PendingFluidInputAType = source.PendingFluidInputAType,
+            PendingFluidInputAAmountMg = source.PendingFluidInputAAmountMg,
+            PendingFluidInputBType = source.PendingFluidInputBType,
+            PendingFluidInputBAmountMg = source.PendingFluidInputBAmountMg,
+            PendingFluidOutputType = source.PendingFluidOutputType,
+            PendingFluidOutput = source.PendingFluidOutput,
+            PendingFluidOutputCapacityMg = source.PendingFluidOutputCapacityMg,
+            CurrentHeat = source.CurrentHeat,
+            CurrentHeatSourceMax = source.CurrentHeatSourceMax,
+            MachineRecipeGroupsCsv = source.MachineRecipeGroupsCsv,
+            LastAction = source.LastAction,
+            LastBlockReason = source.LastBlockReason
+        };
+    }
+
     private CasterSnapshot CloneCasterSnapshot(CasterSnapshot source)
     {
         var clone = new CasterSnapshot
@@ -92,6 +123,32 @@ public partial class HigherLogicRegistry
         bw.Write(mixer.MachineRecipeGroupsCsv ?? string.Empty);
         bw.Write(mixer.LastAction ?? string.Empty);
         bw.Write(mixer.LastBlockReason ?? string.Empty);
+    }
+
+    private void SaveBoilerSnapshot(BinaryWriter bw, BoilerSnapshot boiler)
+    {
+        bw.Write(boiler.WorldTime);
+        bw.Write(boiler.LastHLRSimTime);
+        bw.Write(boiler.IsOn);
+        bw.Write(boiler.SelectedRecipeKey ?? string.Empty);
+        bw.Write(boiler.SelectedFluidType ?? string.Empty);
+        bw.Write(boiler.SelectedFluidGraphId.ToString());
+        bw.Write(boiler.IsProcessing);
+        bw.Write(boiler.CycleTickCounter);
+        bw.Write(boiler.CycleTickLength);
+        bw.Write(boiler.ActiveRecipeKey ?? string.Empty);
+        bw.Write(boiler.PendingFluidInputAType ?? string.Empty);
+        bw.Write(boiler.PendingFluidInputAAmountMg);
+        bw.Write(boiler.PendingFluidInputBType ?? string.Empty);
+        bw.Write(boiler.PendingFluidInputBAmountMg);
+        bw.Write(boiler.PendingFluidOutputType ?? string.Empty);
+        bw.Write(boiler.PendingFluidOutput);
+        bw.Write(boiler.PendingFluidOutputCapacityMg);
+        bw.Write(boiler.CurrentHeat);
+        bw.Write(boiler.CurrentHeatSourceMax);
+        bw.Write(boiler.MachineRecipeGroupsCsv ?? string.Empty);
+        bw.Write(boiler.LastAction ?? string.Empty);
+        bw.Write(boiler.LastBlockReason ?? string.Empty);
     }
 
     private void SaveCasterSnapshot(BinaryWriter bw, CasterSnapshot caster)
@@ -171,6 +228,49 @@ public partial class HigherLogicRegistry
             mixer.PendingFluidInputAAmountMg = 0;
             mixer.PendingFluidInputBType = string.Empty;
             mixer.PendingFluidInputBAmountMg = 0;
+        }
+    }
+
+    private void LoadBoilerSnapshot(BinaryReader br, BoilerSnapshot boiler, int snapshotVersion)
+    {
+        boiler.WorldTime = br.ReadUInt64();
+        boiler.LastHLRSimTime = snapshotVersion >= 1 ? br.ReadUInt64() : boiler.WorldTime;
+        boiler.IsOn = br.ReadBoolean();
+        boiler.SelectedRecipeKey = br.ReadString() ?? string.Empty;
+        boiler.SelectedFluidType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
+
+        string fluidGraph = br.ReadString();
+        if (!Guid.TryParse(fluidGraph, out boiler.SelectedFluidGraphId))
+            boiler.SelectedFluidGraphId = Guid.Empty;
+
+        boiler.IsProcessing = br.ReadBoolean();
+        boiler.CycleTickCounter = Math.Max(0, br.ReadInt32());
+        boiler.CycleTickLength = Math.Max(1, br.ReadInt32());
+        boiler.ActiveRecipeKey = br.ReadString() ?? string.Empty;
+        boiler.PendingFluidInputAType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
+        boiler.PendingFluidInputAAmountMg = Math.Max(0, br.ReadInt32());
+        boiler.PendingFluidInputBType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
+        boiler.PendingFluidInputBAmountMg = Math.Max(0, br.ReadInt32());
+        boiler.PendingFluidOutputType = (br.ReadString() ?? string.Empty).Trim().ToLowerInvariant();
+        boiler.PendingFluidOutput = Math.Max(0, br.ReadInt32());
+        boiler.PendingFluidOutputCapacityMg = Math.Max(1, br.ReadInt32());
+        boiler.CurrentHeat = Math.Max(0, br.ReadInt32());
+        boiler.CurrentHeatSourceMax = Math.Max(0, br.ReadInt32());
+        boiler.MachineRecipeGroupsCsv = br.ReadString() ?? string.Empty;
+        boiler.LastAction = br.ReadString() ?? string.Empty;
+        boiler.LastBlockReason = br.ReadString() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(boiler.MachineRecipeGroupsCsv))
+            boiler.MachineRecipeGroupsCsv = "boiler";
+
+        if (!boiler.IsProcessing)
+        {
+            boiler.CycleTickCounter = 0;
+            boiler.ActiveRecipeKey = string.Empty;
+            boiler.PendingFluidInputAType = string.Empty;
+            boiler.PendingFluidInputAAmountMg = 0;
+            boiler.PendingFluidInputBType = string.Empty;
+            boiler.PendingFluidInputBAmountMg = 0;
         }
     }
 

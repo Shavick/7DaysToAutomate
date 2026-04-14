@@ -570,6 +570,522 @@ public partial class HigherLogicRegistry
         return true;
     }
 
+    private void SimulateBoiler(BoilerSnapshot boiler, ulong worldTime, int hlrTicksToSimulate)
+    {
+        if (boiler == null)
+            return;
+
+        SimulateBoilerHeat(boiler, Math.Max(1, hlrTicksToSimulate));
+
+        int ticksRemaining = Math.Max(1, hlrTicksToSimulate);
+        string nextAction = boiler.LastAction ?? "Idle";
+        string nextReason = string.Empty;
+
+        string flushBlockedReason = string.Empty;
+        if (!TryFlushBoilerPendingOutput(boiler, out flushBlockedReason) && boiler.PendingFluidOutput > 0)
+        {
+            nextAction = "Waiting";
+            nextReason = string.IsNullOrEmpty(flushBlockedReason) ? "Output blocked" : flushBlockedReason;
+        }
+
+        if (!boiler.IsOn)
+        {
+            boiler.IsProcessing = false;
+            boiler.CycleTickCounter = 0;
+            boiler.ActiveRecipeKey = string.Empty;
+            boiler.PendingFluidInputAType = string.Empty;
+            boiler.PendingFluidInputAAmountMg = 0;
+            boiler.PendingFluidInputBType = string.Empty;
+            boiler.PendingFluidInputBAmountMg = 0;
+            nextAction = "Off";
+            if (string.IsNullOrEmpty(nextReason))
+                nextReason = string.Empty;
+            boiler.LastAction = nextAction;
+            boiler.LastBlockReason = nextReason;
+            boiler.WorldTime = worldTime;
+            return;
+        }
+
+        while (ticksRemaining > 0)
+        {
+            if (!boiler.IsProcessing)
+            {
+                string requirementsReason = GetBoilerMissingRequirementReason(boiler);
+                if (!string.IsNullOrEmpty(requirementsReason))
+                {
+                    nextAction = "Waiting";
+                    nextReason = requirementsReason;
+                    break;
+                }
+
+                if (!TryBeginBoilerCycle(boiler, out string startBlockedReason))
+                {
+                    nextAction = "Waiting";
+                    nextReason = string.IsNullOrEmpty(startBlockedReason) ? "Waiting" : startBlockedReason;
+                    break;
+                }
+
+                nextAction = "Mixing";
+                nextReason = string.Empty;
+                ticksRemaining--;
+                if (ticksRemaining <= 0)
+                    break;
+
+                continue;
+            }
+
+            int cycleLength = Math.Max(1, boiler.CycleTickLength);
+            int needed = cycleLength - boiler.CycleTickCounter;
+            if (needed <= 0)
+                needed = 1;
+
+            int advance = Math.Min(ticksRemaining, needed);
+            boiler.CycleTickCounter += advance;
+            ticksRemaining -= advance;
+            nextAction = "Mixing";
+            nextReason = string.Empty;
+
+            if (boiler.CycleTickCounter < cycleLength)
+                break;
+
+            CompleteBoilerCycle(boiler);
+            nextAction = boiler.LastAction ?? "Mix complete";
+            nextReason = string.Empty;
+
+            if (!TryFlushBoilerPendingOutput(boiler, out flushBlockedReason) && boiler.PendingFluidOutput > 0)
+            {
+                nextAction = "Waiting";
+                nextReason = string.IsNullOrEmpty(flushBlockedReason) ? "Output blocked" : flushBlockedReason;
+                break;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(flushBlockedReason) && string.IsNullOrEmpty(nextReason))
+            nextReason = flushBlockedReason;
+
+        boiler.LastAction = nextAction;
+        boiler.LastBlockReason = nextReason;
+        boiler.WorldTime = worldTime;
+    }
+
+    private void SimulateBoilerHeat(BoilerSnapshot boiler, int hlrTicksToSimulate)
+    {
+        if (boiler == null || hlrTicksToSimulate <= 0)
+            return;
+
+        float gainPerTick = GetMelterHeatFloatProperty(boiler.Position, "HeatGainCapPerTick", 0.25f, 0f, 1000f);
+        float lossPerTick = GetMelterHeatFloatProperty(boiler.Position, "HeatLossPerTick", 0.25f, 0f, 1000f);
+
+        float heatExact = Math.Max(0f, boiler.CurrentHeat);
+        float sourceMax = Math.Max(0f, boiler.CurrentHeatSourceMax);
+
+        if (heatExact < sourceMax)
+            heatExact = Math.Min(sourceMax, heatExact + Math.Max(0f, gainPerTick) * hlrTicksToSimulate);
+        else if (heatExact > sourceMax)
+            heatExact = Math.Max(sourceMax, heatExact - Math.Max(0f, lossPerTick) * hlrTicksToSimulate);
+
+        int updatedHeat = Math.Max(0, (int)Math.Floor(heatExact));
+        if (updatedHeat != boiler.CurrentHeat)
+            boiler.CurrentHeat = updatedHeat;
+    }
+
+    private string GetBoilerMissingRequirementReason(BoilerSnapshot boiler)
+    {
+        if (boiler == null)
+            return "World unavailable";
+
+        if (boiler.PendingFluidOutput >= Math.Max(1, boiler.PendingFluidOutputCapacityMg))
+            return "Pending fluid output full";
+
+        if (!TryGetBoilerRule(
+                boiler,
+                boiler.SelectedRecipeKey,
+                out string normalizedRecipeKey,
+                out string inputAType,
+                out int inputAAmountMg,
+                out string outputType,
+                out _,
+                out int requiredHeat,
+                out int craftTimeTicks))
+        {
+            return "Selected recipe unavailable";
+        }
+
+        boiler.SelectedRecipeKey = normalizedRecipeKey;
+        boiler.SelectedFluidType = outputType ?? string.Empty;
+        boiler.CycleTickLength = Math.Max(1, craftTimeTicks);
+
+        if (!TryResolveBoilerInputGraph(boiler.Position, inputAType, Math.Max(1, inputAAmountMg), out Guid graphA, out string blockedA))
+            return blockedA;
+
+        if (requiredHeat > 0 && boiler.CurrentHeat < requiredHeat)
+            return $"Insufficient Heat ({boiler.CurrentHeat}/{requiredHeat})";
+
+        if (!TryResolveBoilerOutputGraph(boiler, outputType, out Guid outputGraph))
+            return "Missing/Invalid Fluid Output";
+
+        boiler.SelectedFluidGraphId = outputGraph;
+
+        if (!FluidGraphManager.TryGetAvailableFluidAmount(world, 0, graphA, inputAType, out int availableA) ||
+            availableA < inputAAmountMg)
+        {
+            return $"Need {FormatGallons(inputAAmountMg)} gal {ToFluidDisplayName(inputAType)}";
+        }
+
+        return string.Empty;
+    }
+
+    private bool TryBeginBoilerCycle(BoilerSnapshot boiler, out string blockedReason)
+    {
+        blockedReason = string.Empty;
+        if (boiler == null)
+        {
+            blockedReason = "World unavailable";
+            return false;
+        }
+
+        if (!TryGetBoilerRule(
+                boiler,
+                boiler.SelectedRecipeKey,
+                out string normalizedRecipeKey,
+                out string inputAType,
+                out int inputAAmountMg,
+                out string outputType,
+                out _,
+                out int requiredHeat,
+                out int craftTimeTicks))
+        {
+            blockedReason = "Selected recipe unavailable";
+            return false;
+        }
+
+        if (requiredHeat > 0 && boiler.CurrentHeat < requiredHeat)
+        {
+            blockedReason = $"Insufficient Heat ({boiler.CurrentHeat}/{requiredHeat})";
+            return false;
+        }
+
+        if (!TryResolveBoilerInputGraph(boiler.Position, inputAType, Math.Max(1, inputAAmountMg), out Guid graphA, out blockedReason))
+            return false;
+
+        if (!FluidGraphManager.TryConsumeFluid(world, 0, graphA, inputAType, inputAAmountMg, out int consumedA) || consumedA < inputAAmountMg)
+        {
+            if (consumedA > 0)
+                FluidGraphManager.TryInjectFluid(world, 0, graphA, inputAType, consumedA, out _);
+
+            blockedReason = $"Need {FormatGallons(inputAAmountMg)} gal {ToFluidDisplayName(inputAType)}";
+            return false;
+        }
+
+        boiler.SelectedRecipeKey = normalizedRecipeKey;
+        boiler.SelectedFluidType = outputType ?? string.Empty;
+        boiler.PendingFluidInputAType = inputAType;
+        boiler.PendingFluidInputAAmountMg = consumedA;
+        boiler.PendingFluidInputBType = string.Empty;
+        boiler.PendingFluidInputBAmountMg = 0;
+        boiler.IsProcessing = true;
+        boiler.CycleTickCounter = 0;
+        boiler.CycleTickLength = Math.Max(1, craftTimeTicks);
+        boiler.ActiveRecipeKey = normalizedRecipeKey;
+        boiler.LastAction = "Requested Inputs";
+        boiler.LastBlockReason = string.Empty;
+        return true;
+    }
+
+    private void CompleteBoilerCycle(BoilerSnapshot boiler)
+    {
+        if (boiler == null)
+            return;
+
+        string recipeKey = string.IsNullOrEmpty(boiler.ActiveRecipeKey) ? boiler.SelectedRecipeKey : boiler.ActiveRecipeKey;
+        if (TryGetBoilerRule(
+                boiler,
+                recipeKey,
+                out string normalizedRecipeKey,
+                out _,
+                out _,
+                out string outputType,
+                out int outputAmountMg,
+                out _,
+                out _))
+        {
+            boiler.SelectedRecipeKey = normalizedRecipeKey;
+            boiler.SelectedFluidType = outputType ?? string.Empty;
+            boiler.PendingFluidOutputType = boiler.SelectedFluidType;
+            long total = (long)boiler.PendingFluidOutput + Math.Max(0, outputAmountMg);
+            boiler.PendingFluidOutput = (int)Math.Min(Math.Max(1, boiler.PendingFluidOutputCapacityMg), total);
+        }
+
+        boiler.IsProcessing = false;
+        boiler.CycleTickCounter = 0;
+        boiler.ActiveRecipeKey = string.Empty;
+        boiler.PendingFluidInputAType = string.Empty;
+        boiler.PendingFluidInputAAmountMg = 0;
+        boiler.PendingFluidInputBType = string.Empty;
+        boiler.PendingFluidInputBAmountMg = 0;
+        boiler.LastAction = "Mix complete";
+        boiler.LastBlockReason = string.Empty;
+    }
+
+    private bool TryFlushBoilerPendingOutput(BoilerSnapshot boiler, out string blockedReason)
+    {
+        blockedReason = string.Empty;
+        if (boiler == null || boiler.PendingFluidOutput <= 0)
+            return true;
+
+        if (string.IsNullOrEmpty(boiler.PendingFluidOutputType))
+        {
+            boiler.PendingFluidOutput = 0;
+            blockedReason = "Pending output invalid";
+            return true;
+        }
+
+        if (!TryResolveBoilerOutputGraph(boiler, boiler.PendingFluidOutputType, out Guid graphId))
+        {
+            blockedReason = "Missing/Invalid Fluid Output";
+            return false;
+        }
+
+        boiler.SelectedFluidGraphId = graphId;
+
+        if (!TryInjectFluidPartialForSnapshot(graphId, boiler.PendingFluidOutputType, boiler.PendingFluidOutput, out int injectedMg, out blockedReason))
+            return false;
+
+        if (injectedMg <= 0)
+            return false;
+
+        boiler.PendingFluidOutput -= injectedMg;
+        if (boiler.PendingFluidOutput < 0)
+            boiler.PendingFluidOutput = 0;
+
+        if (boiler.PendingFluidOutput == 0)
+            boiler.PendingFluidOutputType = string.Empty;
+
+        return true;
+    }
+
+    private bool TryResolveBoilerInputGraph(Vector3i boilerPos, string inputFluidType, int requiredMg, out Guid graphId, out string blockedReason)
+    {
+        graphId = Guid.Empty;
+        blockedReason = string.Empty;
+        if (string.IsNullOrEmpty(inputFluidType))
+        {
+            blockedReason = "Invalid fluid input";
+            return false;
+        }
+
+        string normalized = inputFluidType.Trim().ToLowerInvariant();
+        List<Guid> candidates = GetDecanterAdjacentFluidGraphCandidates(boilerPos);
+        if (candidates.Count == 0)
+        {
+            blockedReason = "Missing fluid network";
+            return false;
+        }
+
+        Guid bestAvailableGraph = Guid.Empty;
+        int bestAvailableMg = -1;
+        int normalizedRequiredMg = Math.Max(1, requiredMg);
+
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            Guid candidate = candidates[i];
+            if (!IsDecanterFluidGraphCompatible(candidate, normalized))
+                continue;
+
+            if (!FluidGraphManager.TryGetAvailableFluidAmount(world, 0, candidate, normalized, out int availableMg))
+                continue;
+
+            if (availableMg >= normalizedRequiredMg)
+            {
+                graphId = candidate;
+                return true;
+            }
+
+            if (availableMg > bestAvailableMg)
+            {
+                bestAvailableMg = availableMg;
+                bestAvailableGraph = candidate;
+            }
+        }
+
+        if (bestAvailableGraph != Guid.Empty)
+            blockedReason = $"Need {FormatGallons(normalizedRequiredMg)} gal {ToFluidDisplayName(normalized)}";
+        else
+            blockedReason = $"Need {ToFluidDisplayName(normalized)}";
+
+        return false;
+    }
+
+    private bool TryResolveBoilerOutputGraph(BoilerSnapshot boiler, string outputFluidType, out Guid graphId)
+    {
+        graphId = Guid.Empty;
+        if (boiler == null || string.IsNullOrWhiteSpace(outputFluidType))
+            return false;
+
+        string normalizedFluid = outputFluidType.Trim().ToLowerInvariant();
+        if (string.IsNullOrEmpty(normalizedFluid))
+            return false;
+
+        List<Guid> candidates = GetDecanterAdjacentFluidGraphCandidates(boiler.Position);
+        if (candidates.Count == 0)
+            return false;
+
+        bool selectedIsCompatible = false;
+        if (boiler.SelectedFluidGraphId != Guid.Empty && candidates.Contains(boiler.SelectedFluidGraphId))
+            selectedIsCompatible = IsDecanterFluidGraphCompatible(boiler.SelectedFluidGraphId, normalizedFluid);
+
+        if (selectedIsCompatible && DoesDecanterGraphHaveActivePump(boiler.SelectedFluidGraphId))
+        {
+            graphId = boiler.SelectedFluidGraphId;
+            return true;
+        }
+
+        Guid firstCompatible = Guid.Empty;
+        for (int i = 0; i < candidates.Count; i++)
+        {
+            Guid candidate = candidates[i];
+            if (!IsDecanterFluidGraphCompatible(candidate, normalizedFluid))
+                continue;
+
+            if (firstCompatible == Guid.Empty)
+                firstCompatible = candidate;
+
+            if (!DoesDecanterGraphHaveActivePump(candidate))
+                continue;
+
+            graphId = candidate;
+            return true;
+        }
+
+        if (selectedIsCompatible)
+        {
+            graphId = boiler.SelectedFluidGraphId;
+            return true;
+        }
+
+        if (firstCompatible != Guid.Empty)
+        {
+            graphId = firstCompatible;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool TryGetBoilerRule(
+        BoilerSnapshot boiler,
+        string recipeKey,
+        out string normalizedRecipeKey,
+        out string inputAType,
+        out int inputAAmountMg,
+        out string outputType,
+        out int outputAmountMg,
+        out int requiredHeat,
+        out int craftTimeTicks)
+    {
+        normalizedRecipeKey = string.Empty;
+        inputAType = string.Empty;
+        inputAAmountMg = 0;
+        outputType = string.Empty;
+        outputAmountMg = 0;
+        requiredHeat = 0;
+        craftTimeTicks = Math.Max(1, boiler?.CycleTickLength ?? 1);
+
+        if (boiler == null)
+            return false;
+
+        if (!string.IsNullOrEmpty(recipeKey) &&
+            MachineRecipeRegistry.TryGetRecipeByKey(recipeKey, out MachineRecipe selected) &&
+            TryReadMachineRecipeAsBoilerRule(
+                selected,
+                Math.Max(1, boiler.CycleTickLength),
+                out inputAType,
+                out inputAAmountMg,
+                out outputType,
+                out outputAmountMg,
+                out requiredHeat,
+                out craftTimeTicks))
+        {
+            normalizedRecipeKey = selected?.NormalizedKey ?? recipeKey;
+            return true;
+        }
+
+        List<MachineRecipe> recipes = MachineRecipeRegistry.GetRecipesForMachineGroups(
+            GetSnapshotMachineGroupsCsv(boiler.MachineRecipeGroupsCsv, "boiler"),
+            true);
+
+        for (int i = 0; i < recipes.Count; i++)
+        {
+            MachineRecipe recipe = recipes[i];
+            if (TryReadMachineRecipeAsBoilerRule(
+                    recipe,
+                    Math.Max(1, boiler.CycleTickLength),
+                    out inputAType,
+                    out inputAAmountMg,
+                    out outputType,
+                    out outputAmountMg,
+                    out requiredHeat,
+                    out craftTimeTicks))
+            {
+                normalizedRecipeKey = recipe?.NormalizedKey ?? string.Empty;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TryReadMachineRecipeAsBoilerRule(
+        MachineRecipe recipe,
+        int defaultCraftTimeTicks,
+        out string inputAType,
+        out int inputAAmountMg,
+        out string outputType,
+        out int outputAmountMg,
+        out int requiredHeat,
+        out int craftTimeTicks)
+    {
+        inputAType = string.Empty;
+        inputAAmountMg = 0;
+        outputType = string.Empty;
+        outputAmountMg = 0;
+        requiredHeat = 0;
+        craftTimeTicks = Math.Max(1, defaultCraftTimeTicks);
+
+        if (recipe == null)
+            return false;
+
+        if (recipe.Inputs != null && recipe.Inputs.Count > 0)
+            return false;
+
+        if (recipe.ItemOutputs != null && recipe.ItemOutputs.Count > 0)
+            return false;
+
+        if (recipe.FluidInputs == null || recipe.FluidInputs.Count != 1)
+            return false;
+
+        if (recipe.FluidOutputs == null || recipe.FluidOutputs.Count != 1)
+            return false;
+
+        MachineRecipeFluidInput a = recipe.FluidInputs[0];
+        MachineRecipeFluidOutput o = recipe.FluidOutputs[0];
+        if (a == null || o == null)
+            return false;
+
+        if (string.IsNullOrEmpty(a.Type) || string.IsNullOrEmpty(o.Type))
+            return false;
+
+        inputAType = a.Type.Trim().ToLowerInvariant();
+        inputAAmountMg = Math.Max(1, a.AmountMg);
+        outputType = o.Type.Trim().ToLowerInvariant();
+        outputAmountMg = Math.Max(1, o.AmountMg);
+        requiredHeat = Math.Max(0, recipe.RequiredHeat);
+        craftTimeTicks = recipe.CraftTimeTicks.HasValue
+            ? Math.Max(1, recipe.CraftTimeTicks.Value)
+            : Math.Max(1, defaultCraftTimeTicks);
+        return true;
+    }
+
     private void SimulateCaster(CasterSnapshot caster, ulong worldTime, int hlrTicksToSimulate)
     {
         if (caster == null)
