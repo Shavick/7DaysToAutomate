@@ -128,6 +128,16 @@ public class TileEntityFluidStorage : TileEntityMachine
         return removed;
     }
 
+    public int FlushAllFluid()
+    {
+        int removed = Math.Max(0, fluidAmountMg);
+        fluidAmountMg = 0;
+        fluidType = string.Empty;
+        acceptedThisTickMg = 0;
+        setModified();
+        return removed;
+    }
+
     public void ApplySnapshotState(string snapshotFluidType, int snapshotAmountMg)
     {
         int amount = Math.Max(0, snapshotAmountMg);

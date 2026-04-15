@@ -361,6 +361,14 @@
 			</property>
 		</block>
 
+		<block name="itemPipeVariantHelper">
+			<property name="Extends" value="itemPipe" />
+			<property name="CustomIcon" value="pipeSmallJoint" />
+			<property name="DescriptionKey" value="itemPipeVariantHelperDesc" />
+			<property name="SelectAlternates" value="true" />
+			<property name="PlaceAltBlockValue" value="itemPipe,itemPipeElbow,itemPipeSmallJoint" />
+		</block>
+
 		<block name="itemPipeT2">
 			<property name="Extends" value="itemPipe" />
 			<property name="CustomIconTint" value="0F5FA8" />
@@ -418,6 +426,14 @@
 			</property>
 		</block>
 
+		<block name="itemPipeVariantHelperT2">
+			<property name="Extends" value="itemPipeT2" />
+			<property name="CustomIcon" value="pipeSmallJoint" />
+			<property name="DescriptionKey" value="itemPipeVariantHelperT2Desc" />
+			<property name="SelectAlternates" value="true" />
+			<property name="PlaceAltBlockValue" value="itemPipeT2,itemPipeElbowT2,itemPipeSmallJointT2" />
+		</block>
+
 		<block name="itemPipeT3">
 			<property name="Extends" value="itemPipeT2" />
 			<property name="CustomIconTint" value="2EA85C" />
@@ -455,6 +471,14 @@
 			<property name="PipeSpeed" value="10" />
 			<property name="PipeLatency" value="10" />
 			<property name="DevLogs" value="false" />
+		</block>
+
+		<block name="itemPipeVariantHelperT3">
+			<property name="Extends" value="itemPipeT3" />
+			<property name="CustomIcon" value="pipeSmallJoint" />
+			<property name="DescriptionKey" value="itemPipeVariantHelperT3Desc" />
+			<property name="SelectAlternates" value="true" />
+			<property name="PlaceAltBlockValue" value="itemPipeT3,itemPipeElbowT3,itemPipeSmallJointT3" />
 		</block>
 
 		<!-- FLUID PIPES -->
@@ -696,6 +720,30 @@
 			<property name="FluidPipeCapacityGps" value="1000" />
 		</block>
 
+		<block name="fluidPipeVariantHelper">
+			<property name="Extends" value="liquidPipe" />
+			<property name="CustomIcon" value="pipeSmallJoint" />
+			<property name="DescriptionKey" value="fluidPipeVariantHelperDesc" />
+			<property name="SelectAlternates" value="true" />
+			<property name="PlaceAltBlockValue" value="liquidPipe,liquidPipeElbow,liquidPipeSmallJoint,fluidValve,fluidIntake" />
+		</block>
+
+		<block name="fluidPipeVariantHelperT2">
+			<property name="Extends" value="liquidPipeT2" />
+			<property name="CustomIcon" value="pipeSmallJoint" />
+			<property name="DescriptionKey" value="fluidPipeVariantHelperT2Desc" />
+			<property name="SelectAlternates" value="true" />
+			<property name="PlaceAltBlockValue" value="liquidPipeT2,liquidPipeElbowT2,liquidPipeSmallJointT2,fluidValveT2,fluidIntakeT2" />
+		</block>
+
+		<block name="fluidPipeVariantHelperT3">
+			<property name="Extends" value="liquidPipeT3" />
+			<property name="CustomIcon" value="pipeSmallJoint" />
+			<property name="DescriptionKey" value="fluidPipeVariantHelperT3Desc" />
+			<property name="SelectAlternates" value="true" />
+			<property name="PlaceAltBlockValue" value="liquidPipeT3,liquidPipeElbowT3,liquidPipeSmallJointT3,fluidValveT3,fluidIntakeT3" />
+		</block>
+
 		<!-- FLUID MACHINES -->
 
 		<block name="fluidPump">
@@ -847,7 +895,7 @@
 			<property name="PendingFluidOutputCapacityGallons" value="5" />
 			<property name="HeatGainCapPerTick" value="0.25" />
 			<property name="HeatLossPerTick" value="0.25" />
-			<property name="DevLogs" value="false" />
+			<property name="DevLogs" value="true" />
 		</block>
 
 		<block name="universalCaster">
@@ -866,6 +914,31 @@
 			<property name="InputSpeed" value="10" />
 			<property name="MachineRecipes" value="mold" />
 			<property name="DevLogs" value="false" />
+		</block>
+
+		<block name="universalGrinder">
+			<property name="Class" value="UniversalGrinderBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="CustomIcon" value="generatorbank" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1500" />
+			<property name="DescriptionKey" value="universalGrinderDesc" />
+			<property name="UnlockedBy" value="craftingWorkstations" />
+			<property name="InputSpeed" value="10" />
+			<property name="BatchSize" value="5" />
+			<property name="BaseReturnRate" value="0.5" />
+			<property name="BlockedRecipeBenches" value="forge"/>
+			<property name="DevLogs" value="false" />
+			<property name="NeedsFluidToRun" value="false" />
+			<property name="FluidFuel" value="gas" />
+			<property name="FluidFuelBufferGallons" value="20" />
+			<property name="FluidFuelUsePerSecond" value="1" />
+			<property name="FluidFuelPullPerSecond" value="20" />
 		</block>
 
 		<block name="heatSourceT2">

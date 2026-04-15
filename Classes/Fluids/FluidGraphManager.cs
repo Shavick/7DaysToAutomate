@@ -52,6 +52,74 @@ public static class FluidGraphManager
         return graphsById.TryGetValue(fluidGraphId, out graph);
     }
 
+    public static bool FlushGraphAndForgetFluid(
+        WorldBase world,
+        int clrIdx,
+        Guid fluidGraphId,
+        out int flushedStorageCount,
+        out int flushedAmountMg,
+        out int affectedPipeCount)
+    {
+        flushedStorageCount = 0;
+        flushedAmountMg = 0;
+        affectedPipeCount = 0;
+
+        if (world == null || fluidGraphId == Guid.Empty)
+            return false;
+
+        if (!graphsById.TryGetValue(fluidGraphId, out FluidGraphData graph) || graph == null)
+            return false;
+
+        ulong now = world.GetWorldTime();
+
+        if (graph.StorageEndpoints != null)
+        {
+            foreach (Vector3i storagePos in graph.StorageEndpoints)
+            {
+                if (SafeWorldRead.TryGetTileEntity(world, clrIdx, storagePos, out TileEntity storageTe) &&
+                    storageTe is TileEntityFluidStorage liveStorage)
+                {
+                    flushedAmountMg += liveStorage.FlushAllFluid();
+                    flushedStorageCount++;
+                }
+                else if (graph.TryGetStorageSnapshot(storagePos, out FluidGraphData.StorageSnapshot snapshot) && snapshot != null)
+                {
+                    flushedAmountMg += Math.Max(0, snapshot.FluidAmountMg);
+                    snapshot.FluidAmountMg = 0;
+                    snapshot.FluidType = string.Empty;
+                    snapshot.AcceptedThisTickMg = 0;
+                    snapshot.LastInputBudgetWorldTime = now;
+                    graph.SetStorageSnapshot(storagePos, snapshot);
+                    flushedStorageCount++;
+                }
+            }
+        }
+
+        graph.FluidType = string.Empty;
+        graph.LastBlockedReason = string.Empty;
+        graph.LastBlockedCount = 0;
+
+        if (graph.PipePositions != null)
+        {
+            foreach (Vector3i pipePos in graph.PipePositions)
+            {
+                affectedPipeCount++;
+
+                if (SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity te) && te is TileEntityLiquidPipe pipe)
+                {
+                    pipe.ClearRememberedFluidType();
+                    pipe.MarkFluidGraphDirty();
+                    pipe.setModified();
+                }
+
+                MarkPipeDirty(pipePos);
+            }
+        }
+
+        ProcessDirtyGraphs(world, int.MaxValue);
+        return true;
+    }
+
     private static void EnsureSavePaths()
     {
         if (!string.IsNullOrEmpty(fluidGraphFile))
@@ -286,6 +354,7 @@ public static class FluidGraphManager
                 if (SafeWorldRead.TryGetTileEntity(world, 0, pipePos, out TileEntity tileEntity) && tileEntity is TileEntityLiquidPipe pipe)
                 {
                     pipe.SetFluidGraphId(Guid.Empty);
+                    pipe.ClearRememberedFluidType();
                     pipe.setModified();
                 }
 
@@ -679,7 +748,7 @@ public static class FluidGraphManager
         }
 
         if (string.IsNullOrEmpty(graph.FluidType))
-            graph.FluidType = normalizedFluid;
+            SetGraphFluidTypeAndRememberPipes(world, clrIdx, graph, normalizedFluid);
 
         blockedReason = string.Empty;
         return true;
@@ -1062,6 +1131,7 @@ public static class FluidGraphManager
                 continue;
 
             pipe.SetFluidGraphId(graph.FluidGraphId);
+            pipe.SetRememberedFluidType(graph.FluidType);
             pipe.setModified();
             assignedPipePositions?.Add(pipePos);
         }
@@ -1213,6 +1283,14 @@ public static class FluidGraphManager
             graphsById.Remove(oldGraphId);
         }
 
+        if (string.IsNullOrEmpty(retainedFluidType))
+        {
+            bool sawConflict = false;
+            retainedFluidType = ResolveRememberedFluidTypeFromConnectedPipes(world, clrIdx, connectedPipes, out sawConflict);
+            if (sawConflict)
+                Log.Warning($"[FluidGraphManager] Rebuild detected conflicting remembered fluid types near {seedPos}; using '{retainedFluidType}'.");
+        }
+
         FluidGraphData newGraph = new FluidGraphData();
         newGraph.FluidType = retainedFluidType;
 
@@ -1223,6 +1301,7 @@ public static class FluidGraphManager
             if (SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity newPipeEntity) && newPipeEntity is TileEntityLiquidPipe newPipeTe)
             {
                 newPipeTe.SetFluidGraphId(newGraph.FluidGraphId);
+                newPipeTe.SetRememberedFluidType(newGraph.FluidType);
                 newPipeTe.setModified();
             }
 
@@ -1697,6 +1776,70 @@ public static class FluidGraphManager
             return;
 
         graph.SetStorageSnapshot(node.Pos, node.Snapshot);
+    }
+
+    private static void SetGraphFluidTypeAndRememberPipes(WorldBase world, int clrIdx, FluidGraphData graph, string fluidType)
+    {
+        if (graph == null)
+            return;
+
+        string normalized = NormalizeFluidType(fluidType);
+        graph.FluidType = normalized;
+
+        if (string.IsNullOrEmpty(normalized) || world == null || graph.PipePositions == null)
+            return;
+
+        foreach (Vector3i pipePos in graph.PipePositions)
+        {
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity te) || !(te is TileEntityLiquidPipe pipe))
+                continue;
+
+            pipe.SetRememberedFluidType(normalized);
+            pipe.setModified();
+        }
+    }
+
+    private static string ResolveRememberedFluidTypeFromConnectedPipes(
+        WorldBase world,
+        int clrIdx,
+        HashSet<Vector3i> connectedPipes,
+        out bool sawConflict)
+    {
+        sawConflict = false;
+
+        if (world == null || connectedPipes == null || connectedPipes.Count == 0)
+            return string.Empty;
+
+        string retained = string.Empty;
+
+        foreach (Vector3i pipePos in connectedPipes)
+        {
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, pipePos, out TileEntity te) || !(te is TileEntityLiquidPipe pipe))
+                continue;
+
+            string remembered = NormalizeFluidType(pipe.RememberedFluidType);
+            if (string.IsNullOrEmpty(remembered))
+                continue;
+
+            if (string.IsNullOrEmpty(retained))
+            {
+                retained = remembered;
+                continue;
+            }
+
+            if (!string.Equals(retained, remembered, StringComparison.Ordinal))
+                sawConflict = true;
+        }
+
+        return retained;
+    }
+
+    private static string NormalizeFluidType(string fluidType)
+    {
+        if (string.IsNullOrWhiteSpace(fluidType))
+            return string.Empty;
+
+        return fluidType.Trim().ToLowerInvariant();
     }
 
     private static FluidGraphData.StorageSnapshot BuildStorageSnapshotFromLive(TileEntityFluidStorage storage, ulong worldTime)

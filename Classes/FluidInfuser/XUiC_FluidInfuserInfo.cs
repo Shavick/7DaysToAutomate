@@ -22,7 +22,7 @@ public class XUiC_FluidInfuserInfo : XUiController
         if (powerBtn != null)
             powerBtn.Controller.OnPress += (c, b) => TogglePower();
 
-        var recipesBtn = GetChildById("recipesButton")?.ViewComponent as XUiV_Button;
+        var recipesBtn = GetChildById("infuserRecipesButton")?.ViewComponent as XUiV_Button;
         if (recipesBtn != null)
             recipesBtn.Controller.OnPress += (c, b) => ShowRecipeOverlay(true);
 
@@ -61,6 +61,12 @@ public class XUiC_FluidInfuserInfo : XUiController
         EnsureContexts();
         ShowRecipeOverlay(false);
         RefreshBindings(true);
+    }
+
+    public override void OnClose()
+    {
+        ShowRecipeOverlay(false);
+        base.OnClose();
     }
 
     public override void Update(float dt)
@@ -375,6 +381,16 @@ public class XUiC_FluidInfuserInfo : XUiController
     private void ShowRecipeOverlay(bool visible)
     {
         recipeOverlayVisible = visible;
+        SetVisibility("infuserRecipesButton", !visible);
+        SetVisibility("recipesTabLabel", !visible);
+        SetVisibility("machineCenterHeader", !visible);
+        SetVisibility("machineCenterDetails", !visible);
+        SetVisibility("machineCenterPower", !visible);
+        SetVisibility("machineLeftItems", !visible);
+        SetVisibility("machineLeftFluid", !visible);
+        SetVisibility("machineRightInput", !visible);
+        SetVisibility("machineRightOutput", !visible);
+        SetVisibility("machineRightRequirements", !visible);
         SetVisibility("recipeOverlay", visible);
         SetVisibility("recipeSearchPanel", visible);
         SetVisibility("recipeSearchInput", visible);

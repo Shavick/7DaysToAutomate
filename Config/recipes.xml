@@ -36,10 +36,10 @@
 			<output item="drinkJarRiverWater" count="1" />
 		</machineRecipe>
 
-		<machineRecipe name="ammogascan" machine="fluidinfuser">
-			<input item="resourceScrapPolymers" count="2" />
-			<fluid_input type="gas" gallons="0.1" />
-			<output item="ammoGasCan" count="1" />
+		<machineRecipe name="ammogascan" machine="fluidinfuser" craft_time="10">
+			<input item="resourceScrapPolymers" count="20" />
+			<fluid_input type="gas" gallons="1" />
+			<output item="ammoGasCan" count="10" />
 		</machineRecipe>
 
 		<machineRecipe name="resourceoil" machine="fluidinfuser">
@@ -56,7 +56,7 @@
 
 		<!-- MELTER -->
 
-		<machineRecipe name="melt_oil_shale" machine="melter">
+		<machineRecipe name="melt_oil_shale" machine="melter" craft_time="5">
 			<heat value="30" />
 			<input item="resourceOilShale" count="5" />
 			<fluid_output type="molten_oil" gallons="0.25" />
@@ -162,7 +162,7 @@
 			<fluid_output type="water" gallons="1" />
 		</machineRecipe>
 
-		<machineRecipe name="boil_gas" machine="boiler">
+		<machineRecipe name="boil_gas" machine="boiler" craft_time="5">
 			<heat value="20" />
 			<fluid_input type="molten_oil" gallons="1" />
 			<fluid_output type="gas" gallons=".2" />
@@ -216,6 +216,11 @@
 		<recipe name="itemPipeSmallJoint" count="8" craft_area="workbench" craft_time="12" tags="learnable,workbenchCrafting,itemPipeSmallJoint">
 			<ingredient name="resourceScrapIron" count="24" />
 			<ingredient name="resourceMechanicalParts" count="1" />
+		</recipe>
+
+		<recipe name="itemPipeVariantHelper" count="12" craft_area="workbench" craft_time="15" tags="learnable,workbenchCrafting,itemPipeVariantHelper">
+			<ingredient name="resourceScrapIron" count="30" />
+			<ingredient name="resourceMechanicalParts" count="2" />
 		</recipe>
 
 		<!-- MACHINES: EXTRACTORS -->
@@ -342,6 +347,13 @@
 			<ingredient name="resourceElectricParts" count="1" />
 		</recipe>
 
+		<recipe name="itemPipeVariantHelperT2" count="12" craft_area="workbench" craft_time="20" tags="learnable,workbenchCrafting,itemPipeVariantHelperT2">
+			<ingredient name="itemPipeVariantHelper" count="12" />
+			<ingredient name="resourceForgedIron" count="24" />
+			<ingredient name="resourceMechanicalParts" count="3" />
+			<ingredient name="resourceElectricParts" count="2" />
+		</recipe>
+
 		<recipe name="itemPipeT3" count="12" craft_area="workbench" craft_time="24" tags="learnable,workbenchCrafting,itemPipeT3">
 			<ingredient name="itemPipeT2" count="12" />
 			<ingredient name="resourceForgedSteel" count="18" />
@@ -363,6 +375,13 @@
 			<ingredient name="resourceElectricParts" count="2" />
 		</recipe>
 
+		<recipe name="itemPipeVariantHelperT3" count="12" craft_area="workbench" craft_time="24" tags="learnable,workbenchCrafting,itemPipeVariantHelperT3">
+			<ingredient name="itemPipeVariantHelperT2" count="12" />
+			<ingredient name="resourceForgedSteel" count="18" />
+			<ingredient name="resourceMechanicalParts" count="5" />
+			<ingredient name="resourceElectricParts" count="4" />
+		</recipe>
+
 		<!-- FLUID PIPES: BASE + UPGRADES -->
 
 		<recipe name="liquidPipe" count="12" craft_area="workbench" craft_time="15" tags="learnable,workbenchCrafting,liquidPipe">
@@ -378,6 +397,11 @@
 		<recipe name="liquidPipeSmallJoint" count="8" craft_area="workbench" craft_time="12" tags="learnable,workbenchCrafting,liquidPipeSmallJoint">
 			<ingredient name="resourceScrapIron" count="24" />
 			<ingredient name="resourceMechanicalParts" count="1" />
+		</recipe>
+
+		<recipe name="fluidPipeVariantHelper" count="12" craft_area="workbench" craft_time="15" tags="learnable,workbenchCrafting,fluidPipeVariantHelper">
+			<ingredient name="resourceScrapIron" count="30" />
+			<ingredient name="resourceMechanicalParts" count="2" />
 		</recipe>
 
 		<recipe name="liquidPipeT2" count="12" craft_area="workbench" craft_time="20" tags="learnable,workbenchCrafting,liquidPipeT2">
@@ -453,11 +477,25 @@
 			<ingredient name="resourceElectricParts" count="1" />
 		</recipe>
 
+		<recipe name="fluidPipeVariantHelperT2" count="12" craft_area="workbench" craft_time="20" tags="learnable,workbenchCrafting,fluidPipeVariantHelperT2">
+			<ingredient name="fluidPipeVariantHelper" count="12" />
+			<ingredient name="resourceForgedIron" count="24" />
+			<ingredient name="resourceMechanicalParts" count="4" />
+			<ingredient name="resourceElectricParts" count="2" />
+		</recipe>
+
 		<recipe name="fluidIntakeT3" count="4" craft_area="workbench" craft_time="22" tags="learnable,workbenchCrafting,fluidIntakeT3">
 			<ingredient name="fluidIntakeT2" count="4" />
 			<ingredient name="resourceForgedSteel" count="12" />
 			<ingredient name="resourceMechanicalParts" count="3" />
 			<ingredient name="resourceElectricParts" count="2" />
+		</recipe>
+
+		<recipe name="fluidPipeVariantHelperT3" count="12" craft_area="workbench" craft_time="24" tags="learnable,workbenchCrafting,fluidPipeVariantHelperT3">
+			<ingredient name="fluidPipeVariantHelperT2" count="12" />
+			<ingredient name="resourceForgedSteel" count="18" />
+			<ingredient name="resourceMechanicalParts" count="5" />
+			<ingredient name="resourceElectricParts" count="4" />
 		</recipe>
 
 		<!-- FLUID MACHINES -->

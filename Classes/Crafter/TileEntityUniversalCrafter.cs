@@ -336,7 +336,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             return null;
         }
 
-        Recipe recipe = CraftingManager.GetRecipe(SelectedRecipeName);
+        Recipe recipe = ResolveRecipeByNameForConfiguredAreas(SelectedRecipeName);
         if (recipe == null)
         {
             DevLog($"ABORT -> CraftingManager returned NULL for recipe '{SelectedRecipeName}'", DevLogLevel.Error);
@@ -478,7 +478,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         SelectedInputPipeGraphId = snapshot.SelectedInputPipeGraphId;
         SelectedOutputChestPos = snapshot.SelectedOutputChestPos;
         SelectedPipeGraphId = snapshot.SelectedOutputPipeGraphId;
-        _recipe = CraftingManager.GetRecipe(snapshot.RecipeName);
+        _recipe = ResolveRecipeByNameForConfiguredAreas(snapshot.RecipeName);
 
         isCrafting = snapshot.IsCrafting;
         craftStartTime = snapshot.CraftStartTime;
@@ -1077,7 +1077,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
 
         if ((pendingOutput == null || pendingOutput.Count == 0) && !string.IsNullOrEmpty(PendingSelectedRecipeName))
         {
-            Recipe pendingRecipe = CraftingManager.GetRecipe(PendingSelectedRecipeName);
+            Recipe pendingRecipe = ResolveRecipeByNameForConfiguredAreas(PendingSelectedRecipeName);
             if (pendingRecipe == null)
             {
                 DevLog($"APPLY QUEUED RECIPE FAILED -> '{PendingSelectedRecipeName}' not found", DevLogLevel.Warning);
@@ -1880,7 +1880,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (_recipe != null && _recipe.GetName() == SelectedRecipeName)
             return;
 
-        Recipe resolved = CraftingManager.GetRecipe(SelectedRecipeName);
+        Recipe resolved = ResolveRecipeByNameForConfiguredAreas(SelectedRecipeName);
 
         if (resolved == null)
         {
@@ -1889,6 +1889,39 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         }
 
         _recipe = resolved;
+    }
+
+    private Recipe ResolveRecipeByNameForConfiguredAreas(string recipeName)
+    {
+        if (string.IsNullOrEmpty(recipeName))
+            return null;
+
+        Recipe resolved = CraftingManager.GetRecipe(recipeName);
+        if (resolved != null &&
+            string.Equals(resolved.GetName(), recipeName, StringComparison.Ordinal) &&
+            IsRecipeAllowedByCraftingArea(resolved))
+        {
+            return resolved;
+        }
+
+        foreach (Recipe candidate in XUiM_Recipes.GetRecipes())
+        {
+            if (candidate == null)
+                continue;
+
+            if (!string.Equals(candidate.GetName(), recipeName, StringComparison.Ordinal))
+                continue;
+
+            if (!IsRecipeAllowedByCraftingArea(candidate))
+                continue;
+
+            return candidate;
+        }
+
+        if (resolved != null && IsRecipeAllowedByCraftingArea(resolved))
+            return resolved;
+
+        return null;
     }
 
     public Dictionary<string, int> GetMissingIngredientsForNextCraft()
@@ -2060,16 +2093,10 @@ public class TileEntityUniversalCrafter : TileEntityMachine
             return false;
         }
 
-        Recipe recipe = CraftingManager.GetRecipe(recipeName);
+        Recipe recipe = ResolveRecipeByNameForConfiguredAreas(recipeName);
         if (recipe == null)
         {
-            DevLog($"ServerSelectRecipe rejected: recipe '{recipeName}' not found", DevLogLevel.Warning);
-            return false;
-        }
-
-        if (!IsRecipeAllowedByCraftingArea(recipe))
-        {
-            DevLog($"ServerSelectRecipe rejected: recipe '{recipeName}' crafting area '{recipe.craftingArea}' is not allowed by CraftingAreaRecipes", DevLogLevel.Warning);
+            DevLog($"ServerSelectRecipe rejected: recipe '{recipeName}' not found for configured CraftingAreaRecipes", DevLogLevel.Warning);
             return false;
         }
 
@@ -2342,7 +2369,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         if (string.IsNullOrEmpty(ActiveCraftRecipeName))
             return null;
 
-        return CraftingManager.GetRecipe(ActiveCraftRecipeName);
+        return ResolveRecipeByNameForConfiguredAreas(ActiveCraftRecipeName);
     }
 
     public override void write(PooledBinaryWriter _bw, StreamModeWrite mode)

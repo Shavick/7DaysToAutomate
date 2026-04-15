@@ -15,7 +15,8 @@ public class FluidPumpBlock : MachineBlock<TileEntityFluidPump>
 
     private readonly BlockActivationCommand[] cmds =
     {
-        new BlockActivationCommand("open", "campfire", true, false, null)
+        new BlockActivationCommand("open", "campfire", true, false, null),
+        new BlockActivationCommand("flush", "campfire", true, false, null)
     };
 
     protected override TileEntityFluidPump CreateTileEntity(Chunk chunk)
@@ -93,13 +94,87 @@ public class FluidPumpBlock : MachineBlock<TileEntityFluidPump>
 
     public override bool OnBlockActivated(string commandName, WorldBase world, int clrIdx, Vector3i blockPos, BlockValue blockValue, EntityPlayerLocal player)
     {
+        if (string.Equals(commandName, "flush", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(commandName, "open", StringComparison.OrdinalIgnoreCase))
+            return TryFlushAdjacentGraphsFromPump(world, clrIdx, blockPos);
+
         return OnBlockActivated(world, clrIdx, blockPos, blockValue, player);
     }
 
     public override bool OnBlockActivated(WorldBase world, int clrIdx, Vector3i blockPos, BlockValue blockValue, EntityPlayerLocal player)
     {
+        if (!world.IsRemote())
+            TryFlushAdjacentGraphsFromPump(world, clrIdx, blockPos);
+
         LogGraphFromPumpActivation(world, clrIdx, blockPos);
         return true;
+    }
+
+    private static bool TryFlushAdjacentGraphsFromPump(WorldBase world, int clrIdx, Vector3i pumpPos)
+    {
+        if (world == null || world.IsRemote())
+            return true;
+
+        List<Guid> graphIds = CollectAdjacentGraphIds(world, clrIdx, pumpPos);
+        if (graphIds.Count == 0)
+        {
+            Log.Out($"[FluidGraph][PumpFlush] Pump {pumpPos} has no connected fluid graph to flush.");
+            return true;
+        }
+
+        int totalGraphs = 0;
+        int totalStorageTouched = 0;
+        int totalFlushedMg = 0;
+        int totalPipes = 0;
+
+        for (int i = 0; i < graphIds.Count; i++)
+        {
+            Guid graphId = graphIds[i];
+            if (!FluidGraphManager.FlushGraphAndForgetFluid(world, clrIdx, graphId, out int storageTouched, out int flushedMg, out int affectedPipes))
+            {
+                Log.Warning($"[FluidGraph][PumpFlush] Failed to flush graph {graphId} from pump {pumpPos}.");
+                continue;
+            }
+
+            totalGraphs++;
+            totalStorageTouched += storageTouched;
+            totalFlushedMg += flushedMg;
+            totalPipes += affectedPipes;
+        }
+
+        Log.Out(
+            $"[FluidGraph][PumpFlush] Pump {pumpPos} flushed {totalGraphs} graph(s), " +
+            $"storageTouched={totalStorageTouched}, pipes={totalPipes}, fluid={ToWholeGallons(totalFlushedMg)}g.");
+
+        return true;
+    }
+
+    private static List<Guid> CollectAdjacentGraphIds(WorldBase world, int clrIdx, Vector3i pumpPos)
+    {
+        List<Guid> graphIds = new List<Guid>();
+
+        for (int i = 0; i < NeighborOffsets.Length; i++)
+        {
+            Vector3i neighbor = pumpPos + NeighborOffsets[i];
+            if (!SafeWorldRead.TryGetTileEntity(world, clrIdx, neighbor, out TileEntity te) || !(te is TileEntityLiquidPipe pipe))
+                continue;
+
+            Guid graphId = pipe.FluidGraphId;
+            if (graphId == Guid.Empty)
+            {
+                if (!FluidGraphManager.TryEnsureGraphForPipe(world, clrIdx, neighbor, out FluidGraphData rebuiltGraph) || rebuiltGraph == null)
+                    continue;
+
+                graphId = rebuiltGraph.FluidGraphId;
+            }
+
+            if (graphId == Guid.Empty || graphIds.Contains(graphId))
+                continue;
+
+            graphIds.Add(graphId);
+        }
+
+        return graphIds;
     }
 
     private static void LogGraphFromPumpActivation(WorldBase world, int clrIdx, Vector3i pumpPos)
@@ -247,7 +322,7 @@ public class FluidPumpBlock : MachineBlock<TileEntityFluidPump>
             player.playerInput.PermanentActions.Activate.GetBindingXuiMarkupString();
 
         string name = blockValue.Block.GetLocalizedBlockName();
-        return $"{key} Probe {name}";
+        return $"{key} Flush {name} Network";
     }
 
     private static void MarkAdjacentPipesDirty(WorldBase world, int clrIdx, Vector3i centerPos)

@@ -2,11 +2,12 @@ using System;
 
 public class TileEntityLiquidPipe : TileEntityMachine
 {
-    private const int PersistVersion = 2;
+    private const int PersistVersion = 3;
 
     public Guid FluidGraphId = Guid.Empty;
     public bool IsFluidGraphDirty = true;
     public bool IsValveOpen = true;
+    public string RememberedFluidType = string.Empty;
 
     public TileEntityLiquidPipe(Chunk chunk) : base(chunk)
     {
@@ -34,6 +35,22 @@ public class TileEntityLiquidPipe : TileEntityMachine
         IsFluidGraphDirty = true;
     }
 
+    public void SetRememberedFluidType(string fluidType)
+    {
+        if (string.IsNullOrWhiteSpace(fluidType))
+        {
+            RememberedFluidType = string.Empty;
+            return;
+        }
+
+        RememberedFluidType = fluidType.Trim().ToLowerInvariant();
+    }
+
+    public void ClearRememberedFluidType()
+    {
+        RememberedFluidType = string.Empty;
+    }
+
     public override void write(PooledBinaryWriter bw, StreamModeWrite mode)
     {
         base.write(bw, mode);
@@ -44,6 +61,7 @@ public class TileEntityLiquidPipe : TileEntityMachine
         bw.Write(FluidGraphId.ToString());
         bw.Write(IsFluidGraphDirty);
         bw.Write(IsValveOpen);
+        bw.Write(RememberedFluidType ?? string.Empty);
     }
 
     public override void read(PooledBinaryReader br, StreamModeRead mode)
@@ -64,5 +82,10 @@ public class TileEntityLiquidPipe : TileEntityMachine
             IsValveOpen = true;
         else
             IsValveOpen = br.ReadBoolean();
+
+        if (mode == StreamModeRead.Persistency && persistVersion < 3)
+            RememberedFluidType = string.Empty;
+        else
+            SetRememberedFluidType(br.ReadString() ?? string.Empty);
     }
 }

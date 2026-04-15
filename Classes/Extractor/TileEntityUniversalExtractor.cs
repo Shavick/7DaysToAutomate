@@ -19,6 +19,7 @@ public static class UCTileEntityIDs
     public const int FluidMixer = 143;
     public const int Caster = 144;
     public const int Boiler = 145;
+    public const int UniversalGrinder = 146;
 }
 
 public class TileEntityUniversalExtractor : TileEntityMachine

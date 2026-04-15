@@ -138,6 +138,14 @@
     <Compile Include="Classes\Caster\XUiC_CasterInfo.cs" />
     <Compile Include="Classes\Caster\Containers\Output\XUiC_CasterOutputContainerEntry.cs" />
     <Compile Include="Classes\Caster\Containers\Output\XUiC_CasterOutputContainerList.cs" />
+    <Compile Include="Classes\Grinder\UniversalGrinderBlock.cs" />
+    <Compile Include="Classes\Grinder\GrinderSnapshot.cs" />
+    <Compile Include="Classes\Grinder\TileEntityUniversalGrinder.cs" />
+    <Compile Include="Classes\Grinder\XUiC_UniversalGrinderInfo.cs" />
+    <Compile Include="Classes\Grinder\Containers\Input\XUiC_GrinderInputContainerEntry.cs" />
+    <Compile Include="Classes\Grinder\Containers\Input\XUiC_GrinderInputContainerList.cs" />
+    <Compile Include="Classes\Grinder\Containers\Output\XUiC_GrinderOutputContainerEntry.cs" />
+    <Compile Include="Classes\Grinder\Containers\Output\XUiC_GrinderOutputContainerList.cs" />
     <Compile Include="Classes\HarmonyPatches\BlockCompositeTileEntity_PipeEndpointDirtyPatch.cs" />
     <Compile Include="Classes\HarmonyPatches\Block_OnBlockActivated_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\ProgressionFromXML_Load_Patches.cs" />
@@ -146,8 +154,8 @@
     <Compile Include="Classes\HarmonyPatches\TileEntity_Instantiate_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\World_Init_Patches.cs" />
     <Compile Include="Classes\HLR\HigherLogicRegistry.cs" />
-    <Compile Include="Classes\HLR\HigherLogicRegistry.MixerCaster.cs" />
-    <Compile Include="Classes\HLR\HigherLogicRegistry.MixerCasterIO.cs" />
+    <Compile Include="Classes\HLR\HigherLogicRegistry.FluidMachines.cs" />
+    <Compile Include="Classes\HLR\HigherLogicRegistry.FluidMachinesIO.cs" />
     <Compile Include="Classes\MachineRecipes\MachineRecipeRegistry.cs" />
     <Compile Include="Classes\MachineRecipes\UI\XUiC_MachineRecipeCodex.cs" />
     <Compile Include="Classes\MachineRecipes\UI\XUiC_MachineRecipeCodexEntry.cs" />
@@ -168,6 +176,7 @@
     <Compile Include="Classes\Net Packages\NetPackageFluidMixerControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageBoilerControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageCasterControl.cs" />
+    <Compile Include="Classes\Net Packages\NetPackageUniversalGrinderControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageOpenMachineUi.cs" />
     <Compile Include="Classes\\Net Packages\\NetPackageToggleMachinePower.cs" />
     <Compile Include="Classes\Networks\NetworkControllerBlock.cs" />

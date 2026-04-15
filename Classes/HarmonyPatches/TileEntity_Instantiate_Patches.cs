@@ -62,6 +62,9 @@ public static class UCPatch_TileEntity_Instantiate
             case 145:
                 __result = new TileEntityBoiler(_chunk);
                 return false;
+            case 146:
+                __result = new TileEntityUniversalGrinder(_chunk);
+                return false;
             default:
                 return true;
         }

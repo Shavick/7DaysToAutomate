@@ -101,11 +101,17 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
         {
             case 0:
             case 2:
+            case 4:
+            case 6:
+            case 14:
             case 12:
                 return PipeAxis.AxisZ;
             case 1:
             case 3:
+            case 5:
+            case 7:
             case 9:
+            case 11:
                 return PipeAxis.AxisX;
             case 8:
             case 10:
@@ -119,6 +125,45 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
             default:
                 return PipeAxis.None;
         }
+    }
+
+    private static string GetEquivalentStraightRotations(byte rawRotation)
+    {
+        switch (GetStraightPipeAxis(rawRotation))
+        {
+            case PipeAxis.AxisX:
+                return "[1,3,5,7,9,11]";
+            case PipeAxis.AxisY:
+                return "[8,10,13,15,16,18,21,23]";
+            case PipeAxis.AxisZ:
+                return "[0,2,4,6,12,14]";
+            default:
+                return "[]";
+        }
+    }
+
+    private static string ToDirectionLabel(Vector3i side)
+    {
+        if (side == Vector3i.forward) return "North";
+        if (side == Vector3i.back) return "South";
+        if (side == Vector3i.right) return "East";
+        if (side == Vector3i.left) return "West";
+        if (side == Vector3i.up) return "Up";
+        if (side == Vector3i.down) return "Down";
+        return side.ToString();
+    }
+
+    private static string FormatOpenDirections(HashSet<Vector3i> sides)
+    {
+        if (sides == null || sides.Count == 0)
+            return "[]";
+
+        List<string> labels = new List<string>();
+        foreach (Vector3i side in sides)
+            labels.Add(ToDirectionLabel(side));
+
+        labels.Sort(StringComparer.Ordinal);
+        return $"[{string.Join(",", labels)}]";
     }
 
     private static int NormalizeElbowRotation(int rotation)
@@ -444,6 +489,17 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
         if (world == null)
             return true;
 
+        PipeShape activatedShape = GetPipeShape(blockValue);
+        PipeAxis activatedAxis = activatedShape == PipeShape.Straight ? GetStraightPipeAxis(blockValue.rotation) : PipeAxis.None;
+        string activatedValidRotations = activatedShape == PipeShape.Straight ? GetEquivalentStraightRotations(blockValue.rotation) : "n/a";
+        HashSet<Vector3i> activatedOpenSides = GetOpenSides(blockValue);
+        string activatedOpenDirections = FormatOpenDirections(activatedOpenSides);
+        Guid activatedGraphId = Guid.Empty;
+        if (SafeWorldRead.TryGetTileEntity(world, clrIdx, blockPos, out TileEntity activatedTe) && activatedTe is TileEntityLiquidPipe activatedPipe)
+            activatedGraphId = activatedPipe.FluidGraphId;
+        string side = world.IsRemote() ? "client" : "server";
+        Log.Out($"[FluidGraph][PipeActivate][{side}] Pos={blockPos} shape={activatedShape} rotation={blockValue.rotation} straightAxis={activatedAxis} validRotations={activatedValidRotations} openDirections={activatedOpenDirections} graphId={activatedGraphId}");
+
         if (world.IsRemote())
             return true;
 
@@ -552,13 +608,16 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
             if (SafeWorldRead.TryGetBlock(world, clrIdx, p, out BlockValue pipeValue))
             {
                 PipeShape shape = GetPipeShape(pipeValue);
+                PipeAxis axis = shape == PipeShape.Straight ? GetStraightPipeAxis(pipeValue.rotation) : PipeAxis.None;
+                string validRotations = shape == PipeShape.Straight ? GetEquivalentStraightRotations(pipeValue.rotation) : "n/a";
                 HashSet<Vector3i> openSides = GetOpenSides(pipeValue);
+                string openDirections = FormatOpenDirections(openSides);
                 List<string> openSideStrings = new List<string>();
                 foreach (Vector3i side in openSides)
                     openSideStrings.Add(side.ToString());
 
                 openSideStrings.Sort(StringComparer.Ordinal);
-                details += $"(rot={pipeValue.rotation},shape={shape},open=[{string.Join(" ", openSideStrings)}])";
+                details += $"(rot={pipeValue.rotation},shape={shape},axis={axis},valid={validRotations},openDirs={openDirections},open=[{string.Join(" ", openSideStrings)}])";
             }
             else
             {
@@ -624,31 +683,3 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
         return $"{key} {action}";
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
