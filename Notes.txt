@@ -1,6 +1,42 @@
-Need to Hook up power switch methos to the machine class
-need to override the methods for power switch to the inherited classes
+Networking:
 
-i still don't fully understand why we need to apply it to both classes....
+    Storage:
 
-remove output container proximity chest registry
+        - network storage interface:
+            - all connected storage containers will be added to the network "storage list" along with the storage position and what storage each item is located in.
+            - when a item is taken out of the network interface, it is also removed from the physical storage.
+            - the network interface will most likely have to be a tile entity composite thats "contents" are composed of all of the storage on the network.
+            - all items of the same type will be merged into a single stack, however, this is just for display as the separate item stacks will know where they are from
+            - when you put items back into the storage interface:
+                - priority should be supported, if two boxes contain the same filters, either the first in the list of storage containers 
+                - support native Shift+leftclick to quick move items from inventory -> storage or storage -> inventory
+                - search for chests that already have that item in it, and fallback to first available storage with space for the item.
+                - eventually we will have filters on the storage through the interface so that players can define (via groups, or item name (list)) what chest can hold specific items
+            - (show different activation text when looking at the interface
+                - with wireless remote (left click to pair))
+                - without ( (E) View Storage Interface)
+        
+        - portable network stoarge interface:
+            - must be paired with a interface block (via left click) 
+            - opens storage interface UI (via right click)
+            - works the same way as the physical interface block
+
+        - interface GUI:
+            - move crafting menu to the left and backpack + inspect window to the right (move both down a bit)
+            - new interface UI goes in the center
+
+
+    Behavior:
+
+        - Network would be another system, like HLR or PipeGraphs
+            - allows the network to trancend chunk boudaries
+            - allows the network to be always aware of endpoints and connections
+            - allows for the wireless transfer of materials
+        
+        - simplicity first:
+            - gather endpoints and pipegraphs that are attached to the network. 
+            - builds "network storage" information based on connected storage endpoints into a dictionary <itemEntryObject, count>
+                - itemEntryObject has storage container information, along with item stack information
+
+
+    recipes with the same name get confused in auto crafter

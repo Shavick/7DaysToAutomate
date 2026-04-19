@@ -9,7 +9,7 @@ public class TileEntityUniversalCrafter : TileEntityMachine
     private const int MaxSerializedOutputTargets = 64;
     private const int MaxSerializedInputBufferEntries = 256;
     private const string DefaultCraftingArea = "workbench";
-    public bool IsDevLogging => blockValue.Block.Properties.GetBool("DevLogs");
+    public new bool IsDevLogging => blockValue.Block.Properties.GetBool("DevLogs");
 
     public string SelectedRecipeName = "";
     public Recipe _recipe;
@@ -561,10 +561,6 @@ public class TileEntityUniversalCrafter : TileEntityMachine
                 Vector3i storagePos = storageEndpoints[j];
                 string key = $"{storagePos}|{pipeTe.PipeGraphId}";
                 if (!seen.Add(key))
-                    continue;
-
-                TileEntityComposite comp = world.GetTileEntity(0, storagePos) as TileEntityComposite;
-                if (comp == null)
                     continue;
 
                 results.Add(new InputTargetInfo(storagePos, pipeTe.PipeGraphId));
@@ -2201,11 +2197,9 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         }
 
         TileEntity te = world.GetTileEntity(chestPos);
-        if (!(te is TileEntityComposite comp))
-        {
-            DevLog($"SERVER SELECT INPUT rejected: no composite TE at {chestPos}", DevLogLevel.Warning);
-            return false;
-        }
+        TileEntityComposite comp = te as TileEntityComposite;
+        if (comp == null)
+            DevLog($"SERVER SELECT INPUT deferred: no composite TE currently loaded at {chestPos}", DevLogLevel.Warning);
 
         SelectedInputChestPos = chestPos;
         SelectedInputPipeGraphId = parsedPipeGraphId;
@@ -2299,11 +2293,9 @@ public class TileEntityUniversalCrafter : TileEntityMachine
         }
 
         TileEntity te = world.GetTileEntity(chestPos);
-        if (!(te is TileEntityComposite comp))
-        {
-            DevLog($"SERVER SELECT OUTPUT rejected: no composite TE at {chestPos}", DevLogLevel.Warning);
-            return false;
-        }
+        TileEntityComposite comp = te as TileEntityComposite;
+        if (comp == null)
+            DevLog($"SERVER SELECT OUTPUT deferred: no composite TE currently loaded at {chestPos}", DevLogLevel.Warning);
 
         SelectedOutputChestPos = chestPos;
         SelectedOutputMode = mode;

@@ -19,7 +19,8 @@ public static class UCTileEntityIDs
     public const int FluidMixer = 143;
     public const int Caster = 144;
     public const int Boiler = 145;
-    public const int UniversalGrinder = 146;
+    public const int Grinder = 146;
+    public const int NetworkStorageInterface = 147;
 }
 
 public class TileEntityUniversalExtractor : TileEntityMachine
@@ -223,11 +224,9 @@ public class TileEntityUniversalExtractor : TileEntityMachine
         }
 
         TileEntity te = world.GetTileEntity(chestPos);
-        if (!(te is TileEntityComposite comp))
-        {
-            DevLog($"SERVER SELECT OUTPUT rejected: no composite TE at {chestPos}");
-            return false;
-        }
+        TileEntityComposite comp = te as TileEntityComposite;
+        if (comp == null)
+            DevLog($"SERVER SELECT OUTPUT deferred: no composite TE currently loaded at {chestPos}");
 
         SelectedOutputChestPos = chestPos;
         SelectedOutputMode = mode;

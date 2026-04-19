@@ -58,6 +58,7 @@ namespace _7DaysToAutomate
 
             PipeGraphManager.SaveToDisk(world);
             FluidGraphManager.SaveToDisk(world);
+            NetworkStorageService.InvalidateAll();
 
             PipeTransportManager.ClearAll();
         }
@@ -98,6 +99,7 @@ namespace _7DaysToAutomate
                 Log.Out("[PipeGraphManager][Lifecycle] GameStartDone fired");
 
             PipeTransportManager.ClearAll();
+            NetworkStorageService.InvalidateAll();
             if (!PipeGraphManager.LoadFromDisk(world))
                 PipeGraphManager.RebuildAllGraphs(world);
             if (!FluidGraphManager.LoadFromDisk(world))

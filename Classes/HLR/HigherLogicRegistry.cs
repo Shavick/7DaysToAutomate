@@ -1,4 +1,4 @@
-ï»¿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -30,13 +30,13 @@ public partial class HigherLogicRegistry
         new Vector3i(0, 0, 1),
         new Vector3i(0, 0, -1)
     };
-    private sealed class GrinderRecipeCandidate
+    private sealed class RecyclerRecipeCandidate
     {
         public Recipe Recipe;
         public string Bench;
     }
 
-    private Dictionary<string, List<GrinderRecipeCandidate>> grinderRecipesByOutputName;
+    private Dictionary<string, List<RecyclerRecipeCandidate>> RecyclerRecipesByOutputName;
 
     public static bool DevLogs = false;
 
@@ -46,7 +46,7 @@ public partial class HigherLogicRegistry
 
     private const string HLR_FOLDER = "HLR";
     private const string HLR_FILE = "hlr_snapshots.dat";
-    private const int HLR_VERSION = 2;
+    private const int HLR_VERSION = 4;
 
     public HigherLogicRegistry(World world)
     {
@@ -57,7 +57,7 @@ public partial class HigherLogicRegistry
         saveCycleActive = false;
         saveBatchIndex = 0;
 
-        HLRDevLog($"[HLR] CTOR â€” Snapshot dictionary initialized");
+        HLRDevLog($"[HLR] CTOR — Snapshot dictionary initialized");
     }
 
     private static void HLRDevLog(string msg)
@@ -70,8 +70,8 @@ public partial class HigherLogicRegistry
 
     public void Init()
     {
-        HLRDevLog("[HLR] Init â€” Higher Logic Registry initialized");
-        HLRDevLog($"[HLR] Init â€” Current snapshot count = {snapshots.Count}");
+        HLRDevLog("[HLR] Init — Higher Logic Registry initialized");
+        HLRDevLog($"[HLR] Init — Current snapshot count = {snapshots.Count}");
     }
 
     public void Update(ulong worldTime)
@@ -89,14 +89,14 @@ public partial class HigherLogicRegistry
 
         lastUpdateTime = worldTime;
 
-        HLRDevLog($"[HLR] Update tick â€” worldTime={worldTime}, lastSaveTime={lastSaveTime}, saveInterval={SAVE_INTERVAL}, snapshots={snapshots.Count}");
+        HLRDevLog($"[HLR] Update tick — worldTime={worldTime}, lastSaveTime={lastSaveTime}, saveInterval={SAVE_INTERVAL}, snapshots={snapshots.Count}");
 
         if (snapshots.Count == 0)
         {
             return;
         }
 
-        HLRDevLog($"[HLR] Simulating batch {currentBatchIndex + 1}/{BATCH_COUNT} â€” total snapshots={snapshots.Count}");
+        HLRDevLog($"[HLR] Simulating batch {currentBatchIndex + 1}/{BATCH_COUNT} — total snapshots={snapshots.Count}");
 
         int snapshotIndex = 0;
         int simulatedThisTick = 0;
@@ -115,7 +115,7 @@ public partial class HigherLogicRegistry
             snapshotIndex++;
         }
 
-        HLRDevLog($"[HLR] Batch complete â€” simulated {simulatedThisTick} snapshot(s)");
+        HLRDevLog($"[HLR] Batch complete — simulated {simulatedThisTick} snapshot(s)");
 
         currentBatchIndex++;
         if (currentBatchIndex >= BATCH_COUNT)
@@ -132,7 +132,7 @@ public partial class HigherLogicRegistry
             }
             else
             {
-                HLRDevLog("[HLR] Periodic save skipped â€” no dirty changes");
+                HLRDevLog("[HLR] Periodic save skipped — no dirty changes");
             }
 
             lastSaveTime = worldTime;
@@ -143,7 +143,7 @@ public partial class HigherLogicRegistry
     {
         if (count <= 0)
         {
-            HLRDevLog("[HLR][Phantom] AddPhantomExtractors ABORT â€” count <= 0");
+            HLRDevLog("[HLR][Phantom] AddPhantomExtractors ABORT — count <= 0");
             return 0;
         }
 
@@ -179,7 +179,7 @@ public partial class HigherLogicRegistry
             added++;
         }
 
-        HLRDevLog($"[HLR][Phantom] AddPhantomExtractors SUCCESS â€” added={added}");
+        HLRDevLog($"[HLR][Phantom] AddPhantomExtractors SUCCESS — added={added}");
         return added;
     }
 
@@ -187,20 +187,20 @@ public partial class HigherLogicRegistry
     {
         if (count <= 0)
         {
-            HLRDevLog("[HLR][Phantom] AddPhantomCrafters ABORT â€” count <= 0");
+            HLRDevLog("[HLR][Phantom] AddPhantomCrafters ABORT — count <= 0");
             return 0;
         }
 
         if (string.IsNullOrEmpty(recipeName))
         {
-            HLRDevLog("[HLR][Phantom] AddPhantomCrafters ABORT â€” recipeName is null/empty");
+            HLRDevLog("[HLR][Phantom] AddPhantomCrafters ABORT — recipeName is null/empty");
             return 0;
         }
 
         Recipe recipe = CraftingManager.GetRecipe(recipeName);
         if (recipe == null)
         {
-            Log.Error($"[HLR][Phantom] AddPhantomCrafters FAIL â€” recipe '{recipeName}' not found");
+            Log.Error($"[HLR][Phantom] AddPhantomCrafters FAIL — recipe '{recipeName}' not found");
             return 0;
         }
 
@@ -239,7 +239,7 @@ public partial class HigherLogicRegistry
             added++;
         }
 
-        HLRDevLog($"[HLR][Phantom] AddPhantomCrafters SUCCESS â€” added={added} recipe='{recipeName}'");
+        HLRDevLog($"[HLR][Phantom] AddPhantomCrafters SUCCESS — added={added} recipe='{recipeName}'");
         return added;
     }
 
@@ -271,7 +271,7 @@ public partial class HigherLogicRegistry
             isDirty = true;
         }
 
-        HLRDevLog($"[HLR][Phantom] ClearPhantomMachines SUCCESS â€” removed={toRemove.Count}");
+        HLRDevLog($"[HLR][Phantom] ClearPhantomMachines SUCCESS — removed={toRemove.Count}");
         return toRemove.Count;
     }
 
@@ -345,15 +345,8 @@ public partial class HigherLogicRegistry
                 isDirty = true;
                 break;
 
-            case GrinderSnapshot grinder:
-                HLRDevLog($"[HLR][UniversalGrinder] Simulate @ {grinder.Position} ticks={hlrTicksToSimulate}");
-                SimulateGrinder(grinder, worldTime, hlrTicksToSimulate);
-                grinder.LastHLRSimTime = worldTime;
-                isDirty = true;
-                break;
-
             default:
-                HLRDevLog($"[HLR] Unknown snapshot type '{snapshot.SnapshotKind}' â€” skipping");
+                HLRDevLog($"[HLR] Unknown snapshot type '{snapshot.SnapshotKind}' — skipping");
                 break;
         }
     }
@@ -362,7 +355,7 @@ public partial class HigherLogicRegistry
     {
         if (!extractor.IsOn)
         {
-            HLRDevLog($"[HLR][Extractor] SKIP â€” extractor OFF @ {extractor.Position}");
+            HLRDevLog($"[HLR][Extractor] SKIP — extractor OFF @ {extractor.Position}");
             return;
         }
 
@@ -371,7 +364,7 @@ public partial class HigherLogicRegistry
             //bool refreshedFromLive = TryRefreshExtractorPipeOutputFromLiveWorld(extractor);
             if (!HasValidGraphStorageEndpoint(ref extractor.SelectedOutputPipeGraphId, ref extractor.SelectedOutputPipeAnchorPos, extractor.Position, extractor.SelectedOutputChestPos))
             {
-                HLRDevLog("[HLR][Extractor] WAIT â€” Output graph/storage endpoint unavailable");
+                HLRDevLog("[HLR][Extractor] WAIT — Output graph/storage endpoint unavailable");
                 return;
             }
 
@@ -425,7 +418,7 @@ public partial class HigherLogicRegistry
                 AddToOwedDictionary(extractor.OwedResources, timer.Resource, remaining);
 
             int nowOwed = extractor.OwedResources.TryGetValue(timer.Resource, out int owedValue) ? owedValue : 0;
-            HLRDevLog($"[HLR][Extractor] PRODUCED â€” {totalProduced}x {timer.Resource} deposited={accepted} owed={nowOwed}");
+            HLRDevLog($"[HLR][Extractor] PRODUCED — {totalProduced}x {timer.Resource} deposited={accepted} owed={nowOwed}");
         }
 
         extractor.WorldTime = worldTime;
@@ -529,7 +522,7 @@ public partial class HigherLogicRegistry
 
         if (crafter.SelectedInputPipeGraphId == Guid.Empty || crafter.SelectedInputChestPos == Vector3i.zero)
         {
-            HLRDevLog("[HLR][Crafter] STOP â€” Missing input graph/chest context");
+            HLRDevLog("[HLR][Crafter] STOP — Missing input graph/chest context");
             crafter.IsCrafting = false;
             crafter.DisabledByPlayer = true;
             return;
@@ -537,13 +530,13 @@ public partial class HigherLogicRegistry
 
         if (!HasValidGraphStorageEndpoint(ref crafter.SelectedInputPipeGraphId, ref crafter.SelectedInputPipeAnchorPos, crafter.Position, crafter.SelectedInputChestPos))
         {
-            HLRDevLog("[HLR][Crafter] WAIT â€” Input graph/storage endpoint unavailable");
+            HLRDevLog("[HLR][Crafter] WAIT — Input graph/storage endpoint unavailable");
             return;
         }
 
         if (crafter.SelectedOutputPipeGraphId == Guid.Empty || crafter.SelectedOutputChestPos == Vector3i.zero)
         {
-            HLRDevLog("[HLR][Crafter] STOP â€” Missing output graph/chest context");
+            HLRDevLog("[HLR][Crafter] STOP — Missing output graph/chest context");
             crafter.IsCrafting = false;
             crafter.DisabledByPlayer = true;
             return;
@@ -551,7 +544,7 @@ public partial class HigherLogicRegistry
 
         if (!HasValidGraphStorageEndpoint(ref crafter.SelectedOutputPipeGraphId, ref crafter.SelectedOutputPipeAnchorPos, crafter.Position, crafter.SelectedOutputChestPos))
         {
-            HLRDevLog("[HLR][Crafter] WAIT â€” Output graph/storage endpoint unavailable");
+            HLRDevLog("[HLR][Crafter] WAIT — Output graph/storage endpoint unavailable");
             return;
         }
 
@@ -567,7 +560,7 @@ public partial class HigherLogicRegistry
 
         if (!TryGetSnapshotStorageItemCounts(ref crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos, out Dictionary<string, int> availableCounts))
         {
-            HLRDevLog("[HLR][Crafter] WAIT â€” Input storage snapshot unavailable");
+            HLRDevLog("[HLR][Crafter] WAIT — Input storage snapshot unavailable");
             return;
         }
 
@@ -586,7 +579,7 @@ public partial class HigherLogicRegistry
             if (craftsThisTick <= 0)
             {
                 crafter.IsCrafting = false;
-                HLRDevLog($"[HLR][Crafter] STOP â€” Ingredient '{itemName}' unavailable");
+                HLRDevLog($"[HLR][Crafter] STOP — Ingredient '{itemName}' unavailable");
                 return;
             }
         }
@@ -604,7 +597,7 @@ public partial class HigherLogicRegistry
 
         if (!TryConsumeSnapshotStorageItems(crafter.SelectedInputPipeGraphId, crafter.SelectedInputChestPos, requiredForCrafts, out Dictionary<string, int> consumed))
         {
-            HLRDevLog("[HLR][Crafter] STOP â€” Failed to consume required ingredients from graph snapshot");
+            HLRDevLog("[HLR][Crafter] STOP — Failed to consume required ingredients from graph snapshot");
             crafter.IsCrafting = false;
             return;
         }
@@ -633,7 +626,7 @@ public partial class HigherLogicRegistry
                 AddToOwedDictionary(crafter.OwedResources, outputName, remaining);
 
             int owedNow = crafter.OwedResources.TryGetValue(outputName, out int owed) ? owed : 0;
-            HLRDevLog($"[HLR][Crafter] PRODUCE â€” {produced}x {outputName} deposited={depositedCount} owed={owedNow}");
+            HLRDevLog($"[HLR][Crafter] PRODUCE — {produced}x {outputName} deposited={depositedCount} owed={owedNow}");
         }
 
         HLRDevLog($"[HLR][Crafter] SIMULATE END @ {crafter.Position}");
@@ -2767,626 +2760,10 @@ public partial class HigherLogicRegistry
         return "{" + string.Join(", ", parts.ToArray()) + "}";
     }
 
-    private void SimulateGrinder(GrinderSnapshot grinder, ulong worldTime, int hlrTicksToSimulate)
-    {
-        if (grinder == null)
-            return;
 
-        if (grinder.PendingOutputs == null)
-            grinder.PendingOutputs = new Dictionary<string, int>(StringComparer.Ordinal);
 
-        if (!grinder.IsOn)
-        {
-            grinder.IsProcessing = false;
-            grinder.CycleTickCounter = 0;
-            grinder.ActiveBatchSize = 0;
-            grinder.ActiveItemName = string.Empty;
-            grinder.LastAction = "Off";
-            grinder.LastBlockReason = string.Empty;
-            grinder.WorldTime = worldTime;
-            return;
-        }
 
-        if (grinder.SelectedInputPipeGraphId == Guid.Empty || grinder.SelectedInputChestPos == Vector3i.zero)
-        {
-            grinder.LastAction = "Waiting";
-            grinder.LastBlockReason = "Missing Input";
-            grinder.WorldTime = worldTime;
-            return;
-        }
 
-        if (!HasValidGraphStorageEndpoint(ref grinder.SelectedInputPipeGraphId, ref grinder.SelectedInputPipeAnchorPos, grinder.Position, grinder.SelectedInputChestPos))
-        {
-            grinder.LastAction = "Waiting";
-            grinder.LastBlockReason = "Missing Input";
-            grinder.WorldTime = worldTime;
-            return;
-        }
-
-        if (grinder.SelectedOutputChestPos == Vector3i.zero)
-        {
-            grinder.LastAction = "Waiting";
-            grinder.LastBlockReason = "Missing Output";
-            grinder.WorldTime = worldTime;
-            return;
-        }
-
-        if (grinder.SelectedOutputMode != OutputTransportMode.Pipe)
-        {
-            grinder.LastAction = "Waiting";
-            grinder.LastBlockReason = "HLR requires pipe item output";
-            grinder.WorldTime = worldTime;
-            return;
-        }
-
-        if (grinder.SelectedOutputPipeGraphId == Guid.Empty)
-        {
-            grinder.LastAction = "Waiting";
-            grinder.LastBlockReason = "Missing Output";
-            grinder.WorldTime = worldTime;
-            return;
-        }
-
-        if (!HasValidGraphStorageEndpoint(ref grinder.SelectedOutputPipeGraphId, ref grinder.SelectedOutputPipeAnchorPos, grinder.Position, grinder.SelectedOutputChestPos))
-        {
-            grinder.LastAction = "Waiting";
-            grinder.LastBlockReason = "Missing Output";
-            grinder.WorldTime = worldTime;
-            return;
-        }
-
-        if (!TryFlushGrinderPendingOutput(grinder, out string flushBlockedReason) &&
-            grinder.PendingOutputs.Count > 0)
-        {
-            grinder.LastAction = "Waiting";
-            grinder.LastBlockReason = string.IsNullOrEmpty(flushBlockedReason) ? "Output blocked" : flushBlockedReason;
-            grinder.WorldTime = worldTime;
-            return;
-        }
-
-        if (!UpdateGrinderFuel(grinder, Math.Max(1, hlrTicksToSimulate), out string fuelBlockedReason))
-        {
-            grinder.LastAction = "Waiting";
-            grinder.LastBlockReason = string.IsNullOrEmpty(fuelBlockedReason) ? "Waiting for fuel" : fuelBlockedReason;
-            grinder.WorldTime = worldTime;
-            return;
-        }
-
-        int ticksRemaining = Math.Max(1, hlrTicksToSimulate);
-        string nextAction = grinder.LastAction ?? "Idle";
-        string nextReason = string.Empty;
-
-        while (ticksRemaining > 0)
-        {
-            if (!grinder.IsProcessing)
-            {
-                if (!TryBeginGrinderCycle(grinder, out string cycleBlockedReason))
-                {
-                    nextAction = "Waiting";
-                    nextReason = string.IsNullOrEmpty(cycleBlockedReason) ? "No valid items" : cycleBlockedReason;
-                    break;
-                }
-
-                nextAction = "Requested Input";
-                nextReason = string.Empty;
-                ticksRemaining--;
-                if (ticksRemaining <= 0)
-                    break;
-
-                continue;
-            }
-
-            int cycleLength = Math.Max(1, grinder.CycleTickLength);
-            int needed = cycleLength - grinder.CycleTickCounter;
-            if (needed <= 0)
-                needed = 1;
-
-            int advance = Math.Min(ticksRemaining, needed);
-            grinder.CycleTickCounter += advance;
-            ticksRemaining -= advance;
-            nextAction = "Grinding";
-            nextReason = string.Empty;
-
-            if (grinder.CycleTickCounter < cycleLength)
-                break;
-
-            grinder.IsProcessing = false;
-            grinder.CycleTickCounter = 0;
-            grinder.ItemsProcessed += Math.Max(0, grinder.ActiveBatchSize);
-            grinder.ActiveBatchSize = 0;
-            grinder.ActiveItemName = string.Empty;
-            nextAction = "Grind complete";
-
-            if (!TryFlushGrinderPendingOutput(grinder, out string blockedReason) &&
-                grinder.PendingOutputs.Count > 0)
-            {
-                nextAction = "Waiting";
-                nextReason = string.IsNullOrEmpty(blockedReason) ? "Output blocked" : blockedReason;
-                break;
-            }
-        }
-
-        grinder.LastAction = nextAction;
-        grinder.LastBlockReason = nextReason;
-        grinder.WorldTime = worldTime;
-    }
-
-    private bool TryFlushGrinderPendingOutput(GrinderSnapshot grinder, out string blockedReason)
-    {
-        blockedReason = string.Empty;
-        if (grinder?.PendingOutputs == null || grinder.PendingOutputs.Count == 0)
-            return true;
-
-        foreach (KeyValuePair<string, int> kvp in new List<KeyValuePair<string, int>>(grinder.PendingOutputs))
-        {
-            if (string.IsNullOrEmpty(kvp.Key) || kvp.Value <= 0)
-            {
-                grinder.PendingOutputs.Remove(kvp.Key);
-                continue;
-            }
-
-            Dictionary<string, int> request = new Dictionary<string, int>(StringComparer.Ordinal)
-            {
-                [kvp.Key] = kvp.Value
-            };
-
-            if (!TryDepositSnapshotOutput(grinder.SelectedOutputPipeGraphId, grinder.SelectedOutputChestPos, request, out Dictionary<string, int> deposited) ||
-                deposited == null ||
-                !deposited.TryGetValue(kvp.Key, out int moved) ||
-                moved <= 0)
-            {
-                blockedReason = "Output blocked";
-                return false;
-            }
-
-            int remaining = kvp.Value - moved;
-            if (remaining > 0)
-                grinder.PendingOutputs[kvp.Key] = remaining;
-            else
-                grinder.PendingOutputs.Remove(kvp.Key);
-        }
-
-        return true;
-    }
-
-    private bool TryBeginGrinderCycle(GrinderSnapshot grinder, out string blockedReason)
-    {
-        blockedReason = "No valid items";
-
-        if (!TryGetSnapshotStorageItemCounts(ref grinder.SelectedInputPipeGraphId, grinder.SelectedInputChestPos, out Dictionary<string, int> availableCounts) ||
-            availableCounts == null ||
-            availableCounts.Count == 0)
-        {
-            blockedReason = "Input unavailable";
-            return false;
-        }
-
-        List<string> candidates = new List<string>();
-        foreach (KeyValuePair<string, int> kvp in availableCounts)
-        {
-            if (string.IsNullOrEmpty(kvp.Key) || kvp.Value <= 0)
-                continue;
-
-            candidates.Add(kvp.Key);
-        }
-        candidates.Sort(StringComparer.Ordinal);
-
-        int remainingCapacity = Math.Max(0, Math.Max(1, grinder.MaxPendingOutput) - GetGrinderPendingTotal(grinder));
-        if (remainingCapacity <= 0)
-        {
-            blockedReason = "Output full";
-            return false;
-        }
-
-        for (int i = 0; i < candidates.Count; i++)
-        {
-            string itemName = candidates[i];
-            int available = availableCounts.TryGetValue(itemName, out int have) ? have : 0;
-            if (available <= 0)
-                continue;
-
-            ItemValue itemValue = ItemClass.GetItem(itemName, false);
-            if (itemValue?.ItemClass == null)
-                continue;
-
-            if (!TryBuildGrinderMaterialOutputsPerItem(
-                    itemValue,
-                    Math.Max(0f, grinder.EffectiveReturnRate),
-                    grinder.AcceptedRecipeBenchesCsv,
-                    grinder.BlockedRecipeBenchesCsv,
-                    out Dictionary<string, int> materialPerItem) ||
-                materialPerItem == null ||
-                materialPerItem.Count == 0)
-            {
-                continue;
-            }
-
-            int desiredBatch = Math.Min(Math.Max(1, grinder.BaseBatchSize), available);
-            int chosenBatch = 0;
-
-            for (int batch = desiredBatch; batch >= 1; batch--)
-            {
-                int projected = 0;
-                foreach (KeyValuePair<string, int> outKvp in materialPerItem)
-                    projected += Math.Max(0, outKvp.Value * batch);
-
-                if (projected <= remainingCapacity)
-                {
-                    chosenBatch = batch;
-                    break;
-                }
-            }
-
-            if (chosenBatch <= 0)
-            {
-                blockedReason = "Output full";
-                continue;
-            }
-
-            Dictionary<string, int> consumeReq = new Dictionary<string, int>(StringComparer.Ordinal)
-            {
-                [itemName] = chosenBatch
-            };
-
-            if (!TryConsumeSnapshotStorageItems(grinder.SelectedInputPipeGraphId, grinder.SelectedInputChestPos, consumeReq, out Dictionary<string, int> consumed) ||
-                consumed == null ||
-                !consumed.TryGetValue(itemName, out int consumedCount) ||
-                consumedCount <= 0)
-            {
-                continue;
-            }
-
-            int actualBatch = Math.Min(chosenBatch, consumedCount);
-            if (actualBatch <= 0)
-                continue;
-
-            foreach (KeyValuePair<string, int> outKvp in materialPerItem)
-            {
-                int totalToQueue = Math.Max(0, outKvp.Value * actualBatch);
-                if (totalToQueue <= 0 || string.IsNullOrEmpty(outKvp.Key))
-                    continue;
-
-                AddPendingGrinderOutput(grinder, outKvp.Key, totalToQueue);
-            }
-
-            grinder.IsProcessing = true;
-            grinder.CycleTickCounter = 0;
-            grinder.CycleTickLength = Math.Max(1, grinder.CycleTickLength);
-            grinder.ActiveBatchSize = actualBatch;
-            grinder.ActiveItemName = itemName;
-            blockedReason = string.Empty;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static int GetGrinderPendingTotal(GrinderSnapshot grinder)
-    {
-        if (grinder?.PendingOutputs == null)
-            return 0;
-
-        int total = 0;
-        foreach (KeyValuePair<string, int> kvp in grinder.PendingOutputs)
-            total += Math.Max(0, kvp.Value);
-        return total;
-    }
-
-    private static void AddPendingGrinderOutput(GrinderSnapshot grinder, string itemName, int count)
-    {
-        if (grinder?.PendingOutputs == null || string.IsNullOrEmpty(itemName) || count <= 0)
-            return;
-
-        int maxPendingOutput = Math.Max(1, grinder.MaxPendingOutput);
-        int currentTotal = GetGrinderPendingTotal(grinder);
-        int remainingCapacity = Math.Max(0, maxPendingOutput - currentTotal);
-        if (remainingCapacity <= 0)
-            return;
-
-        int accepted = Math.Min(count, remainingCapacity);
-        if (accepted <= 0)
-            return;
-
-        if (grinder.PendingOutputs.TryGetValue(itemName, out int existing))
-            grinder.PendingOutputs[itemName] = existing + accepted;
-        else
-            grinder.PendingOutputs[itemName] = accepted;
-    }
-
-    private bool TryBuildGrinderMaterialOutputsPerItem(
-        ItemValue itemValue,
-        float returnRate,
-        string acceptedBenchesCsv,
-        string blockedBenchesCsv,
-        out Dictionary<string, int> materialPerItem)
-    {
-        materialPerItem = new Dictionary<string, int>(StringComparer.Ordinal);
-        string outputItemName = itemValue?.ItemClass?.GetItemName();
-        if (string.IsNullOrEmpty(outputItemName))
-            return false;
-
-        if (TryGetGrinderRecipeReverseOutputsPerItem(outputItemName, returnRate, acceptedBenchesCsv, blockedBenchesCsv, out materialPerItem))
-            return materialPerItem.Count > 0;
-
-        if (TryGetGrinderScrapOutputsPerItem(itemValue, returnRate, out materialPerItem))
-            return materialPerItem.Count > 0;
-
-        return false;
-    }
-
-    private bool TryGetGrinderRecipeReverseOutputsPerItem(
-        string outputItemName,
-        float returnRate,
-        string acceptedBenchesCsv,
-        string blockedBenchesCsv,
-        out Dictionary<string, int> outputsPerItem)
-    {
-        outputsPerItem = new Dictionary<string, int>(StringComparer.Ordinal);
-        EnsureGrinderRecipeCache();
-
-        if (grinderRecipesByOutputName == null ||
-            !grinderRecipesByOutputName.TryGetValue(outputItemName, out List<GrinderRecipeCandidate> candidates) ||
-            candidates == null ||
-            candidates.Count == 0)
-        {
-            return false;
-        }
-
-        HashSet<string> accepted = ParseBenchCsvSet(acceptedBenchesCsv);
-        HashSet<string> blocked = ParseBenchCsvSet(blockedBenchesCsv);
-        int bestTotal = int.MaxValue;
-        Dictionary<string, int> best = null;
-
-        for (int i = 0; i < candidates.Count; i++)
-        {
-            GrinderRecipeCandidate candidate = candidates[i];
-            if (candidate?.Recipe == null)
-                continue;
-
-            if (!IsBenchAllowedForGrinder(candidate.Bench, accepted, blocked))
-                continue;
-
-            if (!TryBuildGrinderRecipeOutputsForSingleItem(candidate.Recipe, returnRate, out Dictionary<string, int> perItem))
-                continue;
-
-            int total = 0;
-            foreach (KeyValuePair<string, int> kvp in perItem)
-                total += kvp.Value;
-
-            if (best == null || total < bestTotal)
-            {
-                best = perItem;
-                bestTotal = total;
-            }
-        }
-
-        if (best == null)
-            return false;
-
-        outputsPerItem = best;
-        return true;
-    }
-
-    private static bool TryBuildGrinderRecipeOutputsForSingleItem(Recipe recipe, float returnRate, out Dictionary<string, int> outputs)
-    {
-        outputs = new Dictionary<string, int>(StringComparer.Ordinal);
-        if (recipe == null || recipe.ingredients == null)
-            return false;
-
-        int recipeOutputCount = Math.Max(1, recipe.count);
-        for (int i = 0; i < recipe.ingredients.Count; i++)
-        {
-            ItemStack ingredient = recipe.ingredients[i];
-            if (ingredient.itemValue?.ItemClass == null)
-                continue;
-
-            int ingredientCount = Math.Max(0, ingredient.count);
-            if (ingredientCount <= 1)
-                continue;
-
-            string ingredientName = ingredient.itemValue.ItemClass.GetItemName();
-            if (string.IsNullOrEmpty(ingredientName))
-                continue;
-
-            int recovered = (int)Math.Floor((ingredientCount * returnRate) / recipeOutputCount);
-            if (recovered <= 0)
-                continue;
-
-            outputs[ingredientName] = recovered;
-        }
-
-        return outputs.Count > 0;
-    }
-
-    private static bool TryGetGrinderScrapOutputsPerItem(ItemValue itemValue, float returnRate, out Dictionary<string, int> outputsPerItem)
-    {
-        outputsPerItem = new Dictionary<string, int>(StringComparer.Ordinal);
-        if (itemValue?.ItemClass == null)
-            return false;
-
-        int inputCount = 1;
-        Recipe scrapRecipe = CraftingManager.GetScrapableRecipe(itemValue, inputCount);
-        if (scrapRecipe == null || scrapRecipe.count <= 0)
-            return false;
-
-        ItemClass sourceClass = ItemClass.GetForId(itemValue.type);
-        ItemClass scrapOutputClass = ItemClass.GetForId(scrapRecipe.itemValueType);
-        if (sourceClass == null || scrapOutputClass == null)
-            return false;
-
-        string scrapOutputName = scrapOutputClass?.GetItemName();
-        if (string.IsNullOrEmpty(scrapOutputName))
-            return false;
-
-        int sourceWeight = Math.Max(0, sourceClass.GetWeight());
-        int outputWeight = Math.Max(0, scrapOutputClass.GetWeight());
-        if (sourceWeight <= 0 || outputWeight <= 0)
-            return false;
-
-        int unitsRaw = (sourceWeight * inputCount) / outputWeight;
-        if (unitsRaw <= 0)
-            return false;
-
-        int vanillaScrapCount = (int)(unitsRaw * 0.75f);
-        if (vanillaScrapCount <= 0)
-            vanillaScrapCount = 1;
-
-        int recovered = (int)Math.Floor(Math.Max(0f, returnRate) * vanillaScrapCount);
-        if (recovered <= 0)
-            return false;
-
-        outputsPerItem[scrapOutputName] = recovered;
-        return true;
-    }
-
-    private void EnsureGrinderRecipeCache()
-    {
-        if (grinderRecipesByOutputName != null)
-            return;
-
-        grinderRecipesByOutputName = new Dictionary<string, List<GrinderRecipeCandidate>>(StringComparer.Ordinal);
-        var recipes = XUiM_Recipes.GetRecipes();
-        if (recipes == null)
-            return;
-
-        for (int i = 0; i < recipes.Count; i++)
-        {
-            Recipe recipe = recipes[i];
-            if (recipe == null || recipe.GetOutputItemClass() == null)
-                continue;
-
-            string outputName = recipe.GetOutputItemClass().GetItemName();
-            if (string.IsNullOrEmpty(outputName))
-                continue;
-
-            if (!grinderRecipesByOutputName.TryGetValue(outputName, out List<GrinderRecipeCandidate> list))
-            {
-                list = new List<GrinderRecipeCandidate>();
-                grinderRecipesByOutputName[outputName] = list;
-            }
-
-            list.Add(new GrinderRecipeCandidate
-            {
-                Recipe = recipe,
-                Bench = NormalizeGrinderBench(recipe.craftingArea)
-            });
-        }
-    }
-
-    private static string NormalizeGrinderBench(string bench)
-    {
-        if (string.IsNullOrWhiteSpace(bench))
-            return "player";
-
-        return bench.Trim().ToLowerInvariant();
-    }
-
-    private static HashSet<string> ParseBenchCsvSet(string csv)
-    {
-        HashSet<string> set = new HashSet<string>(StringComparer.Ordinal);
-        if (string.IsNullOrWhiteSpace(csv))
-            return set;
-
-        string[] split = csv.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
-        for (int i = 0; i < split.Length; i++)
-            set.Add(NormalizeGrinderBench(split[i]));
-
-        return set;
-    }
-
-    private static bool IsBenchAllowedForGrinder(string bench, HashSet<string> accepted, HashSet<string> blocked)
-    {
-        string normalized = NormalizeGrinderBench(bench);
-        if (blocked != null && blocked.Contains(normalized))
-            return false;
-
-        return accepted == null || accepted.Count == 0 || accepted.Contains(normalized);
-    }
-
-    private bool UpdateGrinderFuel(GrinderSnapshot grinder, int hlrTicksToSimulate, out string blockedReason)
-    {
-        blockedReason = string.Empty;
-        if (grinder == null || !grinder.IsFuelEnabled)
-            return true;
-
-        int worldTicksElapsed = Math.Max(1, hlrTicksToSimulate) * (int)UPDATE_INTERVAL;
-        int useAmount = ComputeFuelAmount(grinder.FuelUsePerSecondMg, ref grinder.FuelUseRemainder, worldTicksElapsed);
-        if (useAmount > 0)
-        {
-            if (grinder.FuelBufferMg < useAmount)
-            {
-                blockedReason = "Waiting for fuel";
-                return false;
-            }
-
-            grinder.FuelBufferMg -= useAmount;
-        }
-
-        int pullAmount = ComputeFuelAmount(grinder.FuelPullPerSecondMg, ref grinder.FuelPullRemainder, worldTicksElapsed);
-        int request = Math.Min(Math.Max(0, grinder.FuelCapacityMg - grinder.FuelBufferMg), pullAmount);
-        if (request > 0)
-        {
-            if (!TryResolveGrinderFuelGraph(grinder, out Guid graphId))
-            {
-                blockedReason = "Waiting for fuel";
-                return false;
-            }
-
-            if (FluidGraphManager.TryConsumeFluid(world, 0, graphId, grinder.FuelType, request, out int consumedMg) && consumedMg > 0)
-            {
-                grinder.FuelBufferMg = Math.Min(Math.Max(0, grinder.FuelCapacityMg), grinder.FuelBufferMg + consumedMg);
-                grinder.SelectedFuelGraphId = graphId;
-            }
-        }
-
-        return true;
-    }
-
-    private static int ComputeFuelAmount(int perSecondMg, ref int remainder, int worldTicksElapsed)
-    {
-        long numerator = ((long)Math.Max(0, perSecondMg) * Math.Max(0, worldTicksElapsed)) + remainder;
-        int amount = (int)(numerator / 20L);
-        remainder = (int)(numerator % 20L);
-        return Math.Max(0, amount);
-    }
-
-    private bool TryResolveGrinderFuelGraph(GrinderSnapshot grinder, out Guid graphId)
-    {
-        graphId = Guid.Empty;
-        if (grinder == null || string.IsNullOrWhiteSpace(grinder.FuelType))
-            return false;
-
-        string normalizedFuel = grinder.FuelType.Trim().ToLowerInvariant();
-
-        if (grinder.SelectedFuelGraphId != Guid.Empty &&
-            FluidGraphManager.TryGetGraph(grinder.SelectedFuelGraphId, out FluidGraphData selectedGraph) &&
-            selectedGraph != null &&
-            (string.IsNullOrEmpty(selectedGraph.FluidType) || string.Equals(selectedGraph.FluidType, normalizedFuel, StringComparison.Ordinal)))
-        {
-            graphId = grinder.SelectedFuelGraphId;
-            return true;
-        }
-
-        for (int i = 0; i < NeighborOffsets.Length; i++)
-        {
-            Vector3i pipePos = grinder.Position + NeighborOffsets[i];
-            TileEntityLiquidPipe pipe = world.GetTileEntity(0, pipePos) as TileEntityLiquidPipe;
-            if (pipe == null || pipe.FluidGraphId == Guid.Empty)
-                continue;
-
-            Guid candidate = pipe.FluidGraphId;
-            if (!FluidGraphManager.TryGetGraph(candidate, out FluidGraphData graph) || graph == null)
-                continue;
-
-            if (!string.IsNullOrEmpty(graph.FluidType) && !string.Equals(graph.FluidType, normalizedFuel, StringComparison.Ordinal))
-                continue;
-
-            graphId = candidate;
-            return true;
-        }
-
-        return false;
-    }
 
     private int GetMissedHLRTicks(IHLRSnapshot snapshot, ulong worldTime)
     {
@@ -3408,8 +2785,6 @@ public partial class HigherLogicRegistry
             lastSimTime = boiler.LastHLRSimTime;
         else if (snapshot is CasterSnapshot caster)
             lastSimTime = caster.LastHLRSimTime;
-        else if (snapshot is GrinderSnapshot grinder)
-            lastSimTime = grinder.LastHLRSimTime;
         else
             return 0;
 
@@ -3427,7 +2802,7 @@ public partial class HigherLogicRegistry
 
     private void StageSaveBatch(int batchIndex)
     {
-        HLRDevLog($"[HLR][Save] StageSaveBatch BEGIN â€” batch {batchIndex + 1}/{BATCH_COUNT}");
+        HLRDevLog($"[HLR][Save] StageSaveBatch BEGIN — batch {batchIndex + 1}/{BATCH_COUNT}");
 
         int snapshotIndex = 0;
         int stagedCount = 0;
@@ -3459,7 +2834,7 @@ public partial class HigherLogicRegistry
 
         savedBatches.Add(batchIndex);
 
-        HLRDevLog($"[HLR][Save] StageSaveBatch END â€” staged {stagedCount} snapshot(s)");
+        HLRDevLog($"[HLR][Save] StageSaveBatch END — staged {stagedCount} snapshot(s)");
     }
 
     private void BeginSaveCycle()
@@ -3469,7 +2844,7 @@ public partial class HigherLogicRegistry
         saveBatchIndex = 0;
         saveCycleActive = true;
 
-        HLRDevLog("[HLR][Save] BeginSaveCycle â€” round-robin save started");
+        HLRDevLog("[HLR][Save] BeginSaveCycle — round-robin save started");
     }
 
     private bool IsSaveCycleComplete()
@@ -3490,7 +2865,7 @@ public partial class HigherLogicRegistry
 
         if (IsSaveCycleComplete())
         {
-            HLRDevLog("[HLR][Save] Round-robin cycle complete â€” finalizing full save");
+            HLRDevLog("[HLR][Save] Round-robin cycle complete — finalizing full save");
             SaveSnapshotSet(stagedSaveSnapshots);
             stagedSaveSnapshots.Clear();
             savedBatches.Clear();
@@ -3527,11 +2902,8 @@ public partial class HigherLogicRegistry
             case CasterSnapshot caster:
                 return CloneCasterSnapshot(caster);
 
-            case GrinderSnapshot grinder:
-                return CloneGrinderSnapshot(grinder);
-
             default:
-                Log.Error($"[HLR][Save] CloneSnapshotForSave FAIL â€” unknown snapshot kind '{snapshot?.SnapshotKind}'");
+                Log.Error($"[HLR][Save] CloneSnapshotForSave FAIL — unknown snapshot kind '{snapshot?.SnapshotKind}'");
                 return null;
         }
     }
@@ -3747,62 +3119,6 @@ public partial class HigherLogicRegistry
         return clone;
     }
 
-    private GrinderSnapshot CloneGrinderSnapshot(GrinderSnapshot source)
-    {
-        GrinderSnapshot clone = new GrinderSnapshot
-        {
-            MachineId = source.MachineId,
-            Position = source.Position,
-            WorldTime = source.WorldTime,
-            LastHLRSimTime = source.LastHLRSimTime,
-            IsOn = source.IsOn,
-            SelectedInputChestPos = source.SelectedInputChestPos,
-            SelectedInputPipeGraphId = source.SelectedInputPipeGraphId,
-            SelectedInputPipeAnchorPos = source.SelectedInputPipeAnchorPos,
-            SelectedOutputChestPos = source.SelectedOutputChestPos,
-            SelectedOutputMode = source.SelectedOutputMode,
-            SelectedOutputPipeGraphId = source.SelectedOutputPipeGraphId,
-            SelectedOutputPipeAnchorPos = source.SelectedOutputPipeAnchorPos,
-            ProcessItemArmorMods = source.ProcessItemArmorMods,
-            EffectiveReturnRate = source.EffectiveReturnRate,
-            BaseBatchSize = source.BaseBatchSize,
-            MaxPendingOutput = source.MaxPendingOutput,
-            AcceptedRecipeBenchesCsv = source.AcceptedRecipeBenchesCsv ?? string.Empty,
-            BlockedRecipeBenchesCsv = source.BlockedRecipeBenchesCsv ?? string.Empty,
-            IsProcessing = source.IsProcessing,
-            CycleTickCounter = source.CycleTickCounter,
-            CycleTickLength = source.CycleTickLength,
-            ActiveBatchSize = source.ActiveBatchSize,
-            ActiveItemName = source.ActiveItemName ?? string.Empty,
-            ItemsProcessed = source.ItemsProcessed,
-            PendingOutputs = new Dictionary<string, int>(StringComparer.Ordinal),
-            IsFuelEnabled = source.IsFuelEnabled,
-            FuelType = source.FuelType ?? string.Empty,
-            FuelBufferMg = source.FuelBufferMg,
-            FuelCapacityMg = source.FuelCapacityMg,
-            FuelUsePerSecondMg = source.FuelUsePerSecondMg,
-            FuelPullPerSecondMg = source.FuelPullPerSecondMg,
-            SelectedFuelGraphId = source.SelectedFuelGraphId,
-            FuelUseRemainder = source.FuelUseRemainder,
-            FuelPullRemainder = source.FuelPullRemainder,
-            LastAction = source.LastAction ?? string.Empty,
-            LastBlockReason = source.LastBlockReason ?? string.Empty
-        };
-
-        if (source.PendingOutputs != null)
-        {
-            foreach (KeyValuePair<string, int> kvp in source.PendingOutputs)
-            {
-                if (string.IsNullOrEmpty(kvp.Key) || kvp.Value <= 0)
-                    continue;
-
-                clone.PendingOutputs[kvp.Key] = kvp.Value;
-            }
-        }
-
-        return clone;
-    }
-
     public Dictionary<string, int> GetSnapshotCountsByType()
     {
         Dictionary<string, int> counts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
@@ -3920,23 +3236,23 @@ public partial class HigherLogicRegistry
     // ---------------------------------------------
     public void RegisterMachine(Guid machineId, IHLRSnapshot snapshot)
     {
-        HLRDevLog($"[HLR] RegisterMachine â€” BEGIN id={machineId}");
+        HLRDevLog($"[HLR] RegisterMachine — BEGIN id={machineId}");
 
         if (snapshot == null)
         {
-            Log.Error("[HLR] RegisterMachine FAIL â€” snapshot is null");
+            Log.Error("[HLR] RegisterMachine FAIL — snapshot is null");
             return;
         }
 
         if (string.IsNullOrEmpty(snapshot.SnapshotKind))
         {
-            Log.Error("[HLR] RegisterMachine FAIL â€” SnapshotKind is null or empty");
+            Log.Error("[HLR] RegisterMachine FAIL — SnapshotKind is null or empty");
             return;
         }
 
         if (machineId == Guid.Empty)
         {
-            Log.Error("[HLR] RegisterMachine FAIL â€” machineId is Guid.Empty");
+            Log.Error("[HLR] RegisterMachine FAIL — machineId is Guid.Empty");
             return;
         }
 
@@ -3946,14 +3262,14 @@ public partial class HigherLogicRegistry
         isDirty = true;
 
         HLRDevLog(
-            $"[HLR] RegisterMachine â€” SUCCESS " +
+            $"[HLR] RegisterMachine — SUCCESS " +
             $"id={machineId} " +
             $"kind={snapshot.SnapshotKind} " +
             $"version={snapshot.SnapshotVersion} " +
             $"replacedExisting={replacing}"
         );
 
-        HLRDevLog($"[HLR] RegisterMachine â€” Active snapshots = {snapshots.Count}");
+        HLRDevLog($"[HLR] RegisterMachine — Active snapshots = {snapshots.Count}");
     }
 
     // ---------------------------------------------
@@ -3961,20 +3277,20 @@ public partial class HigherLogicRegistry
     // ---------------------------------------------
     public bool TryUnregisterMachine(Guid machineId, out IHLRSnapshot snapshot)
     {
-        HLRDevLog($"[HLR] TryUnregisterMachine â€” BEGIN id={machineId}");
+        HLRDevLog($"[HLR] TryUnregisterMachine — BEGIN id={machineId}");
 
         snapshot = null;
 
         if (machineId == Guid.Empty)
         {
-            Log.Error("[HLR] TryUnregisterMachine FAIL â€” machineId is Guid.Empty");
+            Log.Error("[HLR] TryUnregisterMachine FAIL — machineId is Guid.Empty");
             return false;
         }
 
         if (!snapshots.TryGetValue(machineId, out snapshot))
         {
-            HLRDevLog($"[HLR] TryUnregisterMachine â€” MISS id={machineId}");
-            HLRDevLog($"[HLR] TryUnregisterMachine â€” Active snapshots = {snapshots.Count}");
+            HLRDevLog($"[HLR] TryUnregisterMachine — MISS id={machineId}");
+            HLRDevLog($"[HLR] TryUnregisterMachine — Active snapshots = {snapshots.Count}");
             return false;
         }
 
@@ -3982,13 +3298,13 @@ public partial class HigherLogicRegistry
         isDirty = true;
 
         HLRDevLog(
-            $"[HLR] TryUnregisterMachine â€” SUCCESS " +
+            $"[HLR] TryUnregisterMachine — SUCCESS " +
             $"id={machineId} " +
             $"kind={snapshot.SnapshotKind} " +
             $"version={snapshot.SnapshotVersion}"
         );
 
-        HLRDevLog($"[HLR] TryUnregisterMachine â€” Active snapshots = {snapshots.Count}");
+        HLRDevLog($"[HLR] TryUnregisterMachine — Active snapshots = {snapshots.Count}");
         return true;
     }
 
@@ -4060,14 +3376,6 @@ public partial class HigherLogicRegistry
                 HLRDevLog($"[HLR][Factory] Unsupported Caster version {version}");
                 return null;
 
-            case "UniversalGrinder":
-                if (version >= 1)
-                {
-                    return new GrinderSnapshot();
-                }
-                HLRDevLog($"[HLR][Factory] Unsupported UniversalGrinder version {version}");
-                return null;
-
             default:
                 Log.Error($"[HLR][Factory] Unknown snapshot kind '{kind}'");
                 return null;
@@ -4135,7 +3443,7 @@ public partial class HigherLogicRegistry
 
                 int snapshotCount = sourceSnapshots.Count;
                 bw.Write(snapshotCount);
-                HLRDevLog($"[HLR][IO] Save â€” snapshotCount={snapshotCount}");
+                HLRDevLog($"[HLR][IO] Save — snapshotCount={snapshotCount}");
 
                 foreach (var snapshot in sourceSnapshots.Values)
                 {
@@ -4147,7 +3455,7 @@ public partial class HigherLogicRegistry
                     bw.Write(snapshot.Position.y);
                     bw.Write(snapshot.Position.z);
 
-                    HLRDevLog($"[HLR][IO] Save â€” snapshot kind={snapshot.SnapshotKind} version={snapshot.SnapshotVersion} machineid={snapshot.MachineId}");
+                    HLRDevLog($"[HLR][IO] Save — snapshot kind={snapshot.SnapshotKind} version={snapshot.SnapshotVersion} machineid={snapshot.MachineId}");
 
                     if (snapshot is ExtractorSnapshotV1 extractor)
                         SaveExtractorSnapshot(bw, extractor);
@@ -4172,9 +3480,6 @@ public partial class HigherLogicRegistry
 
                     if (snapshot is CasterSnapshot caster)
                         SaveCasterSnapshot(bw, caster);
-
-                    if (snapshot is GrinderSnapshot grinder)
-                        SaveGrinderSnapshot(bw, grinder);
                 }
             }
 
@@ -4183,7 +3488,7 @@ public partial class HigherLogicRegistry
 
             File.Move(tempFile, hlrFile);
 
-            HLRDevLog($"[HLR][IO] Save OK â€” wrote header v{HLR_VERSION}");
+            HLRDevLog($"[HLR][IO] Save OK — wrote header v{HLR_VERSION}");
         }
         catch (Exception ex)
         {
@@ -4451,75 +3756,13 @@ public partial class HigherLogicRegistry
         bw.Write(infuser.LastBlockReason ?? string.Empty);
     }
 
-    private void SaveGrinderSnapshot(BinaryWriter bw, GrinderSnapshot grinder)
-    {
-        bw.Write(grinder.WorldTime);
-        bw.Write(grinder.LastHLRSimTime);
-        bw.Write(grinder.IsOn);
-
-        bw.Write(grinder.SelectedInputChestPos.x);
-        bw.Write(grinder.SelectedInputChestPos.y);
-        bw.Write(grinder.SelectedInputChestPos.z);
-        bw.Write(grinder.SelectedInputPipeGraphId.ToString());
-        bw.Write(grinder.SelectedInputPipeAnchorPos.x);
-        bw.Write(grinder.SelectedInputPipeAnchorPos.y);
-        bw.Write(grinder.SelectedInputPipeAnchorPos.z);
-
-        bw.Write(grinder.SelectedOutputChestPos.x);
-        bw.Write(grinder.SelectedOutputChestPos.y);
-        bw.Write(grinder.SelectedOutputChestPos.z);
-        bw.Write((int)grinder.SelectedOutputMode);
-        bw.Write(grinder.SelectedOutputPipeGraphId.ToString());
-        bw.Write(grinder.SelectedOutputPipeAnchorPos.x);
-        bw.Write(grinder.SelectedOutputPipeAnchorPos.y);
-        bw.Write(grinder.SelectedOutputPipeAnchorPos.z);
-
-        bw.Write(grinder.ProcessItemArmorMods);
-        bw.Write(grinder.EffectiveReturnRate);
-        bw.Write(grinder.BaseBatchSize);
-        bw.Write(grinder.MaxPendingOutput);
-        bw.Write(grinder.AcceptedRecipeBenchesCsv ?? string.Empty);
-        bw.Write(grinder.BlockedRecipeBenchesCsv ?? string.Empty);
-
-        bw.Write(grinder.IsProcessing);
-        bw.Write(grinder.CycleTickCounter);
-        bw.Write(grinder.CycleTickLength);
-        bw.Write(grinder.ActiveBatchSize);
-        bw.Write(grinder.ActiveItemName ?? string.Empty);
-        bw.Write(grinder.ItemsProcessed);
-
-        int pendingCount = grinder.PendingOutputs?.Count ?? 0;
-        bw.Write(pendingCount);
-        if (grinder.PendingOutputs != null)
-        {
-            foreach (KeyValuePair<string, int> kvp in grinder.PendingOutputs)
-            {
-                bw.Write(kvp.Key ?? string.Empty);
-                bw.Write(kvp.Value);
-            }
-        }
-
-        bw.Write(grinder.IsFuelEnabled);
-        bw.Write(grinder.FuelType ?? string.Empty);
-        bw.Write(grinder.FuelBufferMg);
-        bw.Write(grinder.FuelCapacityMg);
-        bw.Write(grinder.FuelUsePerSecondMg);
-        bw.Write(grinder.FuelPullPerSecondMg);
-        bw.Write(grinder.SelectedFuelGraphId.ToString());
-        bw.Write(grinder.FuelUseRemainder);
-        bw.Write(grinder.FuelPullRemainder);
-
-        bw.Write(grinder.LastAction ?? string.Empty);
-        bw.Write(grinder.LastBlockReason ?? string.Empty);
-    }
-
     public void Load()
     {
         EnsureSavePaths();
 
         if (!File.Exists(hlrFile))
         {
-            HLRDevLog("[HLR][IO] Load â€” no file found, starting fresh");
+            HLRDevLog("[HLR][IO] Load — no file found, starting fresh");
             return;
         }
 
@@ -4535,23 +3778,23 @@ public partial class HigherLogicRegistry
 
                 if (magic != "HLR")
                 {
-                    Log.Error($"[HLR][IO] Load FAILED â€” bad magic '{magic}'");
+                    Log.Error($"[HLR][IO] Load FAILED — bad magic '{magic}'");
                     return;
                 }
 
                 int fileVersion = br.ReadInt32();
 
-                if (fileVersion != HLR_VERSION)
+                if (fileVersion < 2 || fileVersion > HLR_VERSION)
                 {
-                    Log.Error($"[HLR][IO] Load FAILED â€” unsupported version {fileVersion}");
+                    Log.Error($"[HLR][IO] Load FAILED — unsupported version {fileVersion}");
                     return;
                 }
 
-                HLRDevLog($"[HLR][IO] Load OK â€” header valid (v{fileVersion})");
+                HLRDevLog($"[HLR][IO] Load OK — header valid (v{fileVersion})");
 
                 // Load Snapshot Count
                 int snapshotCount = br.ReadInt32();
-                HLRDevLog($"[HLR][IO] Load â€” snapshotCount={snapshotCount}");
+                HLRDevLog($"[HLR][IO] Load — snapshotCount={snapshotCount}");
 
                 // Snapshot Information
                 for (int i = 0; i < snapshotCount; i++)
@@ -4559,12 +3802,12 @@ public partial class HigherLogicRegistry
                     string kind = br.ReadString();
                     int snapshotVersion = br.ReadInt32();
 
-                    HLRDevLog($"[HLR][IO] Load â€” snapshot[{i}] kind={kind} version={snapshotVersion}");
+                    HLRDevLog($"[HLR][IO] Load — snapshot[{i}] kind={kind} version={snapshotVersion}");
 
                     var snapshot = CreateSnapshot(kind, snapshotVersion);
                     if (snapshot == null)
                     {
-                        Log.Error($"[HLR][IO] Load ABORT â€” unsupported snapshot kind/version kind='{kind}' version={snapshotVersion}");
+                        Log.Error($"[HLR][IO] Load ABORT — unsupported snapshot kind/version kind='{kind}' version={snapshotVersion}");
                         continue;
                     }
 
@@ -4597,8 +3840,6 @@ public partial class HigherLogicRegistry
                         LoadBoilerSnapshot(br, boiler, snapshotVersion);
                     if (snapshot is CasterSnapshot caster)
                         LoadCasterSnapshot(br, caster, snapshotVersion);
-                    if (snapshot is GrinderSnapshot grinder)
-                        LoadGrinderSnapshot(br, grinder, snapshotVersion);
                     snapshots[machineId] = snapshot;
                 }
             }
@@ -4606,10 +3847,10 @@ public partial class HigherLogicRegistry
 
         catch (EndOfStreamException)
         {
-            Log.Error($"[HLR][IO] Load FAILED â€” file truncated: {hlrFile}");
+            Log.Error($"[HLR][IO] Load FAILED — file truncated: {hlrFile}");
             if (snapshots.Count > 0)
             {
-                Log.Warning($"[HLR][IO] Partial load recovery â€” keeping {snapshots.Count} snapshot(s) read before EOF");
+                Log.Warning($"[HLR][IO] Partial load recovery — keeping {snapshots.Count} snapshot(s) read before EOF");
                 isDirty = true;
             }
             else
@@ -4619,10 +3860,10 @@ public partial class HigherLogicRegistry
         }
         catch (Exception ex)
         {
-            Log.Error($"[HLR][IO] Load FAILED â€” exception: {ex}");
+            Log.Error($"[HLR][IO] Load FAILED — exception: {ex}");
             if (snapshots.Count > 0)
             {
-                Log.Warning($"[HLR][IO] Partial load recovery â€” keeping {snapshots.Count} snapshot(s) read before exception");
+                Log.Warning($"[HLR][IO] Partial load recovery — keeping {snapshots.Count} snapshot(s) read before exception");
                 isDirty = true;
             }
             else
@@ -5170,67 +4411,6 @@ public partial class HigherLogicRegistry
         }
     }
 
-    private void LoadGrinderSnapshot(BinaryReader br, GrinderSnapshot grinder, int snapshotVersion)
-    {
-        grinder.WorldTime = br.ReadUInt64();
-        grinder.LastHLRSimTime = snapshotVersion >= 1 ? br.ReadUInt64() : grinder.WorldTime;
-        grinder.IsOn = br.ReadBoolean();
-
-        grinder.SelectedInputChestPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
-        if (!Guid.TryParse(br.ReadString(), out grinder.SelectedInputPipeGraphId))
-            grinder.SelectedInputPipeGraphId = Guid.Empty;
-        grinder.SelectedInputPipeAnchorPos = Vector3i.zero;
-        if (snapshotVersion >= 1)
-            grinder.SelectedInputPipeAnchorPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
-
-        grinder.SelectedOutputChestPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
-        grinder.SelectedOutputMode = (OutputTransportMode)br.ReadInt32();
-        if (!Guid.TryParse(br.ReadString(), out grinder.SelectedOutputPipeGraphId))
-            grinder.SelectedOutputPipeGraphId = Guid.Empty;
-        grinder.SelectedOutputPipeAnchorPos = Vector3i.zero;
-        if (snapshotVersion >= 1)
-            grinder.SelectedOutputPipeAnchorPos = new Vector3i(br.ReadInt32(), br.ReadInt32(), br.ReadInt32());
-
-        grinder.ProcessItemArmorMods = br.ReadBoolean();
-        grinder.EffectiveReturnRate = Math.Max(0f, br.ReadSingle());
-        grinder.BaseBatchSize = Math.Max(1, br.ReadInt32());
-        grinder.MaxPendingOutput = Math.Max(1, br.ReadInt32());
-        grinder.AcceptedRecipeBenchesCsv = br.ReadString() ?? string.Empty;
-        grinder.BlockedRecipeBenchesCsv = br.ReadString() ?? string.Empty;
-
-        grinder.IsProcessing = br.ReadBoolean();
-        grinder.CycleTickCounter = Math.Max(0, br.ReadInt32());
-        grinder.CycleTickLength = Math.Max(1, br.ReadInt32());
-        grinder.ActiveBatchSize = Math.Max(0, br.ReadInt32());
-        grinder.ActiveItemName = br.ReadString() ?? string.Empty;
-        grinder.ItemsProcessed = Math.Max(0L, br.ReadInt64());
-
-        int pendingCount = Math.Max(0, br.ReadInt32());
-        grinder.PendingOutputs = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (int i = 0; i < pendingCount; i++)
-        {
-            string itemName = br.ReadString() ?? string.Empty;
-            int count = br.ReadInt32();
-            if (string.IsNullOrEmpty(itemName) || count <= 0)
-                continue;
-
-            grinder.PendingOutputs[itemName] = count;
-        }
-
-        grinder.IsFuelEnabled = br.ReadBoolean();
-        grinder.FuelType = br.ReadString() ?? string.Empty;
-        grinder.FuelBufferMg = Math.Max(0, br.ReadInt32());
-        grinder.FuelCapacityMg = Math.Max(0, br.ReadInt32());
-        grinder.FuelUsePerSecondMg = Math.Max(0, br.ReadInt32());
-        grinder.FuelPullPerSecondMg = Math.Max(0, br.ReadInt32());
-        if (!Guid.TryParse(br.ReadString(), out grinder.SelectedFuelGraphId))
-            grinder.SelectedFuelGraphId = Guid.Empty;
-        grinder.FuelUseRemainder = Math.Max(0, br.ReadInt32());
-        grinder.FuelPullRemainder = Math.Max(0, br.ReadInt32());
-
-        grinder.LastAction = br.ReadString() ?? string.Empty;
-        grinder.LastBlockReason = br.ReadString() ?? string.Empty;
-    }
 
 }
 

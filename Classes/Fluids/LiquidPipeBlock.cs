@@ -105,6 +105,7 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
             case 6:
             case 14:
             case 12:
+            case 20:
                 return PipeAxis.AxisZ;
             case 1:
             case 3:
@@ -136,7 +137,7 @@ public class LiquidPipeBlock : MachineBlock<TileEntityLiquidPipe>
             case PipeAxis.AxisY:
                 return "[8,10,13,15,16,18,21,23]";
             case PipeAxis.AxisZ:
-                return "[0,2,4,6,12,14]";
+                return "[0,2,4,6,12,14,20]";
             default:
                 return "[]";
         }

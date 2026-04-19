@@ -19,6 +19,8 @@ universalCementMixerDesc,"Automates cement mixer recipes using configured input 
 
 networkController,"Network Controller"
 networkControllerDesc,"Manages machine networks and links connected pipe systems."
+networkStorageInterface,"Network Storage Interface"
+networkStorageInterfaceDesc,"Provides centralized access to networked storage containers."
 
 universalIronExtractorDesc,"Automates iron extraction from iron ore sources. Higher tiers increase output and speed."
 universalCoalExtractorDesc,"Automates coal extraction from coal ore sources."
@@ -42,8 +44,6 @@ universalBoiler,"Universal Boiler"
 universalBoilerDesc,"Converts one fluid into another using configured recipes and heat from below."
 universalCaster,"Universal Caster"
 universalCasterDesc,"Casts solid items from configured molten fluid recipes and outputs to selected storage."
-universalGrinder,"Universal Grinder"
-universalGrinderDesc,"Grinds items back into materials using recipe reversal and scrap fallback rules."
 
 itemPipe,"Item Pipe (T1)"
 itemPipeElbow,"Item Pipe Elbow (T1)"

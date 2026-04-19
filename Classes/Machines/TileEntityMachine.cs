@@ -7,8 +7,8 @@ public abstract class TileEntityMachine : TileEntity
     public const int MinPipePriority = 0;
     public const int MaxPipePriority = 9;
     public const int DefaultPipePriority = 0;
-    public const int DefaultMaxPendingInput = 100;
-    public const int DefaultMaxPendingOutput = 100;
+    public const int DefaultMaxPendingInput = 1000;
+    public const int DefaultMaxPendingOutput = 1000;
 
     protected Guid machineGuid = Guid.Empty;
     protected Dictionary<string, int> pendingOutput = new Dictionary<string, int>();

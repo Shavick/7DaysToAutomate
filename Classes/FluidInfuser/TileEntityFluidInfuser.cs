@@ -514,8 +514,6 @@ public class TileEntityFluidInfuser : TileEntityMachine
                 continue;
 
             TileEntityComposite comp = world.GetTileEntity(chestPos) as TileEntityComposite;
-            if (comp == null)
-                return false;
 
             SelectedInputChestPos = chestPos;
             SelectedInputPipeGraphId = parsedPipeGraphId;
@@ -570,8 +568,6 @@ public class TileEntityFluidInfuser : TileEntityMachine
             }
 
             TileEntityComposite comp = world.GetTileEntity(chestPos) as TileEntityComposite;
-            if (comp == null)
-                return false;
 
             SelectedOutputChestPos = chestPos;
             SelectedOutputMode = mode;
@@ -1401,9 +1397,6 @@ public class TileEntityFluidInfuser : TileEntityMachine
                 Vector3i storagePos = storageEndpoints[j];
                 string key = $"{storagePos}|{pipeTe.PipeGraphId}";
                 if (!seen.Add(key))
-                    continue;
-
-                if (!(world.GetTileEntity(0, storagePos) is TileEntityComposite))
                     continue;
 
                 results.Add(new InputTargetInfo(storagePos, pipeTe.PipeGraphId));

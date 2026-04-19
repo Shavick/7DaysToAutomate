@@ -80,9 +80,13 @@
                     return;
                 }
 
-                if (!(te is TileEntityMachine))
+                bool supportedTileEntity =
+                    te is TileEntityMachine ||
+                    te is TileEntityNetworkStorageInterface;
+
+                if (!supportedTileEntity)
                 {
-                    Log.Error($"[NetPkg][MachineUI][SERVER] TileEntity at {BlockPos} is not a TileEntityMachine");
+                    Log.Error($"[NetPkg][MachineUI][SERVER] TileEntity at {BlockPos} does not support machine UI open");
                     return;
                 }
                 Helper.PrepareMachineForUiOpen(_world, te, BlockPos);
@@ -93,7 +97,7 @@
                     return;
                 }
 
-                if (CustomUi != "ExtractorInfo" && CustomUi != "CrafterInfo" && CustomUi != "FluidDecanterInfo" && CustomUi != "FluidInfuserInfo" && CustomUi != "MelterInfo" && CustomUi != "FluidMixerInfo" && CustomUi != "BoilerInfo" && CustomUi != "CasterInfo")
+                if (CustomUi != "ExtractorInfo" && CustomUi != "CrafterInfo" && CustomUi != "FluidDecanterInfo" && CustomUi != "FluidInfuserInfo" && CustomUi != "MelterInfo" && CustomUi != "FluidMixerInfo" && CustomUi != "BoilerInfo" && CustomUi != "CasterInfo" && CustomUi != "NetworkStorageInterface")
                 {
                     Log.Error($"[NetPkg][MachineUI][SERVER] Unknown UI key '{CustomUi}'");
                     return;
@@ -264,6 +268,19 @@
                         localPlayer.AimingGun = false;
                         XUiC_CasterInfo.Open(localPlayer, BlockPos);
                         Log.Out($"[NetPkg][MachineUI][CLIENT] Caster UI open call executed");
+                        break;
+
+                    case "NetworkStorageInterface":
+                        if (!(te is TileEntityNetworkStorageInterface))
+                        {
+                            Log.Error($"[NetPkg][MachineUI][CLIENT] TileEntity is not TileEntityNetworkStorageInterface for UI {CustomUi}");
+                            return;
+                        }
+
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Opening Network Storage Interface UI at {BlockPos}");
+                        localPlayer.AimingGun = false;
+                        XUiC_NetworkStorageInterface.Open(localPlayer, BlockPos);
+                        Log.Out($"[NetPkg][MachineUI][CLIENT] Network Storage Interface UI open call executed");
                         break;
 
                     default:

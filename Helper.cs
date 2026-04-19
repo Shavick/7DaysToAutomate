@@ -76,12 +76,19 @@ public static class Helper
             caster.NeedsUiRefresh = true;
         }
 
-        if (te is TileEntityUniversalGrinder grinder)
+        if (te is TileEntityNetworkStorageInterface networkStorageInterface)
+        {
+            networkStorageInterface.ResolveNetworkId(world, true);
+            networkStorageInterface.RefreshSnapshotSummary(world);
+            networkStorageInterface.setModified();
+        }
+
+        if (te is TileEntityGrinder grinder)
         {
             grinder.RefreshAvailableInputTargets(world);
             grinder.RefreshAvailableOutputTargets(world);
-            grinder.ResolveSelectedInputContainer();
-            grinder.ResolveFuelGraph(world);
+            grinder.ResolveSelectedInputContainer(world);
+            grinder.ResolveSelectedOutputContainer(world);
             grinder.setModified();
             grinder.NeedsUiRefresh = true;
         }
@@ -165,9 +172,9 @@ public static class Helper
                     XUiC_CasterInfo.Open(localPlayer, blockPos);
                     return;
                 }
-                if (customUi == "GrinderInfo")
+                if (customUi == "NetworkStorageInterface")
                 {
-                    XUiC_UniversalGrinderInfo.Open(localPlayer, blockPos);
+                    XUiC_NetworkStorageInterface.Open(localPlayer, blockPos);
                     return;
                 }
                 Log.Error($"[NetPkg][MachineUI][SERVER] Unknown local-host UI key '{customUi}'");
@@ -394,6 +401,58 @@ public static class Helper
         }
 
         te.ServerSelectOutputContainer(targetPos, (OutputTransportMode)mode, pipeGraphId);
+    }
+
+    public static void RequestGrinderSelectInput(Vector3i blockPos, Vector3i chestPos, string pipeGraphId)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[Grinder][Helper] RequestGrinderSelectInput world is null");
+            return;
+        }
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageGrinderControl>()
+                    .SetupSelectInput(blockPos, GetLocalRequesterEntityId(world), chestPos, pipeGraphId),
+                false
+            );
+            return;
+        }
+        var te = world.GetTileEntity(blockPos) as TileEntityGrinder;
+        if (te == null)
+        {
+            Log.Error($"[Grinder][Helper] No grinder at pos={blockPos}");
+            return;
+        }
+        te.ServerSelectInputContainer(chestPos, pipeGraphId);
+    }
+
+    public static void RequestGrinderSelectOutput(Vector3i blockPos, Vector3i targetPos, int mode, string pipeGraphId)
+    {
+        var world = GameManager.Instance.World;
+        if (world == null)
+        {
+            Log.Error("[Grinder][Helper] RequestGrinderSelectOutput world is null");
+            return;
+        }
+        if (world.IsRemote())
+        {
+            SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
+                NetPackageManager.GetPackage<NetPackageGrinderControl>()
+                    .SetupSelectOutput(blockPos, GetLocalRequesterEntityId(world), targetPos, pipeGraphId),
+                false
+            );
+            return;
+        }
+        var te = world.GetTileEntity(blockPos) as TileEntityGrinder;
+        if (te == null)
+        {
+            Log.Error($"[Grinder][Helper] No grinder at pos={blockPos}");
+            return;
+        }
+        te.ServerSelectOutputContainer(targetPos, pipeGraphId);
     }
 
     public static void RequestCrafterSetPriority(Vector3i blockPos, int priority)
@@ -861,70 +920,72 @@ public static class Helper
         );
     }
 
-    public static void RequestGrinderSelectInput(Vector3i blockPos, Vector3i chestPos, string pipeGraphId)
+    public static void RequestNetworkStorageWithdraw(Vector3i interfacePos, string displayKey, int count)
     {
-        World world = GameManager.Instance.World;
-        if (world == null)
+        World world = GameManager.Instance?.World;
+        if (world == null || string.IsNullOrEmpty(displayKey) || count <= 0)
             return;
+
+        int requesterId = GetLocalRequesterEntityId(world);
 
         if (world.IsRemote())
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
-                NetPackageManager.GetPackage<NetPackageUniversalGrinderControl>()
-                    .SetupSelectInput(blockPos, GetLocalRequesterEntityId(world), chestPos, pipeGraphId),
+                NetPackageManager.GetPackage<NetPackageNetworkStorageControl>()
+                    .SetupWithdraw(interfacePos, requesterId, displayKey, count),
                 false
             );
             return;
         }
 
-        TileEntityUniversalGrinder te = world.GetTileEntity(blockPos) as TileEntityUniversalGrinder;
-        te?.ServerSelectInputContainer(chestPos, pipeGraphId);
+        EntityPlayer requester = world.GetEntity(requesterId) as EntityPlayer;
+        NetworkStorageInterfaceActions.TryExecuteWithdraw(world, interfacePos, requester, displayKey, count, out _);
     }
 
-    public static void RequestGrinderSelectOutput(Vector3i blockPos, Vector3i targetPos, int mode, string pipeGraphId)
+    public static void RequestNetworkStorageDepositHolding(Vector3i interfacePos)
     {
-        World world = GameManager.Instance.World;
+        World world = GameManager.Instance?.World;
         if (world == null)
             return;
+
+        int requesterId = GetLocalRequesterEntityId(world);
 
         if (world.IsRemote())
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
-                NetPackageManager.GetPackage<NetPackageUniversalGrinderControl>()
-                    .SetupSelectOutput(blockPos, GetLocalRequesterEntityId(world), targetPos, mode, pipeGraphId),
+                NetPackageManager.GetPackage<NetPackageNetworkStorageControl>()
+                    .SetupDepositHolding(interfacePos, requesterId),
                 false
             );
             return;
         }
 
-        TileEntityUniversalGrinder te = world.GetTileEntity(blockPos) as TileEntityUniversalGrinder;
-        te?.ServerSelectOutputContainer(targetPos, (OutputTransportMode)mode, pipeGraphId);
+        EntityPlayer requester = world.GetEntity(requesterId) as EntityPlayer;
+        NetworkStorageInterfaceActions.TryExecuteDepositHolding(world, interfacePos, requester, out _);
     }
 
-    public static void RequestGrinderToggleMods(Vector3i blockPos)
+    public static void RequestNetworkStorageDepositAll(Vector3i interfacePos)
     {
-        World world = GameManager.Instance.World;
+        World world = GameManager.Instance?.World;
         if (world == null)
             return;
+
+        int requesterId = GetLocalRequesterEntityId(world);
 
         if (world.IsRemote())
         {
             SingletonMonoBehaviour<ConnectionManager>.Instance.SendToServer(
-                NetPackageManager.GetPackage<NetPackageUniversalGrinderControl>()
-                    .SetupToggleMods(blockPos, GetLocalRequesterEntityId(world)),
+                NetPackageManager.GetPackage<NetPackageNetworkStorageControl>()
+                    .SetupDepositAll(interfacePos, requesterId),
                 false
             );
             return;
         }
 
-        TileEntityUniversalGrinder te = world.GetTileEntity(blockPos) as TileEntityUniversalGrinder;
-        te?.ServerToggleProcessMods();
+        EntityPlayer requester = world.GetEntity(requesterId) as EntityPlayer;
+        NetworkStorageInterfaceActions.TryExecuteDepositAll(world, interfacePos, requester, out _);
     }
 }
-
-
-
-
 
 
 

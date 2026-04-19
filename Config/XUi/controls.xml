@@ -126,28 +126,6 @@
 			</rect>
 		</fluid_infuser_output_container_entry>
 
-		<grinder_input_container_entry>
-			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="GrinderInputContainerEntry, 7DaysToAutomate">
-				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
-				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
-				<sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true" />
-				<label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center" />
-				<sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}" />
-				<sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}" />
-			</rect>
-		</grinder_input_container_entry>
-
-		<grinder_output_container_entry>
-			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="GrinderOutputContainerEntry, 7DaysToAutomate">
-				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
-				<sprite depth="3" name="background" width="56" height="56" color="[mediumGrey]" type="sliced" />
-				<sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{containericon}" color="[white]" pos="0,0" width="60" height="60" foregroundlayer="true" />
-				<label depth="5" name="name" pos="0,0" width="56" height="40" text="{containername}" font_size="14" color="[white]" justify="center" />
-				<sprite depth="2" name="highlightOverlay" color="{backgroundcolor}" pos="0,0" type="sliced" globalopacity="true" width="56" height="56" fillcenter="true" foregroundlayer="true" visible="{isselected}" />
-				<sprite depth="6" name="highlightBorder" sprite="menu_empty3px" color="0,255,170,255" pos="-3,3" width="61" height="61" type="sliced" fillcenter="false" foregroundlayer="true" visible="{isselected}" />
-			</rect>
-		</grinder_output_container_entry>
-
 		<caster_output_container_entry>
 			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="CasterOutputContainerEntry, 7DaysToAutomate">
 				<sprite depth="2" name="backgroundMain" justify="center" sprite="menu_empty3px" pos="-3,3" width="61" height="61" color="[black]" type="sliced" fillcenter="false" />
@@ -176,6 +154,16 @@
 				<label depth="5" name="recipeMachineLabel" pos="244,-2" width="106" height="22" text="{recipe_machine}" font_size="18" justify="right" color="[limeGreen]" />
 			</rect>
 		</machine_recipe_codex_entry>
+
+		<network_storage_entry>
+			<rect width="420" height="52" style="press, hover" controller="XUiC_NetworkStorageEntry, 7DaysToAutomate" sound="[recipe_click]" tooltip="{network_item_tooltip}" sound_play_on_hover="[default_hover]">
+				<sprite depth="2" name="backgroundMain" sprite="menu_empty3px" pos="-2,2" width="424" height="56" color="[black]" type="sliced" fillcenter="false" />
+				<sprite depth="3" name="background" width="420" height="52" pos="0,0" color="[darkGrey]" type="sliced" />
+				<sprite depth="4" name="icon" atlas="ItemIconAtlas" sprite="{network_item_icon}" pos="6,-3" width="44" height="44" foregroundlayer="true" />
+				<label depth="5" name="name" pos="56,-5" width="250" height="24" text="{network_item_name}" font_size="20" color="[white]" />
+				<label depth="5" name="count" pos="312,-5" width="100" height="24" text="{network_item_count}" font_size="20" justify="right" color="[limeGreen]" />
+			</rect>
+		</network_storage_entry>
 
 		<melter_input_container_entry>
 			<rect width="60" height="60" style="press, hover" sound="[recipe_click]" sound_play_on_hover="[default_hover]" controller="MelterInputContainerEntry, 7DaysToAutomate">

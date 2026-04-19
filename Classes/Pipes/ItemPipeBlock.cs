@@ -107,6 +107,7 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
             case 6:
             case 14:
             case 12:
+            case 20:
                 return PipeAxis.AxisZ;
 
             case 1:
@@ -141,7 +142,7 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
             case PipeAxis.AxisY:
                 return "[8,10,13,15,16,18,21,23]";
             case PipeAxis.AxisZ:
-                return "[0,2,4,6,12,14]";
+                return "[0,2,4,6,12,14,20]";
             default:
                 return "[]";
         }
@@ -485,23 +486,67 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
     {
         networkId = Guid.Empty;
 
-        for (int i = 0; i < NeighborOffsets.Length; i++)
+        if (world == null)
+            return false;
+
+        var visited = new HashSet<Vector3i>();
+        var open = new List<Vector3i>();
+        var discoveredNetworkIds = new HashSet<Guid>();
+        int index = 0;
+
+        visited.Add(pipePos);
+        open.Add(pipePos);
+
+        while (index < open.Count)
         {
-            Vector3i neighborPos = pipePos + NeighborOffsets[i];
+            Vector3i currentPos = open[index++];
 
-            if (!IsControllerConnectedNeighbor(world, clrIdx, pipePos, pipeValue, neighborPos))
+            if (!SafeWorldRead.TryGetBlock(world, clrIdx, currentPos, out BlockValue currentValue))
                 continue;
 
-            TileEntity controllerEntity;
-        var controllerTe = SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out controllerEntity) ? controllerEntity as TileEntityNetworkController : null;
-            if (controllerTe == null || !controllerTe.HasValidNetworkId)
-                continue;
+            for (int i = 0; i < NeighborOffsets.Length; i++)
+            {
+                Vector3i neighborPos = currentPos + NeighborOffsets[i];
 
-            networkId = controllerTe.GetNetworkId();
-            return true;
+                if (!IsControllerConnectedNeighbor(world, clrIdx, currentPos, currentValue, neighborPos))
+                    continue;
+
+                TileEntity controllerEntity;
+                var controllerTe = SafeWorldRead.TryGetTileEntity(world, clrIdx, neighborPos, out controllerEntity) ? controllerEntity as TileEntityNetworkController : null;
+                if (controllerTe == null || !controllerTe.HasValidNetworkId)
+                    continue;
+
+                discoveredNetworkIds.Add(controllerTe.GetNetworkId());
+            }
+
+            List<Vector3i> connectedNeighbors = GetConnectedPipeNeighbors(world, clrIdx, currentPos, currentValue);
+            for (int i = 0; i < connectedNeighbors.Count; i++)
+            {
+                Vector3i next = connectedNeighbors[i];
+                if (!visited.Add(next))
+                    continue;
+
+                open.Add(next);
+            }
         }
 
-        return false;
+        if (discoveredNetworkIds.Count == 0)
+            return false;
+
+        if (discoveredNetworkIds.Count == 1)
+        {
+            foreach (Guid id in discoveredNetworkIds)
+            {
+                networkId = id;
+                return true;
+            }
+        }
+
+        List<Guid> ordered = new List<Guid>(discoveredNetworkIds);
+        ordered.Sort((a, b) => string.CompareOrdinal(a.ToString(), b.ToString()));
+        networkId = ordered[0];
+        Log.Warning($"[ItemPipe][Network] Multiple controller network ids reachable from {pipePos}; using {networkId}");
+        return true;
     }
 
     private static void MarkPipeDirtyAt(WorldBase world, int clrIdx, Vector3i pos)
@@ -598,11 +643,7 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
 
         DevLog(blockValue, blockPos, "OnBlockRemoved()");
 
-        for (int i = 0; i < NeighborOffsets.Length; i++)
-        {
-            Vector3i neighborPos = blockPos + NeighborOffsets[i];
-            MarkPipeDirtyAt(world, 0, neighborPos);
-        }
+        MarkSelfAndAdjacentPipesDirty(world, 0, blockPos);
 
         base.OnBlockRemoved(world, chunk, blockPos, blockValue);
     }
@@ -705,14 +746,26 @@ public class ItemPipeBlock : MachineBlock<TileEntityItemPipe>
         Vector3i blockPos,
         EntityAlive entityFocusing)
     {
+        int endpointCount = 0;
+        string graphText = "Unlinked";
+
+        if (SafeWorldRead.TryGetTileEntity(world, clrIdx, blockPos, out TileEntity tileEntity) && tileEntity is TileEntityItemPipe pipe)
+        {
+            if (pipe.PipeGraphId != Guid.Empty)
+                graphText = pipe.PipeGraphId.ToString();
+
+            if (PipeGraphManager.TryGetStorageEndpointsForPipe(world, clrIdx, blockPos, out List<Vector3i> storageEndpoints) && storageEndpoints != null)
+                endpointCount = storageEndpoints.Count;
+        }
+
         if (!(entityFocusing is EntityPlayerLocal player))
-            return "[E] Inspect Item Pipe";
+            return $"[E] Inspect Item Pipe | Graph: {graphText} | Storage Endpoints: {endpointCount}";
 
         string key =
             player.playerInput.Activate.GetBindingXuiMarkupString() +
             player.playerInput.PermanentActions.Activate.GetBindingXuiMarkupString();
 
         string name = blockValue.Block.GetLocalizedBlockName();
-        return $"{key} Inspect {name}";
+        return $"{key} Inspect {name} | Graph: {graphText} | Storage Endpoints: {endpointCount}";
     }
 }

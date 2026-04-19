@@ -1,30 +1,21 @@
-public class UniversalGrinderBlock : MachineBlock<TileEntityUniversalGrinder>
+﻿public class UniversalGrinderBlock : MachineBlock<TileEntityGrinder>
 {
-    protected override TileEntityUniversalGrinder CreateTileEntity(Chunk chunk)
+    protected override TileEntityGrinder CreateTileEntity(Chunk chunk)
     {
-        return new TileEntityUniversalGrinder(chunk);
+        return new TileEntityGrinder(chunk);
     }
 
     public override void OnBlockLoaded(WorldBase world, int clrIdx, Vector3i blockPos, BlockValue blockValue)
     {
         base.OnBlockLoaded(world, clrIdx, blockPos, blockValue);
 
-        if (world.IsRemote())
-            return;
+        if (world.IsRemote()) return;
 
-        TileEntityUniversalGrinder te = world.GetTileEntity(clrIdx, blockPos) as TileEntityUniversalGrinder;
-        if (te == null)
-            return;
+        TileEntityGrinder te = world.GetTileEntity(clrIdx, blockPos) as TileEntityGrinder;
+        if (te == null) return;
 
         HigherLogicRegistry hlr = WorldHLR.GetOrCreate((World)world);
-        if (hlr != null && hlr.TryUnregisterMachine(te.MachineGuid, out IHLRSnapshot snapshot))
-            te.ApplyHLRSnapshot(snapshot);
-
-        te.RefreshAvailableInputTargets(world);
-        te.RefreshAvailableOutputTargets(world);
-        te.ResolveSelectedInputContainer();
-        te.ResolveSelectedOutputContainer();
-        te.ResolveFuelGraph(world);
+        if (hlr != null && hlr.TryUnregisterMachine(te.MachineGuid, out IHLRSnapshot snapshot)) te.ApplyHLRSnapshot(snapshot);
         te.SetSimulatedByHLR(false);
     }
 
@@ -32,22 +23,16 @@ public class UniversalGrinderBlock : MachineBlock<TileEntityUniversalGrinder>
     {
         base.OnBlockUnloaded(world, clrIdx, blockPos, blockValue);
 
-        if (world.IsRemote())
-            return;
+        if (world.IsRemote()) return;
 
-        TileEntityUniversalGrinder te = world.GetTileEntity(clrIdx, blockPos) as TileEntityUniversalGrinder;
-        if (te == null)
-            return;
+        TileEntityGrinder te = world.GetTileEntity(clrIdx, blockPos) as TileEntityGrinder;
+        if (te == null) return;
 
         IHLRSnapshot snapshot = te.BuildHLRSnapshot(world);
-        if (snapshot == null)
-            return;
+        if (snapshot == null) return;
 
         HigherLogicRegistry hlr = WorldHLR.GetOrCreate((World)world);
-        if (hlr == null)
-            return;
-
-        hlr.RegisterMachine(te.MachineGuid, snapshot);
+        if (hlr != null) hlr.RegisterMachine(te.MachineGuid, te.BuildHLRSnapshot(world));
         te.SetSimulatedByHLR(true);
     }
 
@@ -61,31 +46,27 @@ public class UniversalGrinderBlock : MachineBlock<TileEntityUniversalGrinder>
         return cmds;
     }
 
-    public override bool OnBlockActivated(string commandName, WorldBase world, int clrIdx, Vector3i blockPos, BlockValue blockValue, EntityPlayerLocal player)
+    public override bool OnBlockActivated(string _commandName, WorldBase _world, int _cIdx, Vector3i _blockPos, BlockValue _blockValue, EntityPlayerLocal _player)
     {
-        return OnBlockActivated(world, clrIdx, blockPos, blockValue, player);
+        return base.OnBlockActivated(_commandName, _world, _cIdx, _blockPos, _blockValue, _player);
     }
 
-    public override bool OnBlockActivated(WorldBase world, int clrIdx, Vector3i blockPos, BlockValue blockValue, EntityPlayerLocal player)
+    public override bool OnBlockActivated(WorldBase _world, int _clrIdx, Vector3i _blockPos, BlockValue _blockValue, EntityPlayerLocal _player)
     {
-        if (player == null)
-            return false;
-
-        Helper.RequestMachineUIOpen(clrIdx, blockPos, player.entityId, "GrinderInfo");
+        if (_player == null) return false;
+        Helper.RequestMachineUIOpen(_clrIdx, _blockPos, _player.entityId, "GrinderInfo");
         return true;
     }
 
-    public override string GetActivationText(WorldBase world, BlockValue blockValue, int clrIdx, Vector3i blockPos, EntityAlive entityFocusing)
+    public override string GetActivationText(WorldBase _world, BlockValue _blockValue, int _clrIdx, Vector3i _blockPos, EntityAlive _entityFocusing)
     {
-        if (!(entityFocusing is EntityPlayerLocal player))
-            return "[E] Open Universal Grinder";
+        if (!(_entityFocusing is EntityPlayerLocal player)) return "[E] Open Grinder";
 
-        string key =
-            player.playerInput.Activate.GetBindingXuiMarkupString() +
-            player.playerInput.PermanentActions.Activate.GetBindingXuiMarkupString();
+        string key = player.playerInput.Activate.GetBindingXuiMarkupString();
+        player.playerInput.PermanentActions.Activate.GetBindingXuiMarkupString();
 
-        string name = blockValue.Block.GetLocalizedBlockName();
-        return $"{key} Open {name}";
+        string name = _blockValue.Block.GetLocalizedBlockName();
+        return $"[{key}] Open {name}";
     }
 
     private readonly BlockActivationCommand[] cmds =

@@ -11,9 +11,9 @@
 		</machineRecipe>
 
 		<machineRecipe name="gas_from_gas_can" machine="fluiddecanter">
-			<input item="ammoGasCan" count="1" />
+			<input item="ammoGasCan" count="10" />
 			<output item="resourceScrapPolymers" count="2" />
-			<fluid_output type="gas" gallons="0.1" />
+			<fluid_output type="gas" gallons=".1" />
 		</machineRecipe>
 
 		<machineRecipe name="oil_from_oil_can" machine="fluiddecanter">
@@ -39,7 +39,7 @@
 		<machineRecipe name="ammogascan" machine="fluidinfuser" craft_time="10">
 			<input item="resourceScrapPolymers" count="20" />
 			<fluid_input type="gas" gallons="1" />
-			<output item="ammoGasCan" count="10" />
+			<output item="ammoGasCan" count="100" />
 		</machineRecipe>
 
 		<machineRecipe name="resourceoil" machine="fluidinfuser">
@@ -174,29 +174,29 @@
 			<fluid_output type="glue" gallons="0.2" />
 		</machineRecipe>
 
-		<!-- MOLD -->
+		<!-- Caster -->
 
-		<machineRecipe name="cast_scrap_polymer" machine="mold">
+		<machineRecipe name="cast_scrap_polymer" machine="caster">
 			<fluid_input type="molten_oil" gallons="0.1" />
 			<output item="resourceScrapPolymers" count="5" />
 		</machineRecipe>
 
-		<machineRecipe name="cast_forged_iron" machine="mold">
+		<machineRecipe name="cast_forged_iron" machine="caster">
 			<fluid_input type="molten_iron_alloy" gallons="0.04" />
 			<output item="resourceForgedIron" count="1" />
 		</machineRecipe>
 
-		<machineRecipe name="cast_forged_steel" machine="mold">
+		<machineRecipe name="cast_forged_steel" machine="caster">
 			<fluid_input type="molten_steel_alloy" gallons=".2" />
 			<output item="resourceForgedSteel" count="1" />
 		</machineRecipe>
 
-		<machineRecipe name="cast_bullet_tip" machine="mold">
+		<machineRecipe name="cast_bullet_tip" machine="caster">
 			<fluid_input type="molten_lead_alloy" gallons="0.2" />
 			<output item="resourceBulletTip" count="10" />
 		</machineRecipe>
 
-		<machineRecipe name="cast_cement" machine="mold">
+		<machineRecipe name="cast_cement" machine="caster">
 			<fluid_input type="molten_stone" gallons="1" />
 			<output item="resourceCement" count="10" />
 		</machineRecipe>
@@ -498,6 +498,16 @@
 			<ingredient name="resourceElectricParts" count="4" />
 		</recipe>
 
+		<!-- NETWORK -->
+
+		<recipe name="networkStorageInterface" count="1" craft_area="workbench" craft_time="35" tags="learnable,workbenchCrafting,networkStorageInterface">
+			<ingredient name="resourceForgedIron" count="20" />
+			<ingredient name="resourceMechanicalParts" count="10" />
+			<ingredient name="resourceElectricParts" count="8" />
+			<ingredient name="resourceDuctTape" count="4" />
+			<ingredient name="resourceOil" count="10" />
+		</recipe>
+
 		<!-- FLUID MACHINES -->
 
 		<recipe name="fluidPump" count="1" craft_area="workbench" craft_time="20" tags="learnable,workbenchCrafting,fluidPump">
@@ -568,10 +578,89 @@
 			<ingredient name="toolForgeCrucible" count="1"/>
 		</recipe>
 
-		<!-- WASHER RECIPES -->
+		<!-- WASHER RECIPES 
 
 		<recipe name="resourceScrapIron" count="1" craft_area="washer" craft_time="10" tags="fluid:water,fluid_amount:2">
 			<ingredient name="resourceScrapBrass" count="10" />
 		</recipe>
+		-->
+		
+        <!-- AMMO BUNDLE RECIPES (AUTO-GENERATED) -->
+        <recipe name="ammoBundle44MagnumBulletAP" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammo44MagnumBulletAP" count="100" />
+        </recipe>
+        <recipe name="ammoBundle44MagnumBulletBall" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammo44MagnumBulletBall" count="100" />
+        </recipe>
+        <recipe name="ammoBundle44MagnumBulletHP" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammo44MagnumBulletHP" count="100" />
+        </recipe>
+        <recipe name="ammoBundle762mmBulletAP" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammo762mmBulletAP" count="100" />
+        </recipe>
+        <recipe name="ammoBundle762mmBulletBall" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammo762mmBulletBall" count="100" />
+        </recipe>
+        <recipe name="ammoBundle762mmBulletHP" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammo762mmBulletHP" count="100" />
+        </recipe>
+        <recipe name="ammoBundle9mmBulletAP" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammo9mmBulletAP" count="100" />
+        </recipe>
+        <recipe name="ammoBundle9mmBulletBall" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammo9mmBulletBall" count="100" />
+        </recipe>
+        <recipe name="ammoBundle9mmBulletHP" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammo9mmBulletHP" count="100" />
+        </recipe>
+        <recipe name="ammoBundleArrowExploding" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoArrowExploding" count="100" />
+        </recipe>
+        <recipe name="ammoBundleArrowFlaming" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoArrowFlaming" count="100" />
+        </recipe>
+        <recipe name="ammoBundleArrowIron" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoArrowIron" count="100" />
+        </recipe>
+        <recipe name="ammoBundleArrowSteelAP" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoArrowSteelAP" count="100" />
+        </recipe>
+        <recipe name="ammoBundleArrowStone" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoArrowStone" count="100" />
+        </recipe>
+        <recipe name="ammoBundleCrossbowBoltExploding" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoCrossbowBoltExploding" count="100" />
+        </recipe>
+        <recipe name="ammoBundleCrossbowBoltFlaming" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoCrossbowBoltFlaming" count="100" />
+        </recipe>
+        <recipe name="ammoBundleCrossbowBoltIron" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoCrossbowBoltIron" count="100" />
+        </recipe>
+        <recipe name="ammoBundleCrossbowBoltSteelAP" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoCrossbowBoltSteelAP" count="100" />
+        </recipe>
+        <recipe name="ammoBundleCrossbowBoltStone" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoCrossbowBoltStone" count="100" />
+        </recipe>
+        <recipe name="ammoBundleJunkTurretAP" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoJunkTurretAP" count="100" />
+        </recipe>
+        <recipe name="ammoBundleJunkTurretRegular" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoJunkTurretRegular" count="100" />
+        </recipe>
+        <recipe name="ammoBundleJunkTurretShell" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoJunkTurretShell" count="100" />
+        </recipe>
+        <recipe name="ammoBundleShotgunBreachingSlug" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoShotgunBreachingSlug" count="100" />
+        </recipe>
+        <recipe name="ammoBundleShotgunShell" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoShotgunShell" count="100" />
+        </recipe>
+        <recipe name="ammoBundleShotgunSlug" count="1" craft_area="workbench" craft_time="5" tags="learnable,workbenchCrafting">
+            <ingredient name="ammoShotgunSlug" count="100" />
+        </recipe>
+        <!-- END AMMO BUNDLE RECIPES (AUTO-GENERATED) -->
 	</append>
 </configs>

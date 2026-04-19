@@ -1,10 +1,17 @@
 using System;
 using System.Collections.Generic;
 
-public class GrinderSnapshot : IHLRSnapshot
+public enum RecyclerProcessMode : byte
 {
-    public string SnapshotKind => "UniversalGrinder";
-    public int SnapshotVersion => 1;
+    Recipe = 0,
+    Scrap = 1,
+    Both = 2
+}
+
+public class RecyclerSnapshot : IHLRSnapshot
+{
+    public string SnapshotKind => "UniversalRecycler";
+    public int SnapshotVersion => 4;
 
     public Guid MachineId { get; set; }
     public Vector3i Position { get; set; }
@@ -24,11 +31,13 @@ public class GrinderSnapshot : IHLRSnapshot
     public Vector3i SelectedOutputPipeAnchorPos;
 
     public bool ProcessItemArmorMods;
+    public RecyclerProcessMode ProcessMode = RecyclerProcessMode.Both;
     public float EffectiveReturnRate;
     public int BaseBatchSize;
     public int MaxPendingOutput;
     public string AcceptedRecipeBenchesCsv;
     public string BlockedRecipeBenchesCsv;
+    public string IgnoredReturnItemsCsv;
 
     public bool IsProcessing;
     public int CycleTickCounter;

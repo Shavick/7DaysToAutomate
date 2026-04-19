@@ -1,0 +1,512 @@
+7 Days to Automate - Beginner Step-by-Step Guide: Add a New Machine
+Last updated: 2026-04-16
+
+Who this is for
+This guide is for future-you when you remember nothing about the machine system.
+It assumes zero context and walks in exact order from "new class file" to "machine works in MP + unloaded chunks".
+
+Important rule for this project
+Build in this order:
+1. C# runtime logic first
+2. Networking and authority next
+3. Pipe/fluid graph and HLR support next
+4. XML (block/recipe/UI) last
+
+If you do XML first, you can place/open a machine that does nothing, which is misleading and wastes debugging time.
+
+===============================================================================
+PART 1 - Understand the 6 pieces
+===============================================================================
+Every machine needs 6 systems:
+
+1) Block class
+What it is:
+- The placed world block (the thing player interacts with)
+What it does:
+- Creates the TileEntity
+- Handles E/activate click
+- Hands machine to HLR on chunk unload, takes it back on load
+
+2) TileEntity class
+What it is:
+- The machine brain/state
+What it does:
+- Stores selected recipe/targets/graphs, progress counters, buffers
+- Runs cycle logic
+- Saves/loads state
+
+3) NetPackage control
+What it is:
+- Multiplayer command path from client UI to server machine
+What it does:
+- Validates player and distance
+- Applies changes server-side only
+
+4) Pipe/Fluid graph integration
+What it is:
+- Routing layer for moving items/fluids automatically
+What it does:
+- Finds valid inputs/outputs
+- Consumes and injects fluid
+- Dispatches items via graph routes
+
+5) HLR (Higher Logic Registry)
+What it is:
+- Simulation system for unloaded chunks
+What it does:
+- Stores machine snapshots when chunk unloads
+- Simulates machines while unloaded
+- Restores snapshots when chunk loads back
+
+6) XML (block/recipes/UI)
+What it is:
+- Data and UI definitions
+What it does:
+- Defines block class binding, machine recipes, XUi windows
+
+===============================================================================
+PART 2 - The exact build sequence (copy this order every time)
+===============================================================================
+
+Step 0 - Pick a template machine before coding
+Use one of these as your reference model:
+1. Item + fluid + recipes: Classes/FluidInfuser/*
+2. Fluid-to-fluid machine: Classes/FluidMixer/*
+3. Heat + fluid output: Classes/Boiler/*
+4. Fluid-to-item output routing: Classes/Caster/*
+5. Item-heavy machine: Classes/Crafter/* or Classes/Grinder/*
+
+If your new machine is "takes items + fluid, outputs fluid", start from FluidInfuser + FluidMixer patterns.
+
+-------------------------------------------------------------------------------
+Step 1 - Create the TileEntity class FIRST
+-------------------------------------------------------------------------------
+Create file:
+  Classes/<MachineName>/TileEntity<MachineName>.cs
+
+Class skeleton:
+  public class TileEntityMyMachine : TileEntityMachine
+
+Add these fields first (minimum):
+1. Selection fields
+- SelectedRecipeKey
+- SelectedInputChestPos (if item input)
+- SelectedOutputChestPos (if item output)
+- SelectedInputPipeGraphId / SelectedOutputPipeGraphId (if item pipes)
+- SelectedFluidGraphId (or separate input/output fluid graph ids)
+
+2. Runtime state
+- IsProcessing
+- CycleTickCounter
+- CycleTickLength
+- ActiveRecipeKey
+- LastAction
+- LastBlockReason
+
+3. Buffers
+- pendingInputItems dictionary (if needed)
+- pendingOutput from base class (items)
+- pending fluid input/output amount/type fields
+
+Now implement in this order:
+1. GetTileEntityType()
+- return unchecked((TileEntityType)UCTileEntityIDs.MyMachine);
+
+2. OnPowerStateChanged(bool state)
+- set friendly LastAction text for UI
+
+3. Core runtime methods
+- EnsureConfigLoaded() pattern
+- TryBeginCycle(out reason)
+- AdvanceCycle(...)
+- CompleteCycle()
+- TryFlushPendingOutput(out reason)
+
+4. Server control methods
+- ServerSelectRecipe(string key)
+- ServerSelectInputContainer(Vector3i pos, string graphId)
+- ServerSelectOutputContainer(Vector3i pos, OutputTransportMode mode, string graphId)
+
+5. Save/load
+- override write/read
+- call base.write/base.read first
+- add local PersistVersion int
+- write fields in stable order
+- read with compatibility guards
+
+Check yourself after Step 1:
+1. Can class compile with no XML changes yet?
+2. Are all important fields persisted?
+3. Does processing logic handle blocked outputs without deleting buffers?
+
+-------------------------------------------------------------------------------
+Step 2 - Add TileEntity numeric ID and instantiate mapping
+-------------------------------------------------------------------------------
+File A:
+  Classes/Extractor/TileEntityUniversalExtractor.cs
+Contains:
+  public static class UCTileEntityIDs
+
+Action:
+1. Add a new constant, unique integer.
+Example:
+  public const int MyMachine = 147;
+
+File B:
+  Classes/HarmonyPatches/TileEntity_Instantiate_Patches.cs
+
+Action:
+1. Add switch case for that ID:
+  case 147:
+      __result = new TileEntityMyMachine(_chunk);
+      return false;
+
+Why this step matters:
+Without this, game cannot reconstruct your TE type correctly from saved data.
+
+-------------------------------------------------------------------------------
+Step 3 - Create Block class and TE lifecycle handoff
+-------------------------------------------------------------------------------
+Create file:
+  Classes/<MachineName>/<MachineName>Block.cs
+
+Base:
+  MachineBlock<TileEntityMyMachine>
+
+Implement methods in this order:
+1. CreateTileEntity(Chunk chunk)
+2. OnBlockActivated(...) -> Helper.RequestMachineUIOpen(..., "MyMachineInfo")
+3. GetActivationText(...) and activation commands (optional but standard)
+4. OnBlockLoaded(...)
+- server only
+- get TE
+- if HLR has snapshot, apply it
+- refresh/resolve targets and graphs
+- SetSimulatedByHLR(false)
+5. OnBlockUnloaded(...)
+- server only
+- snapshot = te.BuildHLRSnapshot(world)
+- hlr.RegisterMachine(te.MachineGuid, snapshot)
+- te.SetSimulatedByHLR(true)
+
+Reference to copy:
+1. Classes/FluidInfuser/FluidInfuserBlock.cs
+2. Classes/Boiler/BoilerBlock.cs
+
+-------------------------------------------------------------------------------
+Step 4 - Add machine control NetPackage (server-authoritative)
+-------------------------------------------------------------------------------
+Create:
+  Classes/Net Packages/NetPackageMyMachineControl.cs
+
+Copy structure from:
+1. NetPackageFluidInfuserControl.cs
+2. NetPackageFluidMixerControl.cs
+
+Implement:
+1. enum MessageType
+2. Setup methods for each UI action
+3. read/write
+4. ProcessPackage:
+- run NetPackageMachineAuthority.TryValidateRequester(...)
+- lookup machine TE by block pos
+- call TE ServerSelect* methods
+
+Rule:
+Never mutate machine state from client UI directly.
+UI sends request; server validates and applies.
+
+-------------------------------------------------------------------------------
+Step 5 - Wire helper methods for UI prep and requests
+-------------------------------------------------------------------------------
+File:
+  Helper.cs
+
+Do two things:
+1. Add TE branch in PrepareMachineForUiOpen(...)
+- RefreshAvailableInputTargets(world)
+- RefreshAvailableOutputTargets(world)
+- ResolveSelectedInputContainer()
+- ResolveSelectedOutputContainer()
+- ResolveFluidInputGraph(world)/ResolveFluidOutputGraph(world)
+- setModified()
+- NeedsUiRefresh = true
+
+2. Add RequestMyMachine* helper methods
+- send package to server when world.IsRemote()
+- call TE methods directly when server/local host
+
+Why this is important:
+Without prep, UI often opens with stale target/graph state.
+
+-------------------------------------------------------------------------------
+Step 6 - Implement item pipe graph integration
+-------------------------------------------------------------------------------
+Do this if machine uses item containers through pipes.
+
+In TE:
+1. Add availableInputTargets / availableOutputTargets lists
+2. Add selection fields:
+- SelectedInputPipeGraphId
+- SelectedOutputPipeGraphId
+
+Implement:
+1. RefreshAvailableInputTargets(world)
+2. RefreshAvailableOutputTargets(world)
+3. ResolveSelectedInputContainer()
+4. ResolveSelectedOutputContainer()
+
+Dispatch logic:
+1. When output exists, try route through selected graph + mode
+2. If route missing/full, keep pending output and set block reason
+
+Reference files:
+1. Classes/Crafter/TileEntityUniversalCrafter.cs
+2. Classes/Extractor/TileEntityUniversalExtractor.cs
+3. Classes/Grinder/TileEntityUniversalGrinder.cs
+
+-------------------------------------------------------------------------------
+Step 7 - Implement fluid graph integration
+-------------------------------------------------------------------------------
+Do this if machine consumes/produces fluid.
+
+In TE:
+1. Add selected fluid graph field(s)
+2. Add fluid type state fields
+3. Add pending fluid input/output fields
+
+Implement:
+1. ResolveFluidInputGraph(world) and/or ResolveFluidOutputGraph(world)
+2. Requirement checks:
+- FluidGraphManager.TryGetAvailableFluidAmount(...)
+3. Input consume:
+- FluidGraphManager.TryConsumeFluid(...)
+4. Output inject:
+- inject with partial handling
+- if partial/blocked, keep remaining pending output
+
+Reference files:
+1. Classes/FluidInfuser/TileEntityFluidInfuser.cs
+2. Classes/FluidDecanter/TileEntityFluidDecanter.cs
+3. Classes/FluidMixer/TileEntityFluidMixer.cs
+4. Classes/Boiler/TileEntityBoiler.cs
+5. Classes/Caster/TileEntityCaster.cs
+
+-------------------------------------------------------------------------------
+Step 8 - Implement HLR snapshot model and TE hooks
+-------------------------------------------------------------------------------
+Create snapshot file:
+  Classes/<MachineName>/<MachineName>Snapshot.cs
+
+Snapshot must include:
+1. MachineId
+2. Position
+3. WorldTime + LastHLRSimTime
+4. IsOn / IsProcessing / cycle counters
+5. Selected recipe, selected targets, selected graph IDs
+6. Pending buffers (items/fluids)
+7. LastAction / LastBlockReason
+8. SnapshotKind + SnapshotVersion contract
+
+In TE:
+1. BuildHLRSnapshot(world) -> fill snapshot from TE
+2. ApplyHLRSnapshot(object) -> restore and sanitize
+3. SetSimulatedByHLR(bool)
+
+Reference:
+1. FluidInfuserSnapshot.cs
+2. FluidMixerSnapshot.cs
+3. BoilerSnapshot.cs
+4. CasterSnapshot.cs
+5. GrinderSnapshot.cs
+
+-------------------------------------------------------------------------------
+Step 9 - Add HLR runtime simulation for unloaded chunks
+-------------------------------------------------------------------------------
+File:
+  Classes/HLR/HigherLogicRegistry.cs
+
+Action:
+1. In CreateSnapshot(kind, version), add your kind mapping.
+
+File:
+  HLR partial file where machine simulation belongs
+  (for fluid machines currently: Classes/HLR/HigherLogicRegistry.FluidMachines.cs)
+
+Action:
+1. Add SimulateMyMachine(snapshot, worldTime, hlrTicksToSimulate)
+2. Hook it in the HLR update dispatch loop.
+
+Simulation rules should match loaded TE behavior:
+1. Off state handling
+2. Requirement checks
+3. begin/progress/complete cycle
+4. pending output flush
+5. blocked reason text updates
+
+Critical warning:
+If loaded TE behavior and HLR simulation differ, machine will "jump" or dupe on chunk reload.
+
+-------------------------------------------------------------------------------
+Step 10 - Add HLR save/load IO for snapshot
+-------------------------------------------------------------------------------
+Files:
+1. Classes/HLR/HigherLogicRegistry.cs (main save/load switch logic)
+2. Classes/HLR/HigherLogicRegistry.FluidMachinesIO.cs (or appropriate IO partial)
+
+Add:
+1. CloneMyMachineSnapshot(...)
+2. SaveMyMachineSnapshot(BinaryWriter bw, ...)
+3. LoadMyMachineSnapshot(BinaryReader br, ..., int snapshotVersion)
+
+Requirements:
+1. version aware read
+2. sanitize invalid loaded fields
+3. keep backward compatibility
+
+Reference:
+1. Save/Load implementations for FluidMixer/Boiler/Caster in FluidMachinesIO
+2. Snapshot save/load switch wiring in HigherLogicRegistry.cs
+
+-------------------------------------------------------------------------------
+Step 11 - Confirm global lifecycle supports your machine
+-------------------------------------------------------------------------------
+File:
+  ModAPI.cs
+
+Verify these are active (they already are in current project):
+1. OnGameUpdate:
+- PipeGraphManager.ProcessDirtyGraphs(world)
+- PipeTransportManager.ProcessJobs(world)
+- FluidGraphManager.ProcessDirtyGraphs(world)
+- FluidTransportManager.Process(world)
+- hlr.Update(world.GetWorldTime())
+2. World startup/shutdown:
+- hlr.Load / hlr.Save
+- graph LoadFromDisk/SaveToDisk
+
+If graph managers or hlr.Update are not running, machine appears stalled.
+
+===============================================================================
+PART 3 - Only now do XML
+===============================================================================
+
+-------------------------------------------------------------------------------
+Step 12 - Add block XML
+-------------------------------------------------------------------------------
+File:
+  Config/blocks.xml
+
+Add block entry:
+1. name="myMachineBlockName"
+2. Class="MyMachineBlock, 7DaysToAutomate"
+3. properties your TE expects:
+- MachineRecipes
+- heat/fuel/buffer values
+- DevLogs
+
+Tip:
+Copy one existing machine block and rename fields carefully.
+Do not invent properties in XML that TE never reads.
+
+-------------------------------------------------------------------------------
+Step 13 - Add machine recipes XML (if recipe-driven)
+-------------------------------------------------------------------------------
+File:
+  Config/recipes.xml
+
+Add <machineRecipe ... machine="my_machine_group"> entries.
+
+Rules:
+1. group name must match block property MachineRecipes
+2. include heat/craft_time only if TE handles them
+3. include fluid_input/fluid_output and item input/output matching TE logic
+
+Loader already exists in project:
+1. Classes/HarmonyPatches/RecipesFromXML_Load_MachineRecipes_Patch.cs
+2. Classes/MachineRecipes/MachineRecipeRegistry.cs
+
+-------------------------------------------------------------------------------
+Step 14 - Add XUi windows/controllers
+-------------------------------------------------------------------------------
+Files:
+1. Config/XUi/xui.xml
+2. Config/XUi/windows.xml
+3. Config/XUi/controls.xml (if entry templates needed)
+4. Classes/<MachineName>/XUiC_<MachineName>Info.cs
+
+Add:
+1. window_group key, example: MyMachineInfo
+2. window entry with your controller binding
+3. controller code to display TE state and trigger helper requests
+
+-------------------------------------------------------------------------------
+Step 15 - Fully wire open UI path for MP
+-------------------------------------------------------------------------------
+File:
+  Classes/Net Packages/NetPackageOpenMachineUi.cs
+
+Must add BOTH:
+1. server whitelist allows "MyMachineInfo"
+2. client switch case opens XUiC_MyMachineInfo.Open(...)
+
+If only helper/block is wired but not this file:
+1. local host may work
+2. dedicated client open fails
+
+===============================================================================
+PART 4 - Test checklist (do not skip)
+===============================================================================
+
+Smoke test A - local world
+1. Place machine
+2. Press E opens UI
+3. select recipe + input/output
+4. start processing
+5. verify output produced
+
+Smoke test B - blocked output
+1. fill output target so no room
+2. run machine
+3. confirm pending output accumulates safely
+4. clear room
+5. confirm pending flushes (no loss/dupe)
+
+Smoke test C - unloaded chunk + HLR
+1. start machine
+2. move away until chunk unloads
+3. wait
+4. come back
+5. confirm progress advanced appropriately
+
+Smoke test D - restart persistence
+1. save/restart world or server
+2. reload
+3. confirm state (selections/progress/pending buffers) restored
+
+Smoke test E - multiplayer authority
+1. non-host client opens machine
+2. control actions work
+3. too-far request fails (distance validation)
+4. requester spoof mismatch fails (authority validation)
+
+===============================================================================
+PART 5 - Fast "I forgot everything" mini-checklist
+===============================================================================
+
+If adding another machine tomorrow, do this:
+1. clone TE + block from closest existing machine
+2. add UCTileEntityIDs constant and instantiate patch case
+3. implement TE cycle + save/read + server control methods
+4. add control net package + helper requests
+5. add pipe/fluid graph resolve/dispatch
+6. add snapshot + HLR simulate + HLR IO
+7. wire block unload/load HLR handoff
+8. add XML block/recipes/XUi
+9. add NetPackageOpenMachineUi whitelist + client switch
+10. run smoke tests A-E
+
+Done criteria:
+Machine works loaded, unloaded, saved/reloaded, and in MP.
+
+End of guide.

@@ -254,7 +254,8 @@
 			<property name="UnlockedBy" value="craftingWorkstations" />
 			<!-- Placeholder properties - fill later -->
 			<property name="CraftingSpeed" value="1" />
-			<property name="InternalStorageMultiplier" value="5" />
+			<property name="MaxPendingInput" value="1000"/>
+			<property name="InternalStorageMultiplier" value="2" />
 			<property name="DevLogs" value="false" />
 		</block>
 
@@ -281,6 +282,21 @@
 			<property name="DevLogs" value="false" />
 		</block>
 
+		<block name="networkStorageInterface">
+			<property name="Class" value="NetworkStorageInterfaceBlock, 7DaysToAutomate" />
+			<property name="Material" value="Mmetal_hard" />
+			<property name="Shape" value="ModelEntity" />
+			<property name="Model" value="@:Entities/Electrical/serverComputerPrefab.prefab" />
+			<property name="CustomIcon" value="decoServerRackWhite" />
+			<property name="Place" value="TowardsPlacer" />
+			<property name="OnlySimpleRotations" value="true" />
+			<property name="MaxDamage" value="1000" />
+			<property name="Stacknumber" value="1" />
+			<property name="EconomicValue" value="1400" />
+			<property name="DescriptionKey" value="networkStorageInterfaceDesc" />
+			<property name="DevLogs" value="false" />
+		</block>
+
 		<!-- ITEM PIPES -->
 
 		<block name="itemPipe">
@@ -301,6 +317,7 @@
 			<property name="PipeThroughput" value="3" />
 			<property name="PipeSpeed" value="1" />
 			<property name="PipeLatency" value="1" />
+			<drop event="Destroy" name="itemPipeVariantHelper" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="itemPipeT2"/>
 				<property name="Item" value="itemPipeT2"/>
@@ -327,6 +344,7 @@
 			<property name="PipeThroughput" value="5" />
 			<property name="PipeSpeed" value="1" />
 			<property name="PipeLatency" value="1" />
+			<drop event="Destroy" name="itemPipeVariantHelper" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="itemPipeElbowT2"/>
 				<property name="Item" value="itemPipeElbowT2"/>
@@ -353,6 +371,7 @@
 			<property name="PipeThroughput" value="5" />
 			<property name="PipeSpeed" value="1" />
 			<property name="PipeLatency" value="1" />
+			<drop event="Destroy" name="itemPipeVariantHelper" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="itemPipeSmallJointT2"/>
 				<property name="Item" value="itemPipeSmallJointT2"/>
@@ -380,6 +399,7 @@
 			<property name="PipeSpeed" value="5" />
 			<property name="PipeLatency" value="5" />
 			<property name="DevLogs" value="false" />
+			<drop event="Destroy" name="itemPipeVariantHelperT2" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="itemPipeT3"/>
 				<property name="Item" value="itemPipeT3"/>
@@ -399,6 +419,7 @@
 			<property name="PipeSpeed" value="5" />
 			<property name="PipeLatency" value="5" />
 			<property name="DevLogs" value="false" />
+			<drop event="Destroy" name="itemPipeVariantHelperT2" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="itemPipeElbowT3"/>
 				<property name="Item" value="itemPipeElbowT3"/>
@@ -418,6 +439,7 @@
 			<property name="PipeSpeed" value="5" />
 			<property name="PipeLatency" value="5" />
 			<property name="DevLogs" value="false" />
+			<drop event="Destroy" name="itemPipeVariantHelperT2" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="itemPipeSmallJointT2"/>
 				<property name="Item" value="itemPipeSmallJointT2"/>
@@ -445,6 +467,7 @@
 			<property name="PipeSpeed" value="10" />
 			<property name="PipeLatency" value="10" />
 			<property name="DevLogs" value="false" />
+			<drop event="Destroy" name="itemPipeVariantHelperT3" count="1"/>
 		</block>
 
 		<block name="itemPipeElbowT3">
@@ -458,6 +481,7 @@
 			<property name="PipeSpeed" value="10" />
 			<property name="PipeLatency" value="10" />
 			<property name="DevLogs" value="false" />
+			<drop event="Destroy" name="itemPipeVariantHelperT3" count="1"/>
 		</block>
 
 		<block name="itemPipeSmallJointT3">
@@ -471,6 +495,7 @@
 			<property name="PipeSpeed" value="10" />
 			<property name="PipeLatency" value="10" />
 			<property name="DevLogs" value="false" />
+			<drop event="Destroy" name="itemPipeVariantHelperT3" count="1"/>
 		</block>
 
 		<block name="itemPipeVariantHelperT3">
@@ -498,6 +523,7 @@
 			<property name="DescriptionKey" value="liquidPipeDesc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="FluidPipeCapacityGps" value="250" />
+			<drop event="Destroy" name="fluidPipeVariantHelper" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="liquidPipeT2"/>
 				<property name="Item" value="liquidPipeT2"/>
@@ -521,6 +547,7 @@
 			<property name="DescriptionKey" value="liquidPipeElbowDesc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="FluidPipeCapacityGps" value="250" />
+			<drop event="Destroy" name="fluidPipeVariantHelper" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="liquidPipeElbowT2"/>
 				<property name="Item" value="liquidPipeElbowT2"/>
@@ -544,6 +571,7 @@
 			<property name="DescriptionKey" value="liquidPipeTJunctionDesc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="FluidPipeCapacityGps" value="250" />
+			<drop event="Destroy" name="fluidPipeVariantHelper" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="liquidPipeSmallJointT2"/>
 				<property name="Item" value="liquidPipeSmallJointT2"/>
@@ -560,6 +588,7 @@
 			<property name="DescriptionKey" value="liquidPipeT2Desc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="FluidPipeCapacityGps" value="500" />
+			<drop event="Destroy" name="fluidPipeVariantHelperT2" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="liquidPipeT3"/>
 				<property name="Item" value="liquidPipeT3"/>
@@ -576,6 +605,7 @@
 			<property name="DescriptionKey" value="liquidPipeElbowT2Desc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="FluidPipeCapacityGps" value="500" />
+			<drop event="Destroy" name="fluidPipeVariantHelperT2" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="liquidPipeElbowT3"/>
 				<property name="Item" value="liquidPipeElbowT3"/>
@@ -592,6 +622,7 @@
 			<property name="DescriptionKey" value="liquidPipeSmallJointT2Desc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="FluidPipeCapacityGps" value="500" />
+			<drop event="Destroy" name="fluidPipeVariantHelperT2" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="liquidPipeSmallJointT3"/>
 				<property name="Item" value="liquidPipeSmallJointT3"/>
@@ -608,6 +639,7 @@
 			<property name="DescriptionKey" value="liquidPipeT3Desc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="FluidPipeCapacityGps" value="1000" />
+			<drop event="Destroy" name="fluidPipeVariantHelperT3" count="1"/>
 		</block>
 
 		<block name="liquidPipeElbowT3">
@@ -618,6 +650,7 @@
 			<property name="DescriptionKey" value="liquidPipeElbowT3Desc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="FluidPipeCapacityGps" value="1000" />
+			<drop event="Destroy" name="fluidPipeVariantHelperT3" count="1"/>
 		</block>
 
 		<block name="liquidPipeSmallJointT3">
@@ -628,6 +661,7 @@
 			<property name="DescriptionKey" value="liquidPipeSmallJointT3Desc" />
 			<property name="UnlockedBy" value="craftingElectrician" />
 			<property name="FluidPipeCapacityGps" value="1000" />
+			<drop event="Destroy" name="fluidPipeVariantHelperT3" count="1"/>
 		</block>
 
 		<block name="fluidValve">
@@ -647,6 +681,7 @@
 			<property name="AllowValveToggle" value="true" />
 			<property name="IsFluidValve" value="true" />
 			<property name="FluidPipeCapacityGps" value="250" />
+			<drop event="Destroy" name="fluidPipeVariantHelper" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="fluidValveT2"/>
 				<property name="Item" value="fluidValveT2"/>
@@ -662,6 +697,7 @@
 			<property name="EconomicValue" value="55" />
 			<property name="DescriptionKey" value="fluidValveT2Desc" />
 			<property name="FluidPipeCapacityGps" value="500" />
+			<drop event="Destroy" name="fluidPipeVariantHelperT2" count="1"/>
 			<property class="UpgradeBlock">
 				<property name="ToBlock" value="fluidValveT3"/>
 				<property name="Item" value="fluidValveT3"/>
@@ -677,6 +713,7 @@
 			<property name="EconomicValue" value="75" />
 			<property name="DescriptionKey" value="fluidValveT3Desc" />
 			<property name="FluidPipeCapacityGps" value="1000" />
+			<drop event="Destroy" name="fluidPipeVariantHelperT3" count="1"/>
 		</block>
 
 		<block name="fluidIntake">
@@ -700,6 +737,7 @@
 			<property name="FluidIntakeAllowWorldWaterVoxel" value="true" />
 			<property name="FluidIntakeDisallowNameContains" value="Bucket" />
 			<property name="FluidPipeCapacityGps" value="250" />
+			<drop event="Destroy" name="fluidPipeVariantHelper" count="1"/>
 		</block>
 
 		<block name="fluidIntakeT2">
@@ -709,6 +747,7 @@
 			<property name="EconomicValue" value="55" />
 			<property name="DescriptionKey" value="fluidIntakeT2Desc" />
 			<property name="FluidPipeCapacityGps" value="500" />
+			<drop event="Destroy" name="fluidPipeVariantHelperT2" count="1"/>
 		</block>
 
 		<block name="fluidIntakeT3">
@@ -718,6 +757,7 @@
 			<property name="EconomicValue" value="75" />
 			<property name="DescriptionKey" value="fluidIntakeT3Desc" />
 			<property name="FluidPipeCapacityGps" value="1000" />
+			<drop event="Destroy" name="fluidPipeVariantHelperT3" count="1"/>
 		</block>
 
 		<block name="fluidPipeVariantHelper">
@@ -912,12 +952,12 @@
 			<property name="DescriptionKey" value="universalCasterDesc" />
 			<property name="UnlockedBy" value="craftingWorkstations" />
 			<property name="InputSpeed" value="10" />
-			<property name="MachineRecipes" value="mold" />
+			<property name="MachineRecipes" value="caster" />
 			<property name="DevLogs" value="false" />
 		</block>
 
 		<block name="universalGrinder">
-			<property name="Class" value="UniversalGrinderBlock, 7DaysToAutomate" />
+			<property name="Class" value="UniversalGrinderBlock, 7DaysToAutomate"/>
 			<property name="Material" value="Mmetal_hard" />
 			<property name="Shape" value="ModelEntity" />
 			<property name="Model" value="@:Entities/Electrical/generatorBankAPrefab.prefab" />
@@ -927,18 +967,10 @@
 			<property name="CustomIcon" value="generatorbank" />
 			<property name="Stacknumber" value="1" />
 			<property name="EconomicValue" value="1500" />
-			<property name="DescriptionKey" value="universalGrinderDesc" />
+			<property name="DescriptionKey" value="universalCasterDesc" />
 			<property name="UnlockedBy" value="craftingWorkstations" />
 			<property name="InputSpeed" value="10" />
-			<property name="BatchSize" value="5" />
-			<property name="BaseReturnRate" value="0.5" />
-			<property name="BlockedRecipeBenches" value="forge"/>
 			<property name="DevLogs" value="false" />
-			<property name="NeedsFluidToRun" value="false" />
-			<property name="FluidFuel" value="gas" />
-			<property name="FluidFuelBufferGallons" value="20" />
-			<property name="FluidFuelUsePerSecond" value="1" />
-			<property name="FluidFuelPullPerSecond" value="20" />
 		</block>
 
 		<block name="heatSourceT2">

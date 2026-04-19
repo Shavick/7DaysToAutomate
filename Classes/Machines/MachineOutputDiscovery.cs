@@ -101,13 +101,6 @@ public static class MachineOutputDiscovery
             if (targetIndexByPos.ContainsKey(endpointPos))
                 continue;
 
-            if (!(world.GetTileEntity(clrIdx, endpointPos) is TileEntityComposite endpointComposite))
-                continue;
-
-            TEFeatureStorage endpointStorage = endpointComposite.GetFeature<TEFeatureStorage>();
-            if (endpointStorage == null || endpointStorage.items == null)
-                continue;
-
             targetIndexByPos[endpointPos] = results.Count;
             results.Add(new OutputTargetInfo(endpointPos, OutputTransportMode.Pipe, pipeGraphId));
         }

@@ -93,16 +93,6 @@ public class XUiC_OutputContainerList : XUiController
             {
                 OutputTargetInfo target = targets[i];
                 TileEntityComposite comp = world.GetTileEntity(0, target.BlockPos) as TileEntityComposite;
-
-                if (comp == null)
-                {
-                    entries[i].SetTarget(null, null);
-                    entries[i].SetSelected(false);
-                    entries[i].ViewComponent.Enabled = false;
-                    entries[i].ViewComponent.IsVisible = false;
-                    continue;
-                }
-
                 entries[i].SetTarget(comp, target);
                 entries[i].ViewComponent.Enabled = true;
                 entries[i].ViewComponent.IsVisible = true;
@@ -134,7 +124,7 @@ public class XUiC_OutputContainerList : XUiController
     public void OnEntryPressed(XUiController sender, int button)
     {
         var entry = sender as XUiC_OutputContainerEntry;
-        if (entry == null || entry.ContainerTE == null || entry.OutputTarget == null)
+        if (entry == null || entry.OutputTarget == null)
             return;
 
         OutputTargetInfo target = entry.OutputTarget;

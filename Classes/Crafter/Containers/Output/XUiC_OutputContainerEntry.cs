@@ -48,7 +48,7 @@ public class XUiC_OutputContainerEntry : XUiController
 
         if (ContainerTE == null)
         {
-            if (lblName != null) lblName.Text = "";
+            if (lblName != null) lblName.Text = GetDisplayName(null);
             if (background != null) background.Color = new Color32(64, 64, 64, 255);
             if (iconSprite != null) iconSprite.SpriteName = "";
             return;
@@ -67,7 +67,9 @@ public class XUiC_OutputContainerEntry : XUiController
     private string GetDisplayName(TileEntityComposite te)
     {
         if (te == null)
-            return "";
+            return OutputTarget != null && OutputTarget.BlockPos != Vector3i.zero
+                ? $"{OutputTarget.BlockPos} (Unloaded)"
+                : string.Empty;
 
         var sign = te.GetFeature<TEFeatureSignable>();
         string signText = sign?.signText?.Text;

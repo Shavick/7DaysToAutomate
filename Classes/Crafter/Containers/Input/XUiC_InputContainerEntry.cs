@@ -104,9 +104,8 @@ public class XUiC_InputContainerEntry : XUiController
     private string GetDisplayName(TileEntityComposite te)
     {
         if (te == null)
-        {
-            return string.Empty;
-        }
+            return ContainerPos != Vector3i.zero ? $"{ContainerPos} (Unloaded)" : string.Empty;
+
         var sign = te.GetFeature<TEFeatureSignable>();
         string signText = sign?.signText?.Text;
         if (!string.IsNullOrEmpty(signText))

@@ -79,6 +79,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\Grinder\TileEntityUniversalGrinder.cs" />
+    <Compile Include="Classes\Grinder\UniversalGrinderBlock.cs" />
+    <Compile Include="Classes\Grinder\XUiC_GrinderInfo.cs" />
+    <Compile Include="Classes\Net Packages\NetPackageGrinderControl.cs" />
+    <Compile Include="Classes\Networks\NetworkDisplayStack.cs" />
+    <Compile Include="Classes\Networks\NetworkItemIdentity.cs" />
+    <Compile Include="Classes\Networks\NetworkStorageContainerRef.cs" />
+    <Compile Include="Classes\Networks\NetworkStorageEntry.cs" />
+    <Compile Include="Classes\Networks\NetworkStorageService.cs" />
+    <Compile Include="Classes\Networks\NetworkStorageSnapshot.cs" />
+    <Compile Include="Classes\Networks\NetworkStorageInterfaceActions.cs" />
     <Compile Include="InputTargetInfo.cs" />
     <Compile Include="Classes\Crafter\Containers\Input\XUiC_InputContainerEntry.cs" />
     <Compile Include="Classes\Crafter\Containers\Input\XUiC_InputContainerList.cs" />
@@ -118,6 +129,7 @@
     <Compile Include="Classes\FluidInfuser\Containers\Input\XUiC_FluidInfuserInputContainerList.cs" />
     <Compile Include="Classes\FluidInfuser\Containers\Output\XUiC_FluidInfuserOutputContainerEntry.cs" />
     <Compile Include="Classes\FluidInfuser\Containers\Output\XUiC_FluidInfuserOutputContainerList.cs" />
+    <Compile Include="Classes\Recycler\RecyclerSnapshot.cs" />
     <Compile Include="Classes\Melter\MelterBlock.cs" />
     <Compile Include="Classes\Melter\MelterSnapshot.cs" />
     <Compile Include="Classes\Melter\TileEntityMelter.cs" />
@@ -138,14 +150,6 @@
     <Compile Include="Classes\Caster\XUiC_CasterInfo.cs" />
     <Compile Include="Classes\Caster\Containers\Output\XUiC_CasterOutputContainerEntry.cs" />
     <Compile Include="Classes\Caster\Containers\Output\XUiC_CasterOutputContainerList.cs" />
-    <Compile Include="Classes\Grinder\UniversalGrinderBlock.cs" />
-    <Compile Include="Classes\Grinder\GrinderSnapshot.cs" />
-    <Compile Include="Classes\Grinder\TileEntityUniversalGrinder.cs" />
-    <Compile Include="Classes\Grinder\XUiC_UniversalGrinderInfo.cs" />
-    <Compile Include="Classes\Grinder\Containers\Input\XUiC_GrinderInputContainerEntry.cs" />
-    <Compile Include="Classes\Grinder\Containers\Input\XUiC_GrinderInputContainerList.cs" />
-    <Compile Include="Classes\Grinder\Containers\Output\XUiC_GrinderOutputContainerEntry.cs" />
-    <Compile Include="Classes\Grinder\Containers\Output\XUiC_GrinderOutputContainerList.cs" />
     <Compile Include="Classes\HarmonyPatches\BlockCompositeTileEntity_PipeEndpointDirtyPatch.cs" />
     <Compile Include="Classes\HarmonyPatches\Block_OnBlockActivated_Patches.cs" />
     <Compile Include="Classes\HarmonyPatches\ProgressionFromXML_Load_Patches.cs" />
@@ -176,11 +180,16 @@
     <Compile Include="Classes\Net Packages\NetPackageFluidMixerControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageBoilerControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageCasterControl.cs" />
-    <Compile Include="Classes\Net Packages\NetPackageUniversalGrinderControl.cs" />
+    <Compile Include="Classes\Net Packages\NetPackageNetworkStorageControl.cs" />
     <Compile Include="Classes\Net Packages\NetPackageOpenMachineUi.cs" />
     <Compile Include="Classes\\Net Packages\\NetPackageToggleMachinePower.cs" />
     <Compile Include="Classes\Networks\NetworkControllerBlock.cs" />
+    <Compile Include="Classes\Networks\NetworkStorageInterfaceBlock.cs" />
     <Compile Include="Classes\Networks\TileEntityNetworkController.cs" />
+    <Compile Include="Classes\Networks\TileEntityNetworkStorageInterface.cs" />
+    <Compile Include="Classes\Networks\XUiC_NetworkStorageEntry.cs" />
+    <Compile Include="Classes\Networks\XUiC_NetworkStorageList.cs" />
+    <Compile Include="Classes\Networks\XUiC_NetworkStorageInterface.cs" />
     <Compile Include="Classes\Pipes\ItemPipeBlock.cs" />
     <Compile Include="Classes\Pipes\PipeGraphData.cs" />
     <Compile Include="Classes\Pipes\PipeGraphManager.cs" />
@@ -188,7 +197,6 @@
     <Compile Include="Classes\Pipes\PipeTransportManager.cs" />
     <Compile Include="Classes\Pipes\SafeWorldRead.cs" />
     <Compile Include="Classes\Pipes\TileEntityItemPipe.cs" />
-    
     <Compile Include="Classes\Fluids\ItemActionPipeProbe.cs" />
     <Compile Include="Classes\Fluids\ItemActionPipeProbeNoAction.cs" />
     <Compile Include="Classes\Fluids\PipeProbeHudManager.cs" />
@@ -216,7 +224,9 @@
     <Compile Include="OutputTargetInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Classes\NewFolder1\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>call build.cmd</PostBuildEvent>

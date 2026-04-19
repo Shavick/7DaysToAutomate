@@ -730,8 +730,6 @@ public class TileEntityMelter : TileEntityMachine
             return false;
 
         TileEntityComposite comp = world.GetTileEntity(chestPos) as TileEntityComposite;
-        if (comp == null)
-            return false;
 
         SelectedInputChestPos = chestPos;
         SelectedInputPipeGraphId = parsedPipeGraphId;
@@ -796,8 +794,6 @@ public class TileEntityMelter : TileEntityMachine
             return false;
 
         TileEntityComposite comp = world.GetTileEntity(chestPos) as TileEntityComposite;
-        if (comp == null)
-            return false;
 
         SelectedOutputChestPos = chestPos;
         SelectedOutputMode = mode;
@@ -2378,10 +2374,6 @@ public class TileEntityMelter : TileEntityMachine
                 Vector3i storagePos = storageEndpoints[j];
                 string dedupeKey = $"{storagePos}|{pipeTe.PipeGraphId}";
                 if (!seen.Add(dedupeKey))
-                    continue;
-
-                TileEntityComposite comp = world.GetTileEntity(0, storagePos) as TileEntityComposite;
-                if (comp == null)
                     continue;
 
                 results.Add(new InputTargetInfo(storagePos, pipeTe.PipeGraphId));

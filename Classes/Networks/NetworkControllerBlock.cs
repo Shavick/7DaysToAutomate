@@ -1,26 +1,28 @@
-﻿public class NetworkControllerBlock
+using System.Text;
+
+public class NetworkControllerBlock
     : MachineBlock<TileEntityNetworkController>
 {
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // CONSTRUCTOR
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     public NetworkControllerBlock()
     {
         HasTileEntity = true;
     }
 
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // TILE ENTITY CREATION
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     protected override TileEntityNetworkController CreateTileEntity(Chunk chunk)
     {
         Log.Out("[NetworkController][BLOCK] CreateTileEntity()");
         return new TileEntityNetworkController(chunk);
     }
 
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // INIT
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     public override void Init()
     {
         base.Init();
@@ -28,14 +30,14 @@
     }
 
     private static readonly Vector3i[] NeighborOffsets =
-{
-    Vector3i.forward,
-    Vector3i.back,
-    Vector3i.left,
-    Vector3i.right,
-    Vector3i.up,
-    Vector3i.down
-};
+    {
+        Vector3i.forward,
+        Vector3i.back,
+        Vector3i.left,
+        Vector3i.right,
+        Vector3i.up,
+        Vector3i.down
+    };
 
     private static bool IsPipeConnectedToControllerSide(
         WorldBase world,
@@ -90,9 +92,9 @@
         }
     }
 
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     // ACTIVATION / UI
-    // ─────────────────────────────────────────────
+    // ---------------------------------------------
     public override bool HasBlockActivationCommands(
         WorldBase world,
         BlockValue blockValue,
@@ -125,11 +127,11 @@
     }
 
     public override bool OnBlockActivated(
-    WorldBase world,
-    int clrIdx,
-    Vector3i blockPos,
-    BlockValue blockValue,
-    EntityPlayerLocal player)
+        WorldBase world,
+        int clrIdx,
+        Vector3i blockPos,
+        BlockValue blockValue,
+        EntityPlayerLocal player)
     {
         var te = world.GetTileEntity(clrIdx, blockPos) as TileEntityNetworkController;
 
@@ -140,15 +142,55 @@
         }
 
         Log.Out($"[NetworkController][BLOCK][{blockPos}] Activated NetworkId={te.NetworkId}");
+
+        if (world == null || world.IsRemote())
+            return true;
+
+        if (!NetworkStorageService.TryBuildStorageSnapshot(world, te.NetworkId, out NetworkStorageSnapshot snapshot) || snapshot == null)
+        {
+            Log.Warning($"[NetworkController][BLOCK][{blockPos}] Failed to build storage snapshot for network {te.NetworkId}");
+            return true;
+        }
+
+        int stackTypes = snapshot.DisplayStacks.Count;
+        int totalItems = 0;
+        for (int i = 0; i < snapshot.DisplayStacks.Count; i++)
+            totalItems += snapshot.DisplayStacks[i].TotalCount;
+
+        Log.Out($"[NetworkController][BLOCK][{blockPos}] Snapshot built NetworkId={te.NetworkId} Revision={snapshot.Revision} Types={stackTypes} TotalItems={totalItems}");
+
+        int topCount = System.Math.Min(6, snapshot.DisplayStacks.Count);
+        if (topCount > 0)
+        {
+            var sb = new StringBuilder();
+            sb.Append("[NetworkController][BLOCK][");
+            sb.Append(blockPos);
+            sb.Append("] TopStacks=");
+
+            for (int i = 0; i < topCount; i++)
+            {
+                NetworkDisplayStack display = snapshot.DisplayStacks[i];
+                string itemName = NetworkItemIdentity.GetStableDisplayName(display.DisplayStack);
+                if (i > 0)
+                    sb.Append(" | ");
+
+                sb.Append(itemName);
+                sb.Append(":");
+                sb.Append(display.TotalCount);
+            }
+
+            Log.Out(sb.ToString());
+        }
+
         return true;
     }
 
     public override void OnBlockAdded(
-    WorldBase _world,
-    Chunk _chunk,
-    Vector3i _blockPos,
-    BlockValue _blockValue,
-    PlatformUserIdentifierAbs _addedByPlayer)
+        WorldBase _world,
+        Chunk _chunk,
+        Vector3i _blockPos,
+        BlockValue _blockValue,
+        PlatformUserIdentifierAbs _addedByPlayer)
     {
         base.OnBlockAdded(_world, _chunk, _blockPos, _blockValue, _addedByPlayer);
 
